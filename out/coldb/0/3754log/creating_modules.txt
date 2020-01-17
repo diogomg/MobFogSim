@@ -1,0 +1,70 @@
+0.0 MIPS 3234.0 required 281.0 result 2953.0 App Vm_SmartThing0 device null ServerCloudlet19
+0.0 Storage 16777216 VM size 128 result 16777088 App Vm_SmartThing0 device null ServerCloudlet19
+0.0 RAM 1024 required 128 result 896 App Vm_SmartThing0 device null
+0.0 Bandwich 1048576000 Required 1000 result 1048575000 App Vm_SmartThing0 device null
+0.0 FIM MIPS 2953.0 required 281.0 result 2672.0 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Creating AppModuleVm_SmartThing0 on device ServerCloudlet19
+0.0 MIPS 2953.0 required 281.0 result 2672.0 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Storage 16777088 VM size 128 result 16776960 App Vm_SmartThing0 device ServerCloudlet19
+0.0 RAM 1024 required 128 result 896 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Bandwich 1048576000 Required 1000 result 1048575000 App Vm_SmartThing0 device ServerCloudlet19
+0.0 FIM MIPS 2672.0 required 281.0 result 2391.0 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Creating client0 on device SmartThing0
+0.0 MIPS 46533.0 required 1000.0 result 45533.0 App appModuleClient0 device null SmartThing0
+0.0 Storage 524288 VM size 10000 result 514288 App appModuleClient0 device null SmartThing0
+0.0 RAM 16384 required 10 result 16374 App appModuleClient0 device null
+0.0 Bandwich 1048576000 Required 1000 result 1048575000 App appModuleClient0 device null
+0.0 FIM MIPS 45533.0 required 1000.0 result 44533.0 App appModuleClient0 device SmartThing0
+0.0 MIPS 2672.0 required 281.0 result 2391.0 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Storage 16776960 VM size 128 result 16776832 App Vm_SmartThing0 device ServerCloudlet19
+0.0 RAM 1024 required 128 result 896 App Vm_SmartThing0 device ServerCloudlet19
+0.0 Bandwich 1048576000 Required 1000 result 1048575000 App Vm_SmartThing0 device ServerCloudlet19
+0.0 FIM MIPS 2391.0 required 281.0 result 2110.0 App Vm_SmartThing0 device ServerCloudlet19
+0.0 MIPS 45533.0 required 1000.0 result 44533.0 App appModuleClient0 device SmartThing0
+0.0 Storage 514288 VM size 10000 result 504288 App appModuleClient0 device SmartThing0
+0.0 RAM 16384 required 10 result 16374 App appModuleClient0 device SmartThing0
+0.0 Bandwich 1048576000 Required 1000 result 1048575000 App appModuleClient0 device SmartThing0
+0.0 FIM MIPS 44533.0 required 1000.0 result 43533.0 App appModuleClient0 device SmartThing0
+1.983E7 MIPS 0.0 required 2000.0 result -2000.0 App Vm_SmartThing0 device null ServerCloudlet19
+1.983E7 Storage 16776832 VM size 174 result 16776658 App Vm_SmartThing0 device null ServerCloudlet19
+1.983E7 RAM 1024 required 64 result 960 App Vm_SmartThing0 device null
+1.983E7 Bandwich 1048576000 Required 1000 result 1048575000 App Vm_SmartThing0 device null
+1.983E7 FIM MIPS 0.0 required 2000.0 result -2000.0 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Creating AppModuleVm_SmartThing0 on device ServerCloudlet19
+1.983E7 MIPS 0.0 required 0.0 result 0.0 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Storage 16776658 VM size 128 result 16776530 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 RAM 1024 required 0 result 1024 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Bandwich 1048576000 Required 0 result 1048576000 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 FIM MIPS 0.0 required 0.0 result 0.0 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Creating client0 on device SmartThing0
+1.983E7 MIPS 0.0 required 0.0 result 0.0 App appModuleClient0 device SmartThing0
+1.983E7 Storage 504288 VM size 10000 result 494288 App appModuleClient0 device SmartThing0
+1.983E7 RAM 16384 required 0 result 16384 App appModuleClient0 device SmartThing0
+1.983E7 Bandwich 1048576000 Required 0 result 1048576000 App appModuleClient0 device SmartThing0
+1.983E7 FIM MIPS 0.0 required 0.0 result 0.0 App appModuleClient0 device SmartThing0
+1.983E7 MIPS 0.0 required 0.0 result 0.0 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Storage 16776530 VM size 128 result 16776402 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 RAM 1024 required 0 result 1024 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 Bandwich 1048576000 Required 0 result 1048576000 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 FIM MIPS 0.0 required 0.0 result 0.0 App Vm_SmartThing0 device ServerCloudlet19
+1.983E7 MIPS 0.0 required 0.0 result 0.0 App appModuleClient0 device SmartThing0
+1.983E7 Storage 494288 VM size 10000 result 484288 App appModuleClient0 device SmartThing0
+1.983E7 RAM 16384 required 0 result 16384 App appModuleClient0 device SmartThing0
+1.983E7 Bandwich 1048576000 Required 0 result 1048576000 App appModuleClient0 device SmartThing0
+1.983E7 FIM MIPS 0.0 required 0.0 result 0.0 App appModuleClient0 device SmartThing0
+2.0514341408427883E7 MIPS 3234.0 required 2000.0 result 1234.0 App Vm_SmartThing0 device null ServerCloudlet13
+2.0514341408427883E7 Storage 16777390 VM size 174 result 16777216 App Vm_SmartThing0 device null ServerCloudlet13
+2.0514341408427883E7 RAM 1024 required 64 result 960 App Vm_SmartThing0 device null
+2.0514341408427883E7 Bandwich 1048576000 Required 1000 result 1048575000 App Vm_SmartThing0 device null
+2.0514341408427883E7 FIM MIPS 1234.0 required 2000.0 result -766.0 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 Creating AppModuleVm_SmartThing0 on device ServerCloudlet13
+2.0514359591336895E7 MIPS 1234.0 required 0.0 result 1234.0 App Vm_SmartThing0 device ServerCloudlet19
+2.0514359591336895E7 Storage 16777216 VM size 128 result 16777088 App Vm_SmartThing0 device ServerCloudlet19
+2.0514359591336895E7 RAM 1024 required 0 result 1024 App Vm_SmartThing0 device ServerCloudlet19
+2.0514359591336895E7 Bandwich 1048576000 Required 0 result 1048576000 App Vm_SmartThing0 device ServerCloudlet19
+2.0514359591336895E7 FIM MIPS 1234.0 required 0.0 result 1234.0 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 MIPS 1234.0 required 0.0 result 1234.0 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 Storage 16777088 VM size 128 result 16776960 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 RAM 1024 required 0 result 1024 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 Bandwich 1048576000 Required 0 result 1048576000 App Vm_SmartThing0 device ServerCloudlet13
+2.0514359591336895E7 FIM MIPS 1234.0 required 0.0 result 1234.0 App Vm_SmartThing0 device ServerCloudlet13

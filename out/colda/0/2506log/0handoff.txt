@@ -1,0 +1,4 @@
+0	1.4585E7	7602	3769	1	13	AccessPoint63 [serverCloulet=ServerCloudlet20]	AccessPoint75 [serverCloulet=ServerCloudlet20]
+0	1.474E7	8802	3455	2	13	AccessPoint75 [serverCloulet=ServerCloudlet20]	AccessPoint87 [serverCloulet=ServerCloudlet26]
+0	1.4843E7	9468	3048	2	13	AccessPoint87 [serverCloulet=ServerCloudlet26]	AccessPoint86 [serverCloulet=ServerCloudlet25]
+0	1.497E7	10255	2365	2	13	AccessPoint86 [serverCloulet=ServerCloudlet25]	AccessPoint98 [serverCloulet=ServerCloudlet25]

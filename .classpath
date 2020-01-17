@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/org.hamcrest.core_1.3.0.v201303031735.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/commons-math3-3.5-bin.zip"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/json-simple-1.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/guava-18.0.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/junit.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/cloudsim-3.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/cloudsim-examples-3.0.3.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/cloudsim-3.0.3.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/cloudsim-examples-3.0.3-sources.jar"/>
+	<classpathentry kind="lib" path="/home/diogomg/workspace/MobFogSim/jars/commons-math3-3.5/commons-math3-3.5.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

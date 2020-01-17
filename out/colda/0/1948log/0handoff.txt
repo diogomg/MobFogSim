@@ -1,0 +1,1 @@
+0	5552000.0	9717	2803	6	12	AccessPoint98 [serverCloulet=ServerCloudlet25]	AccessPoint86 [serverCloulet=ServerCloudlet25]

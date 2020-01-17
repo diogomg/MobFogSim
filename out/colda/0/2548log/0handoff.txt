@@ -1,0 +1,1 @@
+0	1.4611E7	9715	2805	6	13	AccessPoint98 [serverCloulet=ServerCloudlet25]	AccessPoint86 [serverCloulet=ServerCloudlet25]

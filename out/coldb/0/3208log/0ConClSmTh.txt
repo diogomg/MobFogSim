@@ -1,0 +1,3 @@
+0.0	0	connectApSmartThing T
+0.0	0	desconnectApSmartThing
+1.8006E7	0	connectApSmartThing T

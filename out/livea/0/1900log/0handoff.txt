@@ -1,0 +1,7 @@
+0	4057000.0	7950	5701	4	12	AccessPoint77 [serverCloulet=ServerCloudlet21]	AccessPoint76 [serverCloulet=ServerCloudlet20]
+0	4459000.0	7110	4982	4	13	AccessPoint76 [serverCloulet=ServerCloudlet20]	AccessPoint64 [serverCloulet=ServerCloudlet20]
+0	4551000.0	7025	4443	3	13	AccessPoint64 [serverCloulet=ServerCloudlet20]	AccessPoint63 [serverCloulet=ServerCloudlet20]
+0	4731000.0	6496	4954	7	10	AccessPoint63 [serverCloulet=ServerCloudlet20]	AccessPoint64 [serverCloulet=ServerCloudlet20]
+0	5020000.0	6215	6182	5	13	AccessPoint64 [serverCloulet=ServerCloudlet20]	AccessPoint65 [serverCloulet=ServerCloudlet21]
+0	5078000.0	5788	6279	6	16	AccessPoint65 [serverCloulet=ServerCloudlet21]	AccessPoint53 [serverCloulet=ServerCloudlet15]
+0	5420000.0	6259	6396	3	13	AccessPoint53 [serverCloulet=ServerCloudlet15]	AccessPoint65 [serverCloulet=ServerCloudlet21]

@@ -1,0 +1,1 @@
+0	1.9985E7	3566	4347	1	16	AccessPoint27 [serverCloulet=ServerCloudlet8]	AccessPoint39 [serverCloulet=ServerCloudlet14]

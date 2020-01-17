@@ -1,0 +1,3 @@
+0	2204000.0	6131	4784	1	13	AccessPoint52 [serverCloulet=ServerCloudlet14]	AccessPoint64 [serverCloulet=ServerCloudlet20]
+0	2453000.0	7028	4437	3	13	AccessPoint64 [serverCloulet=ServerCloudlet20]	AccessPoint63 [serverCloulet=ServerCloudlet20]
+0	3439000.0	5757	4335	5	13	AccessPoint63 [serverCloulet=ServerCloudlet20]	AccessPoint51 [serverCloulet=ServerCloudlet14]

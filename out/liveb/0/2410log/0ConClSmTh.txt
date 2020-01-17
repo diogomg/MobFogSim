@@ -1,0 +1,17 @@
+0.0	0	connectApSmartThing T
+0.0	0	desconnectApSmartThing
+1.4424E7	0	connectApSmartThing T
+1.4668E7	0	desconnectServerCloudletSmartThing
+1.4668953613497267E7	0	connectServerCloudletSmartThing
+1.4867E7	0	desconnectServerCloudletSmartThing
+1.4868015113998022E7	0	connectServerCloudletSmartThing
+1.5081E7	0	desconnectServerCloudletSmartThing
+1.5082292549446108E7	0	connectServerCloudletSmartThing
+1.5138E7	0	desconnectServerCloudletSmartThing
+1.5139245994919622E7	0	connectServerCloudletSmartThing
+1.5405E7	0	desconnectServerCloudletSmartThing
+1.5406253135509482E7	0	connectServerCloudletSmartThing
+1.5632E7	0	desconnectServerCloudletSmartThing
+1.56331904532564E7	0	connectServerCloudletSmartThing
+1.6035E7	0	desconnectServerCloudletSmartThing
+1.6036061266142877E7	0	connectServerCloudletSmartThing

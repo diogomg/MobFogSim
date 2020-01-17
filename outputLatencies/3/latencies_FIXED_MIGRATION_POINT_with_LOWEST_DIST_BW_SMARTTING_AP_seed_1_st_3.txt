@@ -1,0 +1,12 @@
+FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_1_st_3
+Time-latency
+1 - 4030.280974777944 - 31.018070385637643 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+2 - 6032.987537638419 - 31.73535148542206 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+3 - 8035.694100498893 - 32.45272906859856 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+4 - 10038.400663359367 - 33.17020188885954 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+5 - 12041.107226219841 - 33.887768714545274 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+6 - 14043.813789080315 - 34.60542832861705 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+7 - 16046.52035194079 - 35.32317952862496 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+8 - 18049.226914801256 - 36.041021126659665 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+9 - 20051.93347766173 - 36.75895194933141 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3
+10 - 22044.6400405222 - 27.476970837676685 - MyApp_vr_game3 - smartThingMyId: 3 - ServerCloudlet7 - TupleType: - SELF_STATE_UPDATE3

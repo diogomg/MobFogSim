@@ -1,0 +1,28 @@
+SPEED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_3_st_7
+Time-latency
+2004.4280104063512 - 999.2496317525113 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+2033.8852549575406 - 23.52849764986081 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+4004.428010406351 - 988.8928744448313 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+6004.428010406352 - 978.5361171371524 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+7004.428010406352 - 973.3577384833125 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+8004.428010406352 - 968.1793598294726 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+9004.428010406353 - 963.0009811756336 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+10004.428010406353 - 957.8226025217937 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+11004.428010406353 - 952.6442238679538 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+12004.428010406353 - 947.4658452141139 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+13004.428010406353 - 942.287466560274 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+14004.428010406353 - 937.1090879064341 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+15004.428010406353 - 931.9307092525942 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+16004.428010406353 - 926.7523305987543 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+17004.428010406347 - 921.5739519449089 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+19004.428010406347 - 911.2171946372291 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+20004.428010406347 - 906.0388159833892 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+21004.428010406347 - 900.8604373295493 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+22004.428010406347 - 895.6820586757094 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+23004.428010406347 - 890.5036800218695 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+24004.428010406347 - 885.3253013680296 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+25004.428010406347 - 880.1469227141897 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+26004.428010406347 - 874.9685440603498 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+27004.428010406347 - 869.7901654065099 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+28004.428010406347 - 864.61178675267 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet12
+39004.70801040635 - 10859.713408098833 - MyApp_vr_game7 - smartThingMyId: 7 - ServerCloudlet3
