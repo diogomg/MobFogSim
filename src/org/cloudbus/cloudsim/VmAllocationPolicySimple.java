@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -16,8 +15,8 @@ import java.util.Map;
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * VmAllocationPolicySimple is an VmAllocationPolicy that chooses, as the host for a VM, the host
- * with less PEs in use.
+ * VmAllocationPolicySimple is an VmAllocationPolicy that chooses, as the host
+ * for a VM, the host with less PEs in use.
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -37,7 +36,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Creates the new VmAllocationPolicySimple object.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @pre $none
 	 * @post $none
 	 */
@@ -57,7 +57,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Allocates a host for a given VM.
 	 * 
-	 * @param vm VM specification
+	 * @param vm
+	 *        VM specification
 	 * @return $true if the host could be allocated; $false otherwise
 	 * @pre $none
 	 * @post $none
@@ -99,7 +100,6 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 				}
 				tries++;
 			} while (!result && tries < getFreePes().size());
-
 		}
 
 		return result;
@@ -108,7 +108,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Releases the host used by a VM.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @pre $none
 	 * @post none
 	 */
@@ -126,7 +127,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Gets the host that is executing the given VM belonging to the given user.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @return the Host with the given vmID and userID; $null if not found
 	 * @pre $none
 	 * @post $none
@@ -139,8 +141,10 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Gets the host that is executing the given VM belonging to the given user.
 	 * 
-	 * @param vmId the vm id
-	 * @param userId the user id
+	 * @param vmId
+	 *        the vm id
+	 * @param userId
+	 *        the user id
 	 * @return the Host with the given vmID and userID; $null if not found
 	 * @pre $none
 	 * @post $none
@@ -162,7 +166,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Sets the vm table.
 	 * 
-	 * @param vmTable the vm table
+	 * @param vmTable
+	 *        the vm table
 	 */
 	protected void setVmTable(Map<String, Host> vmTable) {
 		this.vmTable = vmTable;
@@ -180,7 +185,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Sets the used pes.
 	 * 
-	 * @param usedPes the used pes
+	 * @param usedPes
+	 *        the used pes
 	 */
 	protected void setUsedPes(Map<String, Integer> usedPes) {
 		this.usedPes = usedPes;
@@ -198,7 +204,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 	/**
 	 * Sets the free pes.
 	 * 
-	 * @param freePes the new free pes
+	 * @param freePes
+	 *        the new free pes
 	 */
 	protected void setFreePes(List<Integer> freePes) {
 		this.freePes = freePes;
@@ -206,7 +213,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.VmAllocationPolicy#optimizeAllocation(double, cloudsim.VmList, double)
+	 * @see cloudsim.VmAllocationPolicy#optimizeAllocation(double,
+	 * cloudsim.VmList, double)
 	 */
 	@Override
 	public List<Map<String, Object>> optimizeAllocation(List<? extends Vm> vmList) {
@@ -216,12 +224,14 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.VmAllocationPolicy#allocateHostForVm(org.cloudbus.cloudsim.Vm,
-	 * org.cloudbus.cloudsim.Host)
+	 * @see
+	 * org.cloudbus.cloudsim.VmAllocationPolicy#allocateHostForVm(org.cloudbus
+	 * .cloudsim.Vm, org.cloudbus.cloudsim.Host)
 	 */
 	@Override
 	public boolean allocateHostForVm(Vm vm, Host host) {
-		if (host.vmCreate(vm)) { // if vm has been succesfully created in the host
+		if (host.vmCreate(vm)) { // if vm has been succesfully created in the
+									// host
 			getVmTable().put(vm.getUid(), host);
 
 			int requiredPes = vm.getNumberOfPes();
@@ -230,8 +240,8 @@ public class VmAllocationPolicySimple extends VmAllocationPolicy {
 			getFreePes().set(idx, getFreePes().get(idx) - requiredPes);
 
 			Log.formatLine(
-					"%.2f: VM #" + vm.getId() + " has been allocated to the host #" + host.getId(),
-					CloudSim.clock());
+				"%.2f: VM #" + vm.getId() + " has been allocated to the host #" + host.getId(),
+				CloudSim.clock());
 			return true;
 		}
 

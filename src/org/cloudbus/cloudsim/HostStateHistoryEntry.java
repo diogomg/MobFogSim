@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2011, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2011, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -31,12 +30,17 @@ public class HostStateHistoryEntry {
 	/**
 	 * Instantiates a new vm mips allocation history entry.
 	 * 
-	 * @param time the time
-	 * @param allocatedMips the allocated mips
-	 * @param requestedMips the requested mips
-	 * @param isActive the is active
+	 * @param time
+	 *        the time
+	 * @param allocatedMips
+	 *        the allocated mips
+	 * @param requestedMips
+	 *        the requested mips
+	 * @param isActive
+	 *        the is active
 	 */
-	public HostStateHistoryEntry(double time, double allocatedMips, double requestedMips, boolean isActive) {
+	public HostStateHistoryEntry(double time, double allocatedMips, double requestedMips,
+		boolean isActive) {
 		setTime(time);
 		setAllocatedMips(allocatedMips);
 		setRequestedMips(requestedMips);
@@ -46,7 +50,8 @@ public class HostStateHistoryEntry {
 	/**
 	 * Sets the time.
 	 * 
-	 * @param time the new time
+	 * @param time
+	 *        the new time
 	 */
 	protected void setTime(double time) {
 		this.time = time;
@@ -64,7 +69,8 @@ public class HostStateHistoryEntry {
 	/**
 	 * Sets the allocated mips.
 	 * 
-	 * @param allocatedMips the new allocated mips
+	 * @param allocatedMips
+	 *        the new allocated mips
 	 */
 	protected void setAllocatedMips(double allocatedMips) {
 		this.allocatedMips = allocatedMips;
@@ -82,7 +88,8 @@ public class HostStateHistoryEntry {
 	/**
 	 * Sets the requested mips.
 	 * 
-	 * @param requestedMips the new requested mips
+	 * @param requestedMips
+	 *        the new requested mips
 	 */
 	protected void setRequestedMips(double requestedMips) {
 		this.requestedMips = requestedMips;
@@ -100,7 +107,8 @@ public class HostStateHistoryEntry {
 	/**
 	 * Sets the active.
 	 * 
-	 * @param isActive the new active
+	 * @param isActive
+	 *        the new active
 	 */
 	public void setActive(boolean isActive) {
 		this.isActive = isActive;

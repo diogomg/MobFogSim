@@ -8,23 +8,26 @@ import java.io.IOException;
  * The Class UtilizationModelPlanetLab.
  */
 public class UtilizationModelPlanetLabInMemory implements UtilizationModel {
-	
+
 	/** The scheduling interval. */
 	private double schedulingInterval;
 
 	/** The data (5 min * 288 = 24 hours). */
-	private final double[] data; 
-	
+	private final double[] data;
+
 	/**
 	 * Instantiates a new utilization model PlanetLab.
 	 * 
-	 * @param inputPath the input path
-	 * @throws NumberFormatException the number format exception
-	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @param inputPath
+	 *        the input path
+	 * @throws NumberFormatException
+	 *         the number format exception
+	 * @throws IOException
+	 *         Signals that an I/O exception has occurred.
 	 */
 	public UtilizationModelPlanetLabInMemory(String inputPath, double schedulingInterval)
-			throws NumberFormatException,
-			IOException {
+		throws NumberFormatException,
+		IOException {
 		data = new double[289];
 		setSchedulingInterval(schedulingInterval);
 		BufferedReader input = new BufferedReader(new FileReader(inputPath));
@@ -35,18 +38,24 @@ public class UtilizationModelPlanetLabInMemory implements UtilizationModel {
 		data[n - 1] = data[n - 2];
 		input.close();
 	}
-	
+
 	/**
-	 * Instantiates a new utilization model PlanetLab with variable data samples.
+	 * Instantiates a new utilization model PlanetLab with variable data
+	 * samples.
 	 * 
-	 * @param inputPath the input path
-	 * @param dataSamples number of samples in the file
-	 * @throws NumberFormatException the number format exception
-	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @param inputPath
+	 *        the input path
+	 * @param dataSamples
+	 *        number of samples in the file
+	 * @throws NumberFormatException
+	 *         the number format exception
+	 * @throws IOException
+	 *         Signals that an I/O exception has occurred.
 	 */
-	public UtilizationModelPlanetLabInMemory(String inputPath, double schedulingInterval, int dataSamples)
-			throws NumberFormatException,
-			IOException {
+	public UtilizationModelPlanetLabInMemory(String inputPath, double schedulingInterval,
+		int dataSamples)
+		throws NumberFormatException,
+		IOException {
 		setSchedulingInterval(schedulingInterval);
 		data = new double[dataSamples];
 		BufferedReader input = new BufferedReader(new FileReader(inputPath));
@@ -80,7 +89,8 @@ public class UtilizationModelPlanetLabInMemory implements UtilizationModel {
 	/**
 	 * Sets the scheduling interval.
 	 * 
-	 * @param schedulingInterval the new scheduling interval
+	 * @param schedulingInterval
+	 *        the new scheduling interval
 	 */
 	public void setSchedulingInterval(double schedulingInterval) {
 		this.schedulingInterval = schedulingInterval;

@@ -1,26 +1,20 @@
 /*
- * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for Modeling and
- * Simulation of Clouds Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * 
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * CloudletSchedulerTimeShared implements a policy of scheduling performed by a virtual machine.
- * Cloudlets execute time-shared in VM.
+ * CloudletSchedulerTimeShared implements a policy of scheduling performed by a
+ * virtual machine. Cloudlets execute time-shared in VM.
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -41,8 +35,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	protected int currentCPUs;
 
 	/**
-	 * Creates a new CloudletSchedulerTimeShared object. This method must be invoked before starting
-	 * the actual simulation.
+	 * Creates a new CloudletSchedulerTimeShared object. This method must be
+	 * invoked before starting the actual simulation.
 	 * 
 	 * @pre $none
 	 * @post $none
@@ -54,132 +48,39 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 		cloudletFinishedList = new ArrayList<ResCloudlet>();
 		currentCPUs = 0;
 	}
-	
-//	public void printTempo(double ini, String nome, double count){
-//		new java.util.Date();
-////		if((System.currentTimeMillis()-ini) > 5000){
-//			try(FileWriter fw1 = new FileWriter(getUserId()+"tempo.txt", true);
-//	                BufferedWriter bw1 = new BufferedWriter(fw1);
-//	                PrintWriter out1 = new PrintWriter(bw1))
-//		    {
-////					out1.println(nome + " " + (System.currentTimeMillis()-ini));
-////					ystem.currentTimeMillis()));
-//					out1.println(ini + "\t" + nome + '\t' + count);
-//		    }
-//		    catch (UnsupportedEncodingException e) {
-//		            // TODO Auto-generated catch block
-//		            e.printStackTrace();
-//		    }
-//		    catch (FileNotFoundException e) {
-//		            // TODO Auto-generated catch block
-//		            e.printStackTrace();
-//		    }
-//		    catch (IOException e) {
-//		            // TODO Auto-generated catch block
-//		            e.printStackTrace();
-//		    }
-////		}
-//	}
 
-	public double printTempo(double ini, double currentTime, String nome){
-		new java.util.Date();
-		if(currentTime > 1052000){
-			if(ini<1){
-				ini = System.currentTimeMillis();
-			}
-			try(FileWriter fw1 = new FileWriter(getUserId()+"tempo.txt", true);
-	                BufferedWriter bw1 = new BufferedWriter(fw1);
-	                PrintWriter out1 = new PrintWriter(bw1))
-		    {
-//					out1.println(nome + " " + (System.currentTimeMillis()-ini));
-//					ystem.currentTimeMillis()));
-					out1.println(System.currentTimeMillis()+"_\t_"+(System.currentTimeMillis()-ini)+"_\t_"+currentTime + "_\t_" + nome);
-		    }
-		    catch (UnsupportedEncodingException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (FileNotFoundException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (IOException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		}
-		return System.currentTimeMillis();
-	}
-
-	public void print(double currentTime, String count){
-		new java.util.Date();
-		if(currentTime > 1052000){
-			try(FileWriter fw1 = new FileWriter(getUserId()+"tempo.txt", true);
-	                BufferedWriter bw1 = new BufferedWriter(fw1);
-	                PrintWriter out1 = new PrintWriter(bw1))
-		    {
-					out1.println("_______"+System.currentTimeMillis()+"_\t_"+currentTime+"_\t_"+count+"___________");
-		    }
-		    catch (UnsupportedEncodingException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (FileNotFoundException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (IOException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		}
-	}
-	
 	/**
-	 * Updates the processing of cloudlets running under management of this scheduler.
+	 * Updates the processing of cloudlets running under management of this
+	 * scheduler.
 	 * 
-	 * @param currentTime current simulation time
-	 * @param mipsShare array with MIPS share of each processor available to the scheduler
-	 * @return time predicted completion time of the earliest finishing cloudlet, or 0 if there is
-	 *         no next events
+	 * @param currentTime
+	 *        current simulation time
+	 * @param mipsShare
+	 *        array with MIPS share of each processor available to the scheduler
+	 * @return time predicted completion time of the earliest finishing
+	 *         cloudlet, or 0 if there is no next events
 	 * @pre currentTime >= 0
 	 * @post $none
 	 */
 	@Override
 	public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
-//			double ini = 0;//printTempo(0, currentTime, "70i");
 
-		setCurrentMipsShare(mipsShare);//ini = printTempo(ini, currentTime, "71f");
+		setCurrentMipsShare(mipsShare);
 
 		double timeSpam = currentTime - getPreviousTime();
-//		ini = printTempo(ini, currentTime, "75 82 i");
-		for (ResCloudlet rcl : getCloudletExecList()) {//////////////AQUI!!!!!!!!!
+		for (ResCloudlet rcl : getCloudletExecList()) {
 
-			rcl.updateCloudletFinishedSoFar((long) (getCapacity(mipsShare) * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
-			//System.out.println(getTotalCurrentAllocatedMipsForCloudlet(rcl, getPreviousTime()));
-			//OLA System.out.println(CloudSim.clock()+ " : Remaining length of tuple ID "+((Tuple)rcl.getCloudlet()).getActualTupleId()+" = "+rcl.getRemainingCloudletLength());
-			
+			rcl.updateCloudletFinishedSoFar((long) (getCapacity(mipsShare) * timeSpam
+				* rcl.getNumberOfPes() * Consts.MILLION));
 		}
-//		ini = printTempo(ini, currentTime, "75 82 f");//ini = printTempo(ini, currentTime, "83 87 i");
 		if (getCloudletExecList().size() == 0) {
-//			print(currentTime, "0");
 			setPreviousTime(currentTime);
 			return 0.0;
 		}
-//		else{
-//			print(currentTime, String.valueOf(getCloudletExecList().size()));
-//			if(getCloudletExecList().size() >0) {
-//				if(getUserId().equals("SmartThing3")){
-//					System.out.println("______");
-//				}
-//			}
-//		}
-//		ini = printTempo(ini, currentTime,  "89 98 i");
-		// check finished cloudlets
+
 		double nextEvent = Double.MAX_VALUE;
 		List<ResCloudlet> toRemove = new ArrayList<ResCloudlet>();
-		
-		
+
 		for (ResCloudlet rcl : getCloudletExecList()) {
 			long remainingLength = rcl.getRemainingCloudletLength();
 			if (remainingLength == 0) {// finished: remove from the list
@@ -187,19 +88,12 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 				cloudletFinish(rcl);
 				continue;
 			}
-		}//ini =printTempo(ini, currentTime,  "89 98 f");ini = printTempo(ini, currentTime,  "99 i");
-//		print(currentTime, String.valueOf(toRemove.size()));
-		getCloudletExecList().removeAll(toRemove);//ini =printTempo(ini, currentTime,  "99 f");
-//		ini =printTempo(ini, currentTime,  "102 112 i");
-		// estimate finish time of cloudlets
-		for (ResCloudlet rcl : getCloudletExecList()) {//AQUI FDP
-//			if(getCloudletExecList().size() >0) {
-//				if(getUserId().equals("SmartThing3")){
-//					System.out.println("______");
-//				}
-//			}
+		}
+		getCloudletExecList().removeAll(toRemove);
+		for (ResCloudlet rcl : getCloudletExecList()) {
 			double estimatedFinishTime = currentTime
-					+ (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
+				+ (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl
+					.getNumberOfPes()));
 			if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
 				estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
 			}
@@ -208,16 +102,15 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 				nextEvent = estimatedFinishTime;
 			}
 		}
-//		print(currentTime, String.valueOf(nextEvent));
-//		ini =printTempo(ini, currentTime,  "102 112 f");//ini = printTempo(ini, currentTime,  "114 i");
-		setPreviousTime(currentTime);//ini =printTempo(ini, currentTime,  "114 f");
+		setPreviousTime(currentTime);
 		return nextEvent;
 	}
 
 	/**
 	 * Gets the capacity.
 	 * 
-	 * @param mipsShare the mips share
+	 * @param mipsShare
+	 *        the mips share
 	 * @return the capacity
 	 */
 	protected double getCapacity(List<Double> mipsShare) {
@@ -247,7 +140,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Cancels execution of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being cancealed
+	 * @param cloudletId
+	 *        ID of the cloudlet being cancealed
 	 * @return the canceled cloudlet, $null if not found
 	 * @pre $none
 	 * @post $none
@@ -272,7 +166,7 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 		}
 
 		// Then searches in the exec list
-		position=0;
+		position = 0;
 		for (ResCloudlet rcl : getCloudletExecList()) {
 			if (rcl.getCloudletId() == cloudletId) {
 				found = true;
@@ -293,7 +187,7 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 
 		// Now, looks in the paused queue
 		found = false;
-		position=0;
+		position = 0;
 		for (ResCloudlet rcl : getCloudletPausedList()) {
 			if (rcl.getCloudletId() == cloudletId) {
 				found = true;
@@ -313,7 +207,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Pauses execution of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being paused
+	 * @param cloudletId
+	 *        ID of the cloudlet being paused
 	 * @return $true if cloudlet paused, $false otherwise
 	 * @pre $none
 	 * @post $none
@@ -348,7 +243,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Processes a finished cloudlet.
 	 * 
-	 * @param rcl finished cloudlet
+	 * @param rcl
+	 *        finished cloudlet
 	 * @pre rgl != $null
 	 * @post $none
 	 */
@@ -362,7 +258,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Resumes execution of a paused cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being resumed
+	 * @param cloudletId
+	 *        ID of the cloudlet being resumed
 	 * @return expected finish time of the cloudlet, 0.0 if queued
 	 * @pre $none
 	 * @post $none
@@ -391,7 +288,7 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 
 			double remainingLength = rgl.getRemainingCloudletLength();
 			double estimatedFinishTime = CloudSim.clock()
-					+ (remainingLength / (getCapacity(getCurrentMipsShare()) * rgl.getNumberOfPes()));
+				+ (remainingLength / (getCapacity(getCurrentMipsShare()) * rgl.getNumberOfPes()));
 
 			return estimatedFinishTime;
 		}
@@ -402,8 +299,10 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Receives an cloudlet to be executed in the VM managed by this scheduler.
 	 * 
-	 * @param cloudlet the submited cloudlet
-	 * @param fileTransferTime time required to move the required files from the SAN to the VM
+	 * @param cloudlet
+	 *        the submited cloudlet
+	 * @param fileTransferTime
+	 *        time required to move the required files from the SAN to the VM
 	 * @return expected finish time of this cloudlet
 	 * @pre gl != null
 	 * @post $none
@@ -438,7 +337,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Gets the status of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet
+	 * @param cloudletId
+	 *        ID of the cloudlet
 	 * @return status of the cloudlet, -1 if cloudlet not found
 	 * @pre $none
 	 * @post $none
@@ -461,7 +361,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Get utilization created by all cloudlets.
 	 * 
-	 * @param time the time
+	 * @param time
+	 *        the time
 	 * @return total utilization
 	 */
 	@Override
@@ -474,9 +375,11 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	}
 
 	/**
-	 * Informs about completion of some cloudlet in the VM managed by this scheduler.
+	 * Informs about completion of some cloudlet in the VM managed by this
+	 * scheduler.
 	 * 
-	 * @return $true if there is at least one finished cloudlet; $false otherwise
+	 * @return $true if there is at least one finished cloudlet; $false
+	 *         otherwise
 	 * @pre $none
 	 * @post $none
 	 */
@@ -486,7 +389,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	}
 
 	/**
-	 * Returns the next cloudlet in the finished list, $null if this list is empty.
+	 * Returns the next cloudlet in the finished list, $null if this list is
+	 * empty.
 	 * 
 	 * @return a finished cloudlet
 	 * @pre $none
@@ -529,7 +433,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet exec list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet exec list
 	 */
 	@SuppressWarnings("unchecked")
@@ -540,8 +445,10 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet exec list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletExecList the new cloudlet exec list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletExecList
+	 *        the new cloudlet exec list
 	 */
 	protected <T extends ResCloudlet> void setCloudletExecList(List<T> cloudletExecList) {
 		this.cloudletExecList = cloudletExecList;
@@ -550,7 +457,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet paused list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet paused list
 	 */
 	@SuppressWarnings("unchecked")
@@ -561,8 +469,10 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet paused list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletPausedList the new cloudlet paused list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletPausedList
+	 *        the new cloudlet paused list
 	 */
 	protected <T extends ResCloudlet> void setCloudletPausedList(List<T> cloudletPausedList) {
 		this.cloudletPausedList = cloudletPausedList;
@@ -571,7 +481,8 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet finished list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet finished list
 	 */
 	@SuppressWarnings("unchecked")
@@ -582,8 +493,10 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet finished list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletFinishedList the new cloudlet finished list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletFinishedList
+	 *        the new cloudlet finished list
 	 */
 	protected <T extends ResCloudlet> void setCloudletFinishedList(List<T> cloudletFinishedList) {
 		this.cloudletFinishedList = cloudletFinishedList;
@@ -601,8 +514,9 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.CloudletScheduler#getTotalCurrentAvailableMipsForCloudlet(cloudsim.ResCloudlet,
-	 * java.util.List)
+	 * @see
+	 * cloudsim.CloudletScheduler#getTotalCurrentAvailableMipsForCloudlet(cloudsim
+	 * .ResCloudlet, java.util.List)
 	 */
 	@Override
 	public double getTotalCurrentAvailableMipsForCloudlet(ResCloudlet rcl, List<Double> mipsShare) {
@@ -611,8 +525,9 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.CloudletScheduler#getTotalCurrentAllocatedMipsForCloudlet(cloudsim.ResCloudlet,
-	 * double)
+	 * @see
+	 * cloudsim.CloudletScheduler#getTotalCurrentAllocatedMipsForCloudlet(cloudsim
+	 * .ResCloudlet, double)
 	 */
 	@Override
 	public double getTotalCurrentAllocatedMipsForCloudlet(ResCloudlet rcl, double time) {
@@ -621,8 +536,9 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.CloudletScheduler#getTotalCurrentRequestedMipsForCloudlet(cloudsim.ResCloudlet,
-	 * double)
+	 * @see
+	 * cloudsim.CloudletScheduler#getTotalCurrentRequestedMipsForCloudlet(cloudsim
+	 * .ResCloudlet, double)
 	 */
 	@Override
 	public double getTotalCurrentRequestedMipsForCloudlet(ResCloudlet rcl, double time) {

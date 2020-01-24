@@ -1,8 +1,8 @@
 /*
- * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for Modeling and
- * Simulation of Clouds Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * 
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -18,9 +18,10 @@ import org.cloudbus.cloudsim.lists.PeList;
 import org.cloudbus.cloudsim.provisioners.PeProvisioner;
 
 /**
- * VmSchedulerTimeShared is a VMM allocation policy that allocates one or more Pe to a VM, and
- * allows sharing of PEs by multiple VMs. This class also implements 10% performance degration due
- * to VM migration. This scheduler does not support over-subscription.
+ * VmSchedulerTimeShared is a VMM allocation policy that allocates one or more
+ * Pe to a VM, and allows sharing of PEs by multiple VMs. This class also
+ * implements 10% performance degration due to VM migration. This scheduler does
+ * not support over-subscription.
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -37,7 +38,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	/**
 	 * Instantiates a new vm scheduler time shared.
 	 * 
-	 * @param pelist the pelist
+	 * @param pelist
+	 *        the pelist
 	 */
 	public VmSchedulerTimeShared(List<? extends Pe> pelist) {
 		super(pelist);
@@ -54,7 +56,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 		 * TODO: add the same to RAM and BW provisioners
 		 */
 		if (vm.isInMigration()) {
-			if (!getVmsMigratingIn().contains(vm.getUid()) && !getVmsMigratingOut().contains(vm.getUid())) {
+			if (!getVmsMigratingIn().contains(vm.getUid())
+				&& !getVmsMigratingOut().contains(vm.getUid())) {
 				getVmsMigratingOut().add(vm.getUid());
 			}
 		} else {
@@ -62,42 +65,7 @@ public class VmSchedulerTimeShared extends VmScheduler {
 				getVmsMigratingOut().remove(vm.getUid());
 			}
 		}
-		double totalRequestedMips = 0;
-		double peMips = getPeCapacity();
-		for (Double mips : mipsShareRequested) {
-			if (mips > peMips) {
-				totalRequestedMips += peMips;
-			} else {
-				totalRequestedMips += mips;
-			}
-		}
-		/*if(totalRequestedMips == 0){
-			System.out.println("____");
-		}
-		try(FileWriter fw1 = new FileWriter("creating_modules.txt", true);
-			    BufferedWriter bw1 = new BufferedWriter(fw1);
-			    PrintWriter out1 = new PrintWriter(bw1))
-		{
-			out1.print (CloudSim.clock()+ " MIPS " + getAvailableMips() + " required " + totalRequestedMips + " result " + (getAvailableMips() - totalRequestedMips)+ " App " + vm.getVmm() + " device ");
-			if(vm.getHost() != null){
-				out1.println(vm.getHost().getDatacenter().getName());
-			}
-			else{
-				out1.println("null");
-			}
-		}
-		catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
+
 		boolean result = allocatePesForVm(vm.getUid(), mipsShareRequested);
 
 		updatePeProvisioning();
@@ -107,15 +75,18 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	/**
 	 * Allocate pes for vm.
 	 * 
-	 * @param vmUid the vm uid
-	 * @param mipsShareRequested the mips share requested
+	 * @param vmUid
+	 *        the vm uid
+	 * @param mipsShareRequested
+	 *        the mips share requested
 	 * @return true, if successful
 	 */
 	protected boolean allocatePesForVm(String vmUid, List<Double> mipsShareRequested) {
 		double totalRequestedMips = 0;
 		double peMips = getPeCapacity();
 		for (Double mips : mipsShareRequested) {
-			// each virtual PE of a VM must require not more than the capacity of a physical PE
+			// each virtual PE of a VM must require not more than the capacity
+			// of a physical PE
 			if (mips > peMips) {
 				return false;
 			}
@@ -141,16 +112,17 @@ public class VmSchedulerTimeShared extends VmScheduler {
 				// performance degradation due to migration = 10% MIPS
 				mipsRequested *= 0.9;
 			} else if (getVmsMigratingIn().contains(vmUid)) {
-				// the destination host only experience 10% of the migrating VM's MIPS
+				// the destination host only experience 10% of the migrating
+				// VM's MIPS
 				mipsRequested *= 0.1;
 			}
 			mipsShareAllocated.add(mipsRequested);
 		}
 
 		getMipsMap().put(vmUid, mipsShareAllocated);
-		if((getAvailableMips() - totalRequestedMips) >= 1000){
-			setAvailableMips(getAvailableMips() - totalRequestedMips);			
-		}else{
+		if ((getAvailableMips() - totalRequestedMips) >= 1000) {
+			setAvailableMips(getAvailableMips() - totalRequestedMips);
+		} else {
 			setAvailableMips(1000);
 		}
 
@@ -190,7 +162,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 							break;
 						}
 						if (!peIterator.hasNext()) {
-							Log.printLine("There is no enough MIPS (" + mips + ") to accommodate VM " + vmUid);
+							Log.printLine("There is no enough MIPS (" + mips
+								+ ") to accommodate VM " + vmUid);
 						}
 						pe = peIterator.next();
 						peProvisioner = pe.getPeProvisioner();
@@ -237,8 +210,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	}
 
 	/**
-	 * Returns maximum available MIPS among all the PEs. For the time shared policy it is just all
-	 * the avaiable MIPS.
+	 * Returns maximum available MIPS among all the PEs. For the time shared
+	 * policy it is just all the avaiable MIPS.
 	 * 
 	 * @return max mips
 	 */
@@ -250,7 +223,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	/**
 	 * Sets the pes in use.
 	 * 
-	 * @param pesInUse the new pes in use
+	 * @param pesInUse
+	 *        the new pes in use
 	 */
 	protected void setPesInUse(int pesInUse) {
 		this.pesInUse = pesInUse;
@@ -277,7 +251,8 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	/**
 	 * Sets the mips map requested.
 	 * 
-	 * @param mipsMapRequested the mips map requested
+	 * @param mipsMapRequested
+	 *        the mips map requested
 	 */
 	protected void setMipsMapRequested(Map<String, List<Double>> mipsMapRequested) {
 		this.mipsMapRequested = mipsMapRequested;

@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -11,8 +10,8 @@ package org.cloudbus.cloudsim;
 import org.cloudbus.cloudsim.provisioners.PeProvisioner;
 
 /**
- * CloudSim Pe (Processing Element) class represents CPU unit, defined in terms of Millions
- * Instructions Per Second (MIPS) rating.<br>
+ * CloudSim Pe (Processing Element) class represents CPU unit, defined in terms
+ * of Millions Instructions Per Second (MIPS) rating.<br>
  * <b>ASSUMPTION:<b> All PEs under the same Machine have the same MIPS rating.
  * 
  * @author Manzur Murshed
@@ -28,8 +27,9 @@ public class Pe {
 	public static final int BUSY = 2;
 
 	/**
-	 * Denotes Pe is failed and hence it can't process any Cloudlet at this moment. This Pe is
-	 * failed because it belongs to a machine which is also failed.
+	 * Denotes Pe is failed and hence it can't process any Cloudlet at this
+	 * moment. This Pe is failed because it belongs to a machine which is also
+	 * failed.
 	 */
 	public static final int FAILED = 3;
 
@@ -46,8 +46,10 @@ public class Pe {
 	/**
 	 * Allocates a new Pe object.
 	 * 
-	 * @param id the Pe ID
-	 * @param peProvisioner the pe provisioner
+	 * @param id
+	 *        the Pe ID
+	 * @param peProvisioner
+	 *        the pe provisioner
 	 * @pre id >= 0
 	 * @pre peProvisioner != null
 	 * @post $none
@@ -63,7 +65,8 @@ public class Pe {
 	/**
 	 * Sets the id.
 	 * 
-	 * @param id the new id
+	 * @param id
+	 *        the new id
 	 */
 	protected void setId(int id) {
 		this.id = id;
@@ -81,7 +84,8 @@ public class Pe {
 	/**
 	 * Sets the MIPS Rating of this Pe.
 	 * 
-	 * @param d the mips
+	 * @param d
+	 *        the mips
 	 * @pre mips >= 0
 	 * @post $none
 	 */
@@ -112,8 +116,8 @@ public class Pe {
 	}
 
 	/**
-	 * Sets Pe status to free, meaning it is available for processing. This should be used by SPACE
-	 * shared hostList only.
+	 * Sets Pe status to free, meaning it is available for processing. This
+	 * should be used by SPACE shared hostList only.
 	 * 
 	 * @pre $none
 	 * @post $none
@@ -123,8 +127,8 @@ public class Pe {
 	}
 
 	/**
-	 * Sets Pe status to busy, meaning it is already executing Cloudlets. This should be used by
-	 * SPACE shared hostList only.
+	 * Sets Pe status to busy, meaning it is already executing Cloudlets. This
+	 * should be used by SPACE shared hostList only.
 	 * 
 	 * @pre $none
 	 * @post $none
@@ -146,7 +150,8 @@ public class Pe {
 	/**
 	 * Sets Pe status to either <tt>Pe.FREE</tt> or <tt>Pe.BUSY</tt>
 	 * 
-	 * @param status Pe status, <tt>true</tt> if it is FREE, <tt>false</tt> if BUSY.
+	 * @param status
+	 *        Pe status, <tt>true</tt> if it is FREE, <tt>false</tt> if BUSY.
 	 * @pre $none
 	 * @post $none
 	 */
@@ -157,7 +162,8 @@ public class Pe {
 	/**
 	 * Sets the pe provisioner.
 	 * 
-	 * @param peProvisioner the new pe provisioner
+	 * @param peProvisioner
+	 *        the new pe provisioner
 	 */
 	protected void setPeProvisioner(PeProvisioner peProvisioner) {
 		this.peProvisioner = peProvisioner;

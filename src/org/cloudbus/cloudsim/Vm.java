@@ -1,26 +1,21 @@
 /*
- * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for Modeling and
- * Simulation of Clouds Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * 
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Vm represents a VM: it runs inside a Host, sharing hostList with other VMs. It processes
- * cloudlets. This processing happens according to a policy, defined by the CloudletScheduler. Each
- * VM has a owner, which can submit cloudlets to the VM to be executed
+ * Vm represents a VM: it runs inside a Host, sharing hostList with other VMs.
+ * It processes cloudlets. This processing happens according to a policy,
+ * defined by the CloudletScheduler. Each VM has a owner, which can submit
+ * cloudlets to the VM to be executed
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -85,15 +80,24 @@ public class Vm {
 	/**
 	 * Creates a new VMCharacteristics object.
 	 * 
-	 * @param id unique ID of the VM
-	 * @param userId ID of the VM's owner
-	 * @param mips the mips
-	 * @param numberOfPes amount of CPUs
-	 * @param ram amount of ram
-	 * @param bw amount of bandwidth
-	 * @param size amount of storage
-	 * @param vmm virtual machine monitor
-	 * @param cloudletScheduler cloudletScheduler policy for cloudlets
+	 * @param id
+	 *        unique ID of the VM
+	 * @param userId
+	 *        ID of the VM's owner
+	 * @param mips
+	 *        the mips
+	 * @param numberOfPes
+	 *        amount of CPUs
+	 * @param ram
+	 *        amount of ram
+	 * @param bw
+	 *        amount of bandwidth
+	 * @param size
+	 *        amount of storage
+	 * @param vmm
+	 *        virtual machine monitor
+	 * @param cloudletScheduler
+	 *        cloudletScheduler policy for cloudlets
 	 * @pre id >= 0
 	 * @pre userId >= 0
 	 * @pre size > 0
@@ -105,15 +109,15 @@ public class Vm {
 	 * @post $none
 	 */
 	public Vm(
-			int id,
-			int userId,
-			double mips,
-			int numberOfPes,
-			int ram,
-			long bw,
-			long size,
-			String vmm,
-			CloudletScheduler cloudletScheduler) {
+		int id,
+		int userId,
+		double mips,
+		int numberOfPes,
+		int ram,
+		long bw,
+		long size,
+		String vmm,
+		CloudletScheduler cloudletScheduler) {
 		setId(id);
 		setUserId(userId);
 		setUid(getUid(userId, id));
@@ -134,46 +138,22 @@ public class Vm {
 		setCurrentAllocatedSize(0);
 	}
 
-	public void saveStatus(double currentTime, List<Double> mipsShare){
-		new java.util.Date();
-			try(FileWriter fw1 = new FileWriter(getHost().getDatacenter().getName()+"tempo.txt", true);
-	                BufferedWriter bw1 = new BufferedWriter(fw1);
-	                PrintWriter out1 = new PrintWriter(bw1))
-		    {
-					out1.println("___VM___allocated___time: "+System.currentTimeMillis()+"_\t_ct "+currentTime+"_\t_almips "+getCurrentAllocatedMips()+"_\t_alram "+getCurrentAllocatedRam()+"_\t_alstor "+getSize()+"_\t_albw "+getCurrentAllocatedBw()+"___________");
-					out1.println("___VM___available___time: "+System.currentTimeMillis()+"_\t_ct "+currentTime+"_\t_avmips "+getHost().getAvailableMips()+"_\t_avram "+getHost().getRamProvisioner().getAvailableRam()+"_\t_avstor"+getHost().getStorage()+"_\t_avbw "+getHost().getBwProvisioner().getAvailableBw()+"___________");
-		    }
-		    catch (UnsupportedEncodingException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (FileNotFoundException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-		    catch (IOException e) {
-		            // TODO Auto-generated catch block
-		            e.printStackTrace();
-		    }
-	}
-	
 	/**
 	 * Updates the processing of cloudlets running on this VM.
 	 * 
-	 * @param currentTime current simulation time
-	 * @param mipsShare array with MIPS share of each Pe available to the scheduler
-	 * @return time predicted completion time of the earliest finishing cloudlet, or 0 if there is no
-	 *         next events
+	 * @param currentTime
+	 *        current simulation time
+	 * @param mipsShare
+	 *        array with MIPS share of each Pe available to the scheduler
+	 * @return time predicted completion time of the earliest finishing
+	 *         cloudlet, or 0 if there is no next events
 	 * @pre currentTime >= 0
 	 * @post $none
 	 */
 	public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
 		if (mipsShare != null) {
 			getCloudletScheduler().setUserId(getHost().getDatacenter().getName());
-			CloudletSchedulerTimeShared a = (CloudletSchedulerTimeShared) getCloudletScheduler();
-//			if(a.getCloudletExecList().size() > 0){
-//				saveStatus(currentTime, mipsShare);
-//			}
+
 			return getCloudletScheduler().updateVmProcessing(currentTime, mipsShare);
 		}
 		return 0.0;
@@ -250,7 +230,8 @@ public class Vm {
 	/**
 	 * Get utilization created by all clouddlets running on this VM.
 	 * 
-	 * @param time the time
+	 * @param time
+	 *        the time
 	 * @return total utilization
 	 */
 	public double getTotalUtilizationOfCpu(double time) {
@@ -260,7 +241,8 @@ public class Vm {
 	/**
 	 * Get utilization created by all cloudlets running on this VM in MIPS.
 	 * 
-	 * @param time the time
+	 * @param time
+	 *        the time
 	 * @return total utilization
 	 */
 	public double getTotalUtilizationOfCpuMips(double time) {
@@ -270,7 +252,8 @@ public class Vm {
 	/**
 	 * Sets the uid.
 	 * 
-	 * @param uid the new uid
+	 * @param uid
+	 *        the new uid
 	 */
 	public void setUid(String uid) {
 		this.uid = uid;
@@ -288,8 +271,10 @@ public class Vm {
 	/**
 	 * Generate unique string identificator of the VM.
 	 * 
-	 * @param userId the user id
-	 * @param vmId the vm id
+	 * @param userId
+	 *        the user id
+	 * @param vmId
+	 *        the vm id
 	 * @return string uid
 	 */
 	public static String getUid(int userId, int vmId) {
@@ -308,7 +293,8 @@ public class Vm {
 	/**
 	 * Sets the id.
 	 * 
-	 * @param id the new id
+	 * @param id
+	 *        the new id
 	 */
 	protected void setId(int id) {
 		this.id = id;
@@ -317,7 +303,8 @@ public class Vm {
 	/**
 	 * Sets the user id.
 	 * 
-	 * @param userId the new user id
+	 * @param userId
+	 *        the new user id
 	 */
 	protected void setUserId(int userId) {
 		this.userId = userId;
@@ -346,7 +333,8 @@ public class Vm {
 	/**
 	 * Sets the mips.
 	 * 
-	 * @param mips the new mips
+	 * @param mips
+	 *        the new mips
 	 */
 	protected void setMips(double mips) {
 		this.mips = mips;
@@ -364,7 +352,8 @@ public class Vm {
 	/**
 	 * Sets the number of pes.
 	 * 
-	 * @param numberOfPes the new number of pes
+	 * @param numberOfPes
+	 *        the new number of pes
 	 */
 	protected void setNumberOfPes(int numberOfPes) {
 		this.numberOfPes = numberOfPes;
@@ -384,7 +373,8 @@ public class Vm {
 	/**
 	 * Sets the amount of ram.
 	 * 
-	 * @param ram new amount of ram
+	 * @param ram
+	 *        new amount of ram
 	 * @pre ram > 0
 	 * @post $none
 	 */
@@ -406,7 +396,8 @@ public class Vm {
 	/**
 	 * Sets the amount of bandwidth.
 	 * 
-	 * @param bw new amount of bandwidth
+	 * @param bw
+	 *        new amount of bandwidth
 	 * @pre bw > 0
 	 * @post $none
 	 */
@@ -428,7 +419,8 @@ public class Vm {
 	/**
 	 * Sets the amount of storage.
 	 * 
-	 * @param size new amount of storage
+	 * @param size
+	 *        new amount of storage
 	 * @pre size > 0
 	 * @post $none
 	 */
@@ -450,7 +442,8 @@ public class Vm {
 	/**
 	 * Sets the VMM.
 	 * 
-	 * @param vmm the new VMM
+	 * @param vmm
+	 *        the new VMM
 	 */
 	protected void setVmm(String vmm) {
 		this.vmm = vmm;
@@ -459,7 +452,8 @@ public class Vm {
 	/**
 	 * Sets the host that runs this VM.
 	 * 
-	 * @param host Host running the VM
+	 * @param host
+	 *        Host running the VM
 	 * @pre host != $null
 	 * @post $none
 	 */
@@ -488,7 +482,8 @@ public class Vm {
 	/**
 	 * Sets the vm scheduler.
 	 * 
-	 * @param cloudletScheduler the new vm scheduler
+	 * @param cloudletScheduler
+	 *        the new vm scheduler
 	 */
 	protected void setCloudletScheduler(CloudletScheduler cloudletScheduler) {
 		this.cloudletScheduler = cloudletScheduler;
@@ -506,7 +501,8 @@ public class Vm {
 	/**
 	 * Sets the in migration.
 	 * 
-	 * @param inMigration the new in migration
+	 * @param inMigration
+	 *        the new in migration
 	 */
 	public void setInMigration(boolean inMigration) {
 		this.inMigration = inMigration;
@@ -524,7 +520,8 @@ public class Vm {
 	/**
 	 * Sets the current allocated size.
 	 * 
-	 * @param currentAllocatedSize the new current allocated size
+	 * @param currentAllocatedSize
+	 *        the new current allocated size
 	 */
 	protected void setCurrentAllocatedSize(long currentAllocatedSize) {
 		this.currentAllocatedSize = currentAllocatedSize;
@@ -542,7 +539,8 @@ public class Vm {
 	/**
 	 * Sets the current allocated ram.
 	 * 
-	 * @param currentAllocatedRam the new current allocated ram
+	 * @param currentAllocatedRam
+	 *        the new current allocated ram
 	 */
 	public void setCurrentAllocatedRam(int currentAllocatedRam) {
 		this.currentAllocatedRam = currentAllocatedRam;
@@ -560,7 +558,8 @@ public class Vm {
 	/**
 	 * Sets the current allocated bw.
 	 * 
-	 * @param currentAllocatedBw the new current allocated bw
+	 * @param currentAllocatedBw
+	 *        the new current allocated bw
 	 */
 	public void setCurrentAllocatedBw(long currentAllocatedBw) {
 		this.currentAllocatedBw = currentAllocatedBw;
@@ -570,7 +569,8 @@ public class Vm {
 	 * Gets the current allocated mips.
 	 * 
 	 * @return the current allocated mips
-	 * @TODO replace returning the field by a call to getCloudletScheduler().getCurrentMipsShare()
+	 * @TODO replace returning the field by a call to
+	 *       getCloudletScheduler().getCurrentMipsShare()
 	 */
 	public List<Double> getCurrentAllocatedMips() {
 		return currentAllocatedMips;
@@ -579,7 +579,8 @@ public class Vm {
 	/**
 	 * Sets the current allocated mips.
 	 * 
-	 * @param currentAllocatedMips the new current allocated mips
+	 * @param currentAllocatedMips
+	 *        the new current allocated mips
 	 */
 	public void setCurrentAllocatedMips(List<Double> currentAllocatedMips) {
 		this.currentAllocatedMips = currentAllocatedMips;
@@ -597,7 +598,8 @@ public class Vm {
 	/**
 	 * Sets the being instantiated.
 	 * 
-	 * @param beingInstantiated the new being instantiated
+	 * @param beingInstantiated
+	 *        the new being instantiated
 	 */
 	public void setBeingInstantiated(boolean beingInstantiated) {
 		this.beingInstantiated = beingInstantiated;
@@ -615,21 +617,25 @@ public class Vm {
 	/**
 	 * Adds the state history entry.
 	 * 
-	 * @param time the time
-	 * @param allocatedMips the allocated mips
-	 * @param requestedMips the requested mips
-	 * @param isInMigration the is in migration
+	 * @param time
+	 *        the time
+	 * @param allocatedMips
+	 *        the allocated mips
+	 * @param requestedMips
+	 *        the requested mips
+	 * @param isInMigration
+	 *        the is in migration
 	 */
 	public void addStateHistoryEntry(
-			double time,
-			double allocatedMips,
-			double requestedMips,
-			boolean isInMigration) {
+		double time,
+		double allocatedMips,
+		double requestedMips,
+		boolean isInMigration) {
 		VmStateHistoryEntry newState = new VmStateHistoryEntry(
-				time,
-				allocatedMips,
-				requestedMips,
-				isInMigration);
+			time,
+			allocatedMips,
+			requestedMips,
+			isInMigration);
 		if (!getStateHistory().isEmpty()) {
 			VmStateHistoryEntry previousState = getStateHistory().get(getStateHistory().size() - 1);
 			if (previousState.getTime() == time) {

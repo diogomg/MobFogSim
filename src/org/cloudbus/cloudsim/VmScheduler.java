@@ -1,8 +1,8 @@
 /*
- * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for Modeling and
- * Simulation of Clouds Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * 
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -15,8 +15,8 @@ import java.util.Map;
 import org.cloudbus.cloudsim.lists.PeList;
 
 /**
- * VmScheduler is an abstract class that represents the policy used by a VMM to share processing
- * power among VMs running in a host.
+ * VmScheduler is an abstract class that represents the policy used by a VMM to
+ * share processing power among VMs running in a host.
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -45,7 +45,8 @@ public abstract class VmScheduler {
 	/**
 	 * Creates a new HostAllocationPolicy.
 	 * 
-	 * @param pelist the pelist
+	 * @param pelist
+	 *        the pelist
 	 * @pre peList != $null
 	 * @post $none
 	 */
@@ -61,9 +62,12 @@ public abstract class VmScheduler {
 	/**
 	 * Allocates PEs for a VM.
 	 * 
-	 * @param vm the vm
-	 * @param mipsShare the mips share
-	 * @return $true if this policy allows a new VM in the host, $false otherwise
+	 * @param vm
+	 *        the vm
+	 * @param mipsShare
+	 *        the mips share
+	 * @return $true if this policy allows a new VM in the host, $false
+	 *         otherwise
 	 * @pre $none
 	 * @post $none
 	 */
@@ -72,7 +76,8 @@ public abstract class VmScheduler {
 	/**
 	 * Releases PEs allocated to a VM.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @pre $none
 	 * @post $none
 	 */
@@ -95,7 +100,8 @@ public abstract class VmScheduler {
 	/**
 	 * Gets the pes allocated for vm.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @return the pes allocated for vm
 	 */
 	public List<Pe> getPesAllocatedForVM(Vm vm) {
@@ -105,8 +111,10 @@ public abstract class VmScheduler {
 	/**
 	 * Returns the MIPS share of each Pe that is allocated to a given VM.
 	 * 
-	 * @param vm the vm
-	 * @return an array containing the amount of MIPS of each pe that is available to the VM
+	 * @param vm
+	 *        the vm
+	 * @return an array containing the amount of MIPS of each pe that is
+	 *         available to the VM
 	 * @pre $none
 	 * @post $none
 	 */
@@ -117,7 +125,8 @@ public abstract class VmScheduler {
 	/**
 	 * Gets the total allocated MIPS for a VM over all the PEs.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @return the allocated mips for vm
 	 */
 	public double getTotalAllocatedMipsForVm(Vm vm) {
@@ -169,7 +178,8 @@ public abstract class VmScheduler {
 	/**
 	 * Gets the vm list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the vm list
 	 */
 	@SuppressWarnings("unchecked")
@@ -180,8 +190,10 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the vm list.
 	 * 
-	 * @param <T> the generic type
-	 * @param peList the pe list
+	 * @param <T>
+	 *        the generic type
+	 * @param peList
+	 *        the pe list
 	 */
 	protected <T extends Pe> void setPeList(List<T> peList) {
 		this.peList = peList;
@@ -199,7 +211,8 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the mips map.
 	 * 
-	 * @param mipsMap the mips map
+	 * @param mipsMap
+	 *        the mips map
 	 */
 	protected void setMipsMap(Map<String, List<Double>> mipsMap) {
 		this.mipsMap = mipsMap;
@@ -217,7 +230,8 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the free mips.
 	 * 
-	 * @param availableMips the new free mips
+	 * @param availableMips
+	 *        the new free mips
 	 */
 	protected void setAvailableMips(double availableMips) {
 		this.availableMips = availableMips;
@@ -235,7 +249,8 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the vms in migration.
 	 * 
-	 * @param vmsInMigration the new vms migrating out
+	 * @param vmsInMigration
+	 *        the new vms migrating out
 	 */
 	protected void setVmsMigratingOut(List<String> vmsInMigration) {
 		vmsMigratingOut = vmsInMigration;
@@ -253,7 +268,8 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the vms migrating in.
 	 * 
-	 * @param vmsMigratingIn the new vms migrating in
+	 * @param vmsMigratingIn
+	 *        the new vms migrating in
 	 */
 	protected void setVmsMigratingIn(List<String> vmsMigratingIn) {
 		this.vmsMigratingIn = vmsMigratingIn;
@@ -271,7 +287,8 @@ public abstract class VmScheduler {
 	/**
 	 * Sets the pe map.
 	 * 
-	 * @param peMap the pe map
+	 * @param peMap
+	 *        the pe map
 	 */
 	protected void setPeMap(Map<String, List<Pe>> peMap) {
 		this.peMap = peMap;

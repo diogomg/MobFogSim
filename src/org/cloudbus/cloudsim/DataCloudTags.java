@@ -1,16 +1,15 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
 
 /**
- * This class contains additional tags for the DataCloud functionalities, such as file information
- * retrieval, file transfers, and storage info.
+ * This class contains additional tags for the DataCloud functionalities, such
+ * as file information retrieval, file transfers, and storage info.
  * 
  * @author Uros Cibej
  * @author Anthony Sulistio
@@ -40,32 +39,34 @@ public final class DataCloudTags {
 	public static final int REGISTER_REPLICA_CTLG = BASE + 1;
 
 	/**
-	 * Denotes a list of all Replica Catalogue (RC) entities that are listed in this regional Data
-	 * GIS entity. This tag should be called from a user to Data GIS.
+	 * Denotes a list of all Replica Catalogue (RC) entities that are listed in
+	 * this regional Data GIS entity. This tag should be called from a user to
+	 * Data GIS.
 	 */
 	public static final int INQUIRY_LOCAL_RC_LIST = BASE + 2;
 
 	/**
-	 * Denotes a list of Replica Catalogue (RC) entities that are listed in other regional Data GIS
-	 * entities. This tag should be called from a user to Data GIS.
+	 * Denotes a list of Replica Catalogue (RC) entities that are listed in
+	 * other regional Data GIS entities. This tag should be called from a user
+	 * to Data GIS.
 	 */
 	public static final int INQUIRY_GLOBAL_RC_LIST = BASE + 3;
 
 	/**
-	 * Denotes a list of Replica Catalogue IDs. This tag should be called from a Regional Data GIS
-	 * to another
+	 * Denotes a list of Replica Catalogue IDs. This tag should be called from a
+	 * Regional Data GIS to another
 	 */
 	public static final int INQUIRY_RC_LIST = BASE + 4;
 
 	/**
-	 * Denotes a result regarding to a list of Replica Catalogue IDs. This tag should be called from
-	 * a Regional Data GIS to a sender Regional Data GIS.
+	 * Denotes a result regarding to a list of Replica Catalogue IDs. This tag
+	 * should be called from a Regional Data GIS to a sender Regional Data GIS.
 	 */
 	public static final int INQUIRY_RC_RESULT = BASE + 5;
 
 	/**
-	 * Denotes the submission of a DataCloudlet. This tag is normally used between user and
-	 * DataCloudResource entity.
+	 * Denotes the submission of a DataCloudlet. This tag is normally used
+	 * between user and DataCloudResource entity.
 	 */
 	public static final int DATAcloudlet_SUBMIT = BASE + 6;
 
@@ -81,7 +82,8 @@ public final class DataCloudTags {
 	public static final int FILE_REQUEST = RM_BASE + 1;
 
 	/**
-	 * Sends the file to the requester. The format of the reply is File or null if error happens
+	 * Sends the file to the requester. The format of the reply is File or null
+	 * if error happens
 	 */
 	public static final int FILE_DELIVERY = RM_BASE + 2;
 
@@ -96,9 +98,10 @@ public final class DataCloudTags {
 
 	/**
 	 * Sends the result of adding a master file back to sender.<br>
-	 * The format of the reply is Object[3] = {String lfn, Integer uniqueID, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of FILE_ADD_XXXX where XXXX means the error/success
-	 * message
+	 * The format of the reply is Object[3] = {String lfn, Integer uniqueID,
+	 * Integer resultID}.<br>
+	 * NOTE: The result id is in the form of FILE_ADD_XXXX where XXXX means the
+	 * error/success message
 	 */
 	public static final int FILE_ADD_MASTER_RESULT = RM_BASE + 11;
 
@@ -112,8 +115,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of adding a replica file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of FILE_ADD_XXXX where XXXX means the error/success
-	 * message
+	 * NOTE: The result id is in the form of FILE_ADD_XXXX where XXXX means the
+	 * error/success message
 	 */
 	public static final int FILE_ADD_REPLICA_RESULT = RM_BASE + 13;
 
@@ -127,8 +130,8 @@ public final class DataCloudTags {
 	public static final int FILE_ADD_ERROR_EMPTY = RM_BASE + 22;
 
 	/**
-	 * Denotes that file addition is failed because the file already exists in the catalogue and it
-	 * is read-only file
+	 * Denotes that file addition is failed because the file already exists in
+	 * the catalogue and it is read-only file
 	 */
 	public static final int FILE_ADD_ERROR_EXIST_READ_ONLY = RM_BASE + 23;
 
@@ -136,7 +139,8 @@ public final class DataCloudTags {
 	public static final int FILE_ADD_ERROR = RM_BASE + 24;
 
 	/**
-	 * Denotes that file addition is failed because access/permission denied or not authorized
+	 * Denotes that file addition is failed because access/permission denied or
+	 * not authorized
 	 */
 	public static final int FILE_ADD_ERROR_ACCESS_DENIED = RM_BASE + 25;
 
@@ -152,8 +156,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of deleting a master file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of FILE_DELETE_XXXX where XXXX means the error/success
-	 * message
+	 * NOTE: The result id is in the form of FILE_DELETE_XXXX where XXXX means
+	 * the error/success message
 	 */
 	public static final int FILE_DELETE_MASTER_RESULT = RM_BASE + 31;
 
@@ -167,8 +171,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of deleting a replica file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of FILE_DELETE_XXXX where XXXX means the error/success
-	 * message
+	 * NOTE: The result id is in the form of FILE_DELETE_XXXX where XXXX means
+	 * the error/success message
 	 */
 	public static final int FILE_DELETE_REPLICA_RESULT = RM_BASE + 33;
 
@@ -182,18 +186,20 @@ public final class DataCloudTags {
 	public static final int FILE_DELETE_ERROR_READ_ONLY = RM_BASE + 42;
 
 	/**
-	 * Denotes that file deletion is failed because the file does not exist in the storage nor
-	 * catalogue
+	 * Denotes that file deletion is failed because the file does not exist in
+	 * the storage nor catalogue
 	 */
 	public static final int FILE_DELETE_ERROR_DOESNT_EXIST = RM_BASE + 43;
 
 	/**
-	 * Denotes that file deletion is failed because it is currently used by others
+	 * Denotes that file deletion is failed because it is currently used by
+	 * others
 	 */
 	public static final int FILE_DELETE_ERROR_IN_USE = RM_BASE + 44;
 
 	/**
-	 * Denotes that file deletion is failed because access/permission denied or not authorized
+	 * Denotes that file deletion is failed because access/permission denied or
+	 * not authorized
 	 */
 	public static final int FILE_DELETE_ERROR_ACCESS_DENIED = RM_BASE + 45;
 
@@ -209,8 +215,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of deleting a file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of FILE_MODIFY_XXXX where XXXX means the error/success
-	 * message
+	 * NOTE: The result id is in the form of FILE_MODIFY_XXXX where XXXX means
+	 * the error/success message
 	 */
 	public static final int FILE_MODIFY_RESULT = RM_BASE + 51;
 
@@ -231,12 +237,14 @@ public final class DataCloudTags {
 	public static final int FILE_MODIFY_ERROR_DOESNT_EXIST = RM_BASE + 63;
 
 	/**
-	 * Denotes that file modification is failed because the file is currently used by others
+	 * Denotes that file modification is failed because the file is currently
+	 * used by others
 	 */
 	public static final int FILE_MODIFY_ERROR_IN_USE = RM_BASE + 64;
 
 	/**
-	 * Denotes that file modification is failed because access/permission denied or not authorized
+	 * Denotes that file modification is failed because access/permission denied
+	 * or not authorized
 	 */
 	public static final int FILE_MODIFY_ERROR_ACCESS_DENIED = RM_BASE + 65;
 
@@ -288,8 +296,10 @@ public final class DataCloudTags {
 	public static final int CTLG_FILE_ATTR_DELIVERY = CTLG_BASE + 6;
 
 	/**
-	 * Denotes the request to get a list of file attributes based on the given filter.<br>
-	 * The format of this request is Object[2] = {Filter filter, Integer senderID}.<br>
+	 * Denotes the request to get a list of file attributes based on the given
+	 * filter.<br>
+	 * The format of this request is Object[2] = {Filter filter, Integer
+	 * senderID}.<br>
 	 * The reply tag name is {@link #CTLG_FILTER_DELIVERY}.
 	 */
 	public static final int CTLG_FILTER = CTLG_BASE + 7;
@@ -304,18 +314,20 @@ public final class DataCloudTags {
 	// ***********************RM<-->RC******************************//
 
 	/**
-	 * Denotes the request to register / add a master file to the Replica Catalogue.<br>
-	 * The format of this request is Object[3] = {String filename, FileAttribute attr, Integer
-	 * resID}.<br>
+	 * Denotes the request to register / add a master file to the Replica
+	 * Catalogue.<br>
+	 * The format of this request is Object[3] = {String filename, FileAttribute
+	 * attr, Integer resID}.<br>
 	 * The reply tag name is {@link #CTLG_ADD_MASTER_RESULT}.
 	 */
 	public static final int CTLG_ADD_MASTER = CTLG_BASE + 10;
 
 	/**
 	 * Sends the result of registering a master file back to sender.<br>
-	 * The format of the reply is Object[3] = {String filename, Integer uniqueID, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of CTLG_ADD_MASTER_XXXX where XXXX means the error/success
-	 * message
+	 * The format of the reply is Object[3] = {String filename, Integer
+	 * uniqueID, Integer resultID}.<br>
+	 * NOTE: The result id is in the form of CTLG_ADD_MASTER_XXXX where XXXX
+	 * means the error/success message
 	 */
 	public static final int CTLG_ADD_MASTER_RESULT = CTLG_BASE + 11;
 
@@ -333,8 +345,10 @@ public final class DataCloudTags {
 	// /////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Denotes the request to de-register / delete a master file from the Replica Catalogue.<br>
-	 * The format of this request is Object[2] = {String lfn, Integer resourceID}.<br>
+	 * Denotes the request to de-register / delete a master file from the
+	 * Replica Catalogue.<br>
+	 * The format of this request is Object[2] = {String lfn, Integer
+	 * resourceID}.<br>
 	 * The reply tag name is {@link #CTLG_DELETE_MASTER_RESULT}.
 	 */
 	public static final int CTLG_DELETE_MASTER = CTLG_BASE + 20;
@@ -342,8 +356,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of de-registering a master file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of CTLG_DELETE_MASTER_XXXX where XXXX means the
-	 * error/success message
+	 * NOTE: The result id is in the form of CTLG_DELETE_MASTER_XXXX where XXXX
+	 * means the error/success message
 	 */
 	public static final int CTLG_DELETE_MASTER_RESULT = CTLG_BASE + 21;
 
@@ -354,21 +368,24 @@ public final class DataCloudTags {
 	public static final int CTLG_DELETE_MASTER_ERROR = CTLG_BASE + 23;
 
 	/**
-	 * Denotes that master file deletion is failed because the file does not exist in the catalogue
+	 * Denotes that master file deletion is failed because the file does not
+	 * exist in the catalogue
 	 */
 	public static final int CTLG_DELETE_MASTER_DOESNT_EXIST = CTLG_BASE + 24;
 
 	/**
-	 * Denotes that master file deletion is failed because replica files are still in the catalogue.
-	 * All replicas need to be deleted first.
+	 * Denotes that master file deletion is failed because replica files are
+	 * still in the catalogue. All replicas need to be deleted first.
 	 */
 	public static final int CTLG_DELETE_MASTER_REPLICAS_EXIST = CTLG_BASE + 25;
 
 	// /////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Denotes the request to register / add a replica file to the Replica Catalogue.<br>
-	 * The format of this request is Object[2] = {String lfn, Integer resourceID}.<br>
+	 * Denotes the request to register / add a replica file to the Replica
+	 * Catalogue.<br>
+	 * The format of this request is Object[2] = {String lfn, Integer
+	 * resourceID}.<br>
 	 * The reply tag name is {@link #CTLG_ADD_REPLICA_RESULT}.
 	 */
 	public static final int CTLG_ADD_REPLICA = CTLG_BASE + 30;
@@ -376,8 +393,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of registering a replica file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of CTLG_ADD_REPLICA_XXXX where XXXX means the
-	 * error/success message
+	 * NOTE: The result id is in the form of CTLG_ADD_REPLICA_XXXX where XXXX
+	 * means the error/success message
 	 */
 	public static final int CTLG_ADD_REPLICA_RESULT = CTLG_BASE + 31;
 
@@ -388,8 +405,8 @@ public final class DataCloudTags {
 	public static final int CTLG_ADD_REPLICA_ERROR = CTLG_BASE + 33;
 
 	/**
-	 * Denotes that replica file addition is failed because the given file name does not exist in
-	 * the catalogue
+	 * Denotes that replica file addition is failed because the given file name
+	 * does not exist in the catalogue
 	 */
 	public static final int CTLG_ADD_REPLICA_ERROR_DOESNT_EXIST = CTLG_BASE + 34;
 
@@ -401,8 +418,10 @@ public final class DataCloudTags {
 	// /////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Denotes the request to de-register / delete a replica file from the Replica Catalogue.<br>
-	 * The format of this request is Object[2] = {String lfn, Integer resourceID}.<br>
+	 * Denotes the request to de-register / delete a replica file from the
+	 * Replica Catalogue.<br>
+	 * The format of this request is Object[2] = {String lfn, Integer
+	 * resourceID}.<br>
 	 * The reply tag name is {@link #CTLG_DELETE_REPLICA_RESULT}.
 	 */
 	public static final int CTLG_DELETE_REPLICA = CTLG_BASE + 40;
@@ -410,8 +429,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of de-registering a replica file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of CTLG_DELETE_REPLICA_XXXX where XXXX means the
-	 * error/success message
+	 * NOTE: The result id is in the form of CTLG_DELETE_REPLICA_XXXX where XXXX
+	 * means the error/success message
 	 */
 	public static final int CTLG_DELETE_REPLICA_RESULT = CTLG_BASE + 41;
 
@@ -422,17 +441,18 @@ public final class DataCloudTags {
 	public static final int CTLG_DELETE_REPLICA_ERROR = CTLG_BASE + 43;
 
 	/**
-	 * Denotes that replica file deletion is failed because the file does not exist in the catalogue
+	 * Denotes that replica file deletion is failed because the file does not
+	 * exist in the catalogue
 	 */
 	public static final int CTLG_DELETE_REPLICA_ERROR_DOESNT_EXIST = CTLG_BASE + 44;
 
 	// /////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Denotes the request to modify an existing master file information stored in the Replica
-	 * Catalogue.<br>
-	 * The format of this request is Object[3] = {String filename, FileAttribute attr, Integer
-	 * resID}.<br>
+	 * Denotes the request to modify an existing master file information stored
+	 * in the Replica Catalogue.<br>
+	 * The format of this request is Object[3] = {String filename, FileAttribute
+	 * attr, Integer resID}.<br>
 	 * The reply tag name is {@link #CTLG_MODIFY_MASTER_RESULT}.
 	 */
 	public static final int CTLG_MODIFY_MASTER = CTLG_BASE + 50;
@@ -440,8 +460,8 @@ public final class DataCloudTags {
 	/**
 	 * Sends the result of modifying a master file back to sender.<br>
 	 * The format of the reply is Object[2] = {String lfn, Integer resultID}.<br>
-	 * NOTE: The result id is in the form of CTLG_MODIFY_MASTER_XXXX where XXXX means the
-	 * error/success message
+	 * NOTE: The result id is in the form of CTLG_MODIFY_MASTER_XXXX where XXXX
+	 * means the error/success message
 	 */
 	public static final int CTLG_MODIFY_MASTER_RESULT = CTLG_BASE + 51;
 
@@ -454,14 +474,14 @@ public final class DataCloudTags {
 	public static final int CTLG_MODIFY_MASTER_ERROR = CTLG_BASE + 53;
 
 	/**
-	 * Denotes that master file modification is failed because the file does not exist in the
-	 * catalogue
+	 * Denotes that master file modification is failed because the file does not
+	 * exist in the catalogue
 	 */
 	public static final int CTLG_MODIFY_MASTER_ERROR_DOESNT_EXIST = CTLG_BASE + 54;
 
 	/**
-	 * Denotes that master file modification is failed because the file attribute is set to a
-	 * read-only
+	 * Denotes that master file modification is failed because the file
+	 * attribute is set to a read-only
 	 */
 	public static final int CTLG_MODIFY_MASTER_ERROR_READ_ONLY = CTLG_BASE + 55;
 

@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -13,7 +12,8 @@ import java.util.Date;
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * A class for storing related information regarding to a {@link gridsim.datagrid.File} entity.
+ * A class for storing related information regarding to a
+ * {@link gridsim.datagrid.File} entity.
  * 
  * @author Uros Cibej
  * @author Anthony Sulistio
@@ -48,13 +48,16 @@ public class FileAttribute {
 	/**
 	 * Allocates a new FileAttribute class.
 	 * 
-	 * @param fileName file name
-	 * @param fileSize size of this file (in bytes)
-	 * @throws ParameterException This happens when one of the following scenarios occur:
-	 *             <ul>
-	 *             <li>the file name is empty or <tt>null</tt>
-	 *             <li>the file size is zero or negative numbers
-	 *             </ul>
+	 * @param fileName
+	 *        file name
+	 * @param fileSize
+	 *        size of this file (in bytes)
+	 * @throws ParameterException
+	 *         This happens when one of the following scenarios occur:
+	 *         <ul>
+	 *         <li>the file name is empty or <tt>null</tt>
+	 *         <li>the file size is zero or negative numbers
+	 *         </ul>
 	 */
 	public FileAttribute(String fileName, int fileSize) throws ParameterException {
 		// check for errors in the input
@@ -91,8 +94,10 @@ public class FileAttribute {
 	/**
 	 * Copy the values of this object into another FileAttribute class
 	 * 
-	 * @param attr a FileAttribute object (the destination)
-	 * @return <tt>true</tt> if the copy operation is successful, <tt>false</tt> otherwise
+	 * @param attr
+	 *        a FileAttribute object (the destination)
+	 * @return <tt>true</tt> if the copy operation is successful, <tt>false</tt>
+	 *         otherwise
 	 */
 	public boolean copyValue(FileAttribute attr) {
 		if (attr == null) {
@@ -118,7 +123,8 @@ public class FileAttribute {
 	/**
 	 * Sets the file creation time (in millisecond)
 	 * 
-	 * @param creationTime the file creation time (in millisecond)
+	 * @param creationTime
+	 *        the file creation time (in millisecond)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setCreationTime(long creationTime) {
@@ -142,7 +148,8 @@ public class FileAttribute {
 	/**
 	 * Sets the resource ID that stores this file
 	 * 
-	 * @param resourceID a resource ID
+	 * @param resourceID
+	 *        a resource ID
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setResourceID(int resourceID) {
@@ -166,7 +173,8 @@ public class FileAttribute {
 	/**
 	 * Sets the owner name of this file
 	 * 
-	 * @param name the owner name
+	 * @param name
+	 *        the owner name
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setOwnerName(String name) {
@@ -189,8 +197,8 @@ public class FileAttribute {
 
 	/**
 	 * Gets the size of this object (in byte).<br>
-	 * NOTE: This object size is NOT the actual file size. Moreover, this size is used for
-	 * transferring this object over a network.
+	 * NOTE: This object size is NOT the actual file size. Moreover, this size
+	 * is used for transferring this object over a network.
 	 * 
 	 * @return the object size (in byte)
 	 */
@@ -210,7 +218,8 @@ public class FileAttribute {
 	/**
 	 * Sets the file size (in MBytes)
 	 * 
-	 * @param fileSize the file size (in MBytes)
+	 * @param fileSize
+	 *        the file size (in MBytes)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setFileSize(int fileSize) {
@@ -246,7 +255,8 @@ public class FileAttribute {
 	 * NOTE: This time is relative to the start time. Preferably use
 	 * {@link gridsim.CloudSim#clock()} method.
 	 * 
-	 * @param time the last update time (in seconds)
+	 * @param time
+	 *        the last update time (in seconds)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setUpdateTime(double time) {
@@ -270,7 +280,8 @@ public class FileAttribute {
 	/**
 	 * Sets the file registration ID (published by a Replica Catalogue entity)
 	 * 
-	 * @param id registration ID
+	 * @param id
+	 *        registration ID
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setRegistrationId(int id) {
@@ -294,7 +305,8 @@ public class FileAttribute {
 	/**
 	 * Sets the file type (e.g. raw, tag, etc)
 	 * 
-	 * @param type a file type
+	 * @param type
+	 *        a file type
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setType(int type) {
@@ -318,7 +330,8 @@ public class FileAttribute {
 	/**
 	 * Sets the checksum of this file
 	 * 
-	 * @param checksum the checksum of this file
+	 * @param checksum
+	 *        the checksum of this file
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setChecksum(int checksum) {
@@ -342,7 +355,8 @@ public class FileAttribute {
 	/**
 	 * Sets the cost associated with this file
 	 * 
-	 * @param cost cost of this file
+	 * @param cost
+	 *        cost of this file
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setCost(double cost) {
@@ -380,8 +394,9 @@ public class FileAttribute {
 	/**
 	 * Marks this file as a master copy or replica
 	 * 
-	 * @param masterCopy a flag denotes <tt>true</tt> for master copy or <tt>false</tt> for a
-	 *            replica
+	 * @param masterCopy
+	 *        a flag denotes <tt>true</tt> for master copy or <tt>false</tt> for
+	 *        a replica
 	 */
 	public void setMasterCopy(boolean masterCopy) {
 		this.masterCopy = masterCopy;
@@ -399,7 +414,9 @@ public class FileAttribute {
 	/**
 	 * Marks this file as a read only or not
 	 * 
-	 * @param readOnly a flag denotes <tt>true</tt> for read only or <tt>false</tt> for re-writeable
+	 * @param readOnly
+	 *        a flag denotes <tt>true</tt> for read only or <tt>false</tt> for
+	 *        re-writeable
 	 */
 	public void setReadOnly(boolean readOnly) {
 		this.readOnly = readOnly;
@@ -417,7 +434,8 @@ public class FileAttribute {
 	/**
 	 * Sets the file name
 	 * 
-	 * @param name the file name
+	 * @param name
+	 *        the file name
 	 */
 	public void setName(String name) {
 		this.name = name;

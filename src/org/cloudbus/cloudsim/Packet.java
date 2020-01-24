@@ -1,15 +1,9 @@
 /*
- * Gokul Poduval & Chen-Khong Tham
- * Computer Communication Networks (CCN) Lab
- * Dept of Electrical & Computer Engineering
- * National University of Singapore
- * August 2004
- *
- * Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * Copyright (c) 2004, The University of Melbourne, Australia and National
- * University of Singapore
- * Packet.java - Interface of a Network Packet.
- *
+ * Gokul Poduval & Chen-Khong Tham Computer Communication Networks (CCN) Lab
+ * Dept of Electrical & Computer Engineering National University of Singapore
+ * August 2004 Licence: GPL - http://www.gnu.org/copyleft/gpl.html Copyright (c)
+ * 2004, The University of Melbourne, Australia and National University of
+ * Singapore Packet.java - Interface of a Network Packet.
  */
 
 package org.cloudbus.cloudsim;
@@ -45,7 +39,8 @@ public interface Packet {
 	/**
 	 * Sets the size of this packet
 	 * 
-	 * @param size size of the packet
+	 * @param size
+	 *        size of the packet
 	 * @return <tt>true</tt> if it is successful, <tt>false</tt> otherwise
 	 * @pre size >= 0
 	 * @post $none
@@ -91,10 +86,11 @@ public interface Packet {
 	/**
 	 * Sets the network service type of this packet.
 	 * <p>
-	 * By default, the service type is 0 (zero). It is depends on the packet scheduler to determine
-	 * the priority of this service level.
+	 * By default, the service type is 0 (zero). It is depends on the packet
+	 * scheduler to determine the priority of this service level.
 	 * 
-	 * @param serviceType this packet's service type
+	 * @param serviceType
+	 *        this packet's service type
 	 * @pre serviceType >= 0
 	 * @post $none
 	 */
@@ -112,7 +108,8 @@ public interface Packet {
 	/**
 	 * Sets an entity ID from the last hop that this packet has traversed.
 	 * 
-	 * @param last an entity ID from the last hop
+	 * @param last
+	 *        an entity ID from the last hop
 	 * @pre last > 0
 	 * @post $none
 	 */

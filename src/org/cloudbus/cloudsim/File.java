@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim;
@@ -43,13 +42,16 @@ public class File {
 	 * Creates a new DataCloud file with a given size (in MBytes). <br>
 	 * NOTE: By default, a newly-created file is set to a <b>master</b> copy.
 	 * 
-	 * @param fileName file name
-	 * @param fileSize file size is in MBytes
-	 * @throws ParameterException This happens when one of the following scenarios occur:
-	 *             <ul>
-	 *             <li>the file name is empty or <tt>null</tt>
-	 *             <li>the file size is zero or negative numbers
-	 *             </ul>
+	 * @param fileName
+	 *        file name
+	 * @param fileSize
+	 *        file size is in MBytes
+	 * @throws ParameterException
+	 *         This happens when one of the following scenarios occur:
+	 *         <ul>
+	 *         <li>the file name is empty or <tt>null</tt>
+	 *         <li>the file size is zero or negative numbers
+	 *         </ul>
 	 */
 	public File(String fileName, int fileSize) throws ParameterException {
 		if (fileName == null || fileName.length() == 0) {
@@ -66,11 +68,13 @@ public class File {
 	}
 
 	/**
-	 * Copy constructor, i.e. cloning from a source file into this object, but this object is set to
-	 * a <b>replica</b>
+	 * Copy constructor, i.e. cloning from a source file into this object, but
+	 * this object is set to a <b>replica</b>
 	 * 
-	 * @param file the source of a File object to copy
-	 * @throws ParameterException This happens when the source file is <tt>null</tt>
+	 * @param file
+	 *        the source of a File object to copy
+	 * @throws ParameterException
+	 *         This happens when the source file is <tt>null</tt>
 	 */
 	public File(File file) throws ParameterException {
 		if (file == null) {
@@ -86,7 +90,8 @@ public class File {
 	/**
 	 * Clone this file but the clone file is set to a <b>replica</b>
 	 * 
-	 * @return a clone of this file (as a replica) or <tt>null</tt> if an error occurs
+	 * @return a clone of this file (as a replica) or <tt>null</tt> if an error
+	 *         occurs
 	 */
 	public File makeReplica() {
 		return makeCopy();
@@ -95,7 +100,8 @@ public class File {
 	/**
 	 * Clone this file and make the new file as a <b>master</b> copy as well
 	 * 
-	 * @return a clone of this file (as a master copy) or <tt>null</tt> if an error occurs
+	 * @return a clone of this file (as a master copy) or <tt>null</tt> if an
+	 *         error occurs
 	 */
 	public File makeMasterCopy() {
 		File file = makeCopy();
@@ -109,7 +115,8 @@ public class File {
 	/**
 	 * Makes a copy of this file
 	 * 
-	 * @return a clone of this file (as a replica) or <tt>null</tt> if an error occurs
+	 * @return a clone of this file (as a replica) or <tt>null</tt> if an error
+	 *         occurs
 	 */
 	private File makeCopy() {
 		File file = null;
@@ -136,8 +143,8 @@ public class File {
 
 	/**
 	 * Gets the size of this object (in byte).<br>
-	 * NOTE: This object size is NOT the actual file size. Moreover, this size is used for
-	 * transferring this object over a network.
+	 * NOTE: This object size is NOT the actual file size. Moreover, this size
+	 * is used for transferring this object over a network.
 	 * 
 	 * @return the object size (in byte)
 	 */
@@ -148,7 +155,8 @@ public class File {
 	/**
 	 * Sets the resource ID that stores this file
 	 * 
-	 * @param resourceID a resource ID
+	 * @param resourceID
+	 *        a resource ID
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setResourceID(int resourceID) {
@@ -176,7 +184,8 @@ public class File {
 	/**
 	 * Sets the file name
 	 * 
-	 * @param name the file name
+	 * @param name
+	 *        the file name
 	 */
 	public void setName(String name) {
 		attribute.setName(name);
@@ -185,7 +194,8 @@ public class File {
 	/**
 	 * Sets the owner name of this file
 	 * 
-	 * @param name the owner name
+	 * @param name
+	 *        the owner name
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setOwnerName(String name) {
@@ -222,7 +232,8 @@ public class File {
 	/**
 	 * Sets the file size (in MBytes)
 	 * 
-	 * @param fileSize the file size (in MBytes)
+	 * @param fileSize
+	 *        the file size (in MBytes)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setFileSize(int fileSize) {
@@ -234,7 +245,8 @@ public class File {
 	 * NOTE: This time is relative to the start time. Preferably use
 	 * {@link gridsim.CloudSim#clock()} method.
 	 * 
-	 * @param time the last update time (in seconds)
+	 * @param time
+	 *        the last update time (in seconds)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setUpdateTime(double time) {
@@ -253,7 +265,8 @@ public class File {
 	/**
 	 * Sets the file registration ID (published by a Replica Catalogue entity)
 	 * 
-	 * @param id registration ID
+	 * @param id
+	 *        registration ID
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setRegistrationID(int id) {
@@ -272,7 +285,8 @@ public class File {
 	/**
 	 * Sets the file type (e.g. raw, tag, etc)
 	 * 
-	 * @param type a file type
+	 * @param type
+	 *        a file type
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setType(int type) {
@@ -291,7 +305,8 @@ public class File {
 	/**
 	 * Sets the checksum of this file
 	 * 
-	 * @param checksum the checksum of this file
+	 * @param checksum
+	 *        the checksum of this file
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setChecksum(int checksum) {
@@ -310,7 +325,8 @@ public class File {
 	/**
 	 * Sets the cost associated with this file
 	 * 
-	 * @param cost cost of this file
+	 * @param cost
+	 *        cost of this file
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 */
 	public boolean setCost(double cost) {
@@ -347,8 +363,9 @@ public class File {
 	/**
 	 * Marks this file as a master copy or replica
 	 * 
-	 * @param masterCopy a flag denotes <tt>true</tt> for master copy or <tt>false</tt> for a
-	 *            replica
+	 * @param masterCopy
+	 *        a flag denotes <tt>true</tt> for master copy or <tt>false</tt> for
+	 *        a replica
 	 */
 	public void setMasterCopy(boolean masterCopy) {
 		attribute.setMasterCopy(masterCopy);
@@ -366,7 +383,9 @@ public class File {
 	/**
 	 * Marks this file as a read only or not
 	 * 
-	 * @param readOnly a flag denotes <tt>true</tt> for read only or <tt>false</tt> for re-writeable
+	 * @param readOnly
+	 *        a flag denotes <tt>true</tt> for read only or <tt>false</tt> for
+	 *        re-writeable
 	 */
 	public void setReadOnly(boolean readOnly) {
 		attribute.setReadOnly(readOnly);
@@ -382,10 +401,12 @@ public class File {
 	}
 
 	/**
-	 * Sets the current transaction time (in second) of this file. This transaction time can be
-	 * related to the operation of adding / deleting / getting this file on a resource's storage.
+	 * Sets the current transaction time (in second) of this file. This
+	 * transaction time can be related to the operation of adding / deleting /
+	 * getting this file on a resource's storage.
 	 * 
-	 * @param time the transaction time (in second)
+	 * @param time
+	 *        the transaction time (in second)
 	 * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
 	 * @see gridsim.datagrid.storage.Storage#addFile(File)
 	 * @see gridsim.datagrid.storage.Storage#addFile(List)

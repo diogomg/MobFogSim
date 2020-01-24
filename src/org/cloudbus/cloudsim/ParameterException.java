@@ -1,23 +1,17 @@
 /*
- * ** Network and Service Differentiation Extensions to CloudSim 3.0 **
- *
- * Gokul Poduval & Chen-Khong Tham
- * Computer Communication Networks (CCN) Lab
- * Dept of Electrical & Computer Engineering
- * National University of Singapore
- * October 2004
- *
- * Licence: GPL - http://www.gnu.org/copyleft/gpl.html
- * Copyright (c) 2004, The University of Melbourne, Australia and
- * National University of Singapore
+ * ** Network and Service Differentiation Extensions to CloudSim 3.0 ** Gokul
+ * Poduval & Chen-Khong Tham Computer Communication Networks (CCN) Lab Dept of
+ * Electrical & Computer Engineering National University of Singapore October
+ * 2004 Licence: GPL - http://www.gnu.org/copyleft/gpl.html Copyright (c) 2004,
+ * The University of Melbourne, Australia and National University of Singapore
  * ParameterException.java - Thrown for illegal parameters
- *
  */
 
 package org.cloudbus.cloudsim;
 
 /**
- * This exception is to report bad or invalid parameters given during constructor.
+ * This exception is to report bad or invalid parameters given during
+ * constructor.
  * 
  * @author Gokul Poduval
  * @author Chen-Khong Tham, National University of Singapore
@@ -45,7 +39,8 @@ public class ParameterException extends Exception {
 	/**
 	 * Creates a new ParameterException object.
 	 * 
-	 * @param message an error message
+	 * @param message
+	 *        an error message
 	 * @pre $none
 	 * @post $none
 	 */
