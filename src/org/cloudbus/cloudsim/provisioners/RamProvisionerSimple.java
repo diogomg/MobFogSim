@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.provisioners;
@@ -21,8 +20,8 @@ import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * RamProvisionerSimple is an extension of RamProvisioner which uses a best-effort policy to
- * allocate memory to a VM.
+ * RamProvisionerSimple is an extension of RamProvisioner which uses a
+ * best-effort policy to allocate memory to a VM.
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -36,7 +35,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 	/**
 	 * Instantiates a new ram provisioner simple.
 	 * 
-	 * @param availableRam the available ram
+	 * @param availableRam
+	 *        the available ram
 	 */
 	public RamProvisionerSimple(int availableRam) {
 		super(availableRam);
@@ -45,7 +45,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.provisioners.RamProvisioner#allocateRamForVm(cloudsim.Vm, int)
+	 * @see cloudsim.provisioners.RamProvisioner#allocateRamForVm(cloudsim.Vm,
+	 * int)
 	 */
 	@Override
 	public boolean allocateRamForVm(Vm vm, int ram) {
@@ -57,31 +58,28 @@ public class RamProvisionerSimple extends RamProvisioner {
 
 		deallocateRamForVm(vm);
 
-		try(FileWriter fw1 = new FileWriter("creating_modules.txt", true);
-			    BufferedWriter bw1 = new BufferedWriter(fw1);
-			    PrintWriter out1 = new PrintWriter(bw1))
+		try (FileWriter fw1 = new FileWriter("creating_modules.txt", true);
+			BufferedWriter bw1 = new BufferedWriter(fw1);
+			PrintWriter out1 = new PrintWriter(bw1))
 		{
-			out1.print (CloudSim.clock() + " RAM "+getAvailableRam()+" required "+ram + " result " + (getAvailableRam() - ram) + " App " + vm.getVmm() + " device ");
-			if(vm.getHost() != null){
+			out1.print(CloudSim.clock() + " RAM " + getAvailableRam() + " required " + ram
+				+ " result " + (getAvailableRam() - ram) + " App " + vm.getVmm() + " device ");
+			if (vm.getHost() != null) {
 				out1.println(vm.getHost().getDatacenter().getName());
 			}
-			else{
+			else {
 				out1.println("null");
 			}
-		}
-		catch (UnsupportedEncodingException e) {
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
 
 		if (getAvailableRam() >= ram) {
 			setAvailableRam(getAvailableRam() - ram);
@@ -97,7 +95,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.provisioners.RamProvisioner#getAllocatedRamForVm(cloudsim.Vm)
+	 * @see
+	 * cloudsim.provisioners.RamProvisioner#getAllocatedRamForVm(cloudsim.Vm)
 	 */
 	@Override
 	public int getAllocatedRamForVm(Vm vm) {
@@ -132,7 +131,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.provisioners.RamProvisioner#isSuitableForVm(cloudsim.Vm, int)
+	 * @see cloudsim.provisioners.RamProvisioner#isSuitableForVm(cloudsim.Vm,
+	 * int)
 	 */
 	@Override
 	public boolean isSuitableForVm(Vm vm, int ram) {
@@ -157,7 +157,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 	/**
 	 * Sets the ram table.
 	 * 
-	 * @param ramTable the ram table
+	 * @param ramTable
+	 *        the ram table
 	 */
 	protected void setRamTable(Map<String, Integer> ramTable) {
 		this.ramTable = ramTable;

@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.provisioners;
@@ -29,8 +28,8 @@ public abstract class PeProvisioner {
 	/**
 	 * Creates the new PeProvisioner.
 	 * 
-	 * @param mips overall amount of MIPS available in the Pe
-	 * 
+	 * @param mips
+	 *        overall amount of MIPS available in the Pe
 	 * @pre mips>=0
 	 * @post $none
 	 */
@@ -42,11 +41,11 @@ public abstract class PeProvisioner {
 	/**
 	 * Allocates MIPS for a given VM.
 	 * 
-	 * @param vm virtual machine for which the MIPS are being allocated
-	 * @param mips the mips
-	 * 
+	 * @param vm
+	 *        virtual machine for which the MIPS are being allocated
+	 * @param mips
+	 *        the mips
 	 * @return $true if the MIPS could be allocated; $false otherwise
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -55,11 +54,11 @@ public abstract class PeProvisioner {
 	/**
 	 * Allocates MIPS for a given VM.
 	 * 
-	 * @param vmUid the vm uid
-	 * @param mips the mips
-	 * 
+	 * @param vmUid
+	 *        the vm uid
+	 * @param mips
+	 *        the mips
 	 * @return $true if the MIPS could be allocated; $false otherwise
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -68,11 +67,11 @@ public abstract class PeProvisioner {
 	/**
 	 * Allocates MIPS for a given VM.
 	 * 
-	 * @param vm virtual machine for which the MIPS are being allocated
-	 * @param mips the mips for each virtual Pe
-	 * 
+	 * @param vm
+	 *        virtual machine for which the MIPS are being allocated
+	 * @param mips
+	 *        the mips for each virtual Pe
 	 * @return $true if the MIPS could be allocated; $false otherwise
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -81,10 +80,9 @@ public abstract class PeProvisioner {
 	/**
 	 * Gets allocated MIPS for a given VM.
 	 * 
-	 * @param vm virtual machine for which the MIPS are being allocated
-	 * 
+	 * @param vm
+	 *        virtual machine for which the MIPS are being allocated
 	 * @return array of allocated MIPS
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -93,10 +91,9 @@ public abstract class PeProvisioner {
 	/**
 	 * Gets total allocated MIPS for a given VM for all PEs.
 	 * 
-	 * @param vm virtual machine for which the MIPS are being allocated
-	 * 
+	 * @param vm
+	 *        virtual machine for which the MIPS are being allocated
 	 * @return total allocated MIPS
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -105,11 +102,11 @@ public abstract class PeProvisioner {
 	/**
 	 * Gets allocated MIPS for a given VM for a given virtual Pe.
 	 * 
-	 * @param vm virtual machine for which the MIPS are being allocated
-	 * @param peId the pe id
-	 * 
+	 * @param vm
+	 *        virtual machine for which the MIPS are being allocated
+	 * @param peId
+	 *        the pe id
 	 * @return allocated MIPS
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -118,8 +115,8 @@ public abstract class PeProvisioner {
 	/**
 	 * Releases MIPS used by a VM.
 	 * 
-	 * @param vm the vm
-	 * 
+	 * @param vm
+	 *        the vm
 	 * @pre $none
 	 * @post none
 	 */
@@ -147,7 +144,8 @@ public abstract class PeProvisioner {
 	/**
 	 * Sets the MIPS.
 	 * 
-	 * @param mips the MIPS to set
+	 * @param mips
+	 *        the MIPS to set
 	 */
 	public void setMips(double mips) {
 		this.mips = mips;
@@ -157,7 +155,6 @@ public abstract class PeProvisioner {
 	 * Gets the available MIPS in the PE.
 	 * 
 	 * @return available MIPS
-	 * 
 	 * @pre $none
 	 * @post $none
 	 */
@@ -168,7 +165,8 @@ public abstract class PeProvisioner {
 	/**
 	 * Sets the available MIPS.
 	 * 
-	 * @param availableMips the availableMips to set
+	 * @param availableMips
+	 *        the availableMips to set
 	 */
 	protected void setAvailableMips(double availableMips) {
 		this.availableMips = availableMips;
