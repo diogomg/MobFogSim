@@ -1,9 +1,6 @@
 /*
- * @(#)FloydWarshall.java	ver 1.2  6/20/2005
- *
- * Modified by Weishuai Yang (wyang@cs.binghamton.edu).
- * Originally written by Rahul Simha
- *
+ * @(#)FloydWarshall.java ver 1.2 6/20/2005 Modified by Weishuai Yang
+ * (wyang@cs.binghamton.edu). Originally written by Rahul Simha
  */
 
 package org.cloudbus.cloudsim.network;
@@ -44,7 +41,8 @@ public class FloydWarshall_Float {
 	/**
 	 * initialization matrix
 	 * 
-	 * @param numVertices number of nodes
+	 * @param numVertices
+	 *        number of nodes
 	 */
 	public void initialize(int numVertices) {
 		this.numVertices = numVertices;
@@ -70,7 +68,8 @@ public class FloydWarshall_Float {
 	/**
 	 * calculates all pairs delay
 	 * 
-	 * @param adjMatrix original delay matrix
+	 * @param adjMatrix
+	 *        original delay matrix
 	 * @return all pairs delay matrix
 	 */
 	public float[][] allPairsShortestPaths(float[][] adjMatrix) {
@@ -99,7 +98,8 @@ public class FloydWarshall_Float {
 				for (int j = 0; j < numVertices; j++) {
 					if (i != j) {
 
-						// D_k[i][j] = min ( D_k-1[i][j], D_k-1[i][k] + D_k-1[k][j].
+						// D_k[i][j] = min ( D_k-1[i][j], D_k-1[i][k] +
+						// D_k-1[k][j].
 						if (Dk_minus_one[i][j] <= Dk_minus_one[i][k] + Dk_minus_one[k][j]) {
 							Dk[i][j] = Dk_minus_one[i][j];
 							Pk[i][j] = Pk_minus_one[i][j];
@@ -135,59 +135,4 @@ public class FloydWarshall_Float {
 	public int[][] getPK() {
 		return Pk;
 	}
-
-
-/*
-  public static void main (String[] argv)
-  {
-    // A test case.
-     *
-      double[][] adjMatrix = {
-        {0, 1, 0, 0, 1},
-        {1, 0, 1, 3, 0},
-        {0, 1, 0, 2, 0},
-        {0, 3, 2, 0, 1},
-        {1, 0, 0, 1, 0},
-      };
-
-
-      int n = adjMatrix.length;
-      FloydWarshall fwAlg = new FloydWarshall ();
-      fwAlg.initialize (n);
-      adjMatrix=fwAlg.allPairsShortestPaths (adjMatrix);
-
-	    //debug begin
-	    StringBuffer s0=new StringBuffer("Delay Information before floydwarshall:\n");
-	    for(int i=0;i<n;i++){
-	    	s0.append("Node "+i+" to others:");
-	    	for(int j=0;j<n;j++){
-	    			s0.append(LogFormatter.sprintf(" % 6.1f     ", adjMatrix[i][j]));
-
-	    	}
-	    	s0.append("\n");
-	    }
-	    Log.printLine(""+s0);
-
-
-	    int[][] Pk=fwAlg.getPK();
-
-
-	    Log.printLine("Path information");
-	    for(int i=0;i<n;i++){
-	    	for(int j=0;j<n;j++){
-	    		Log.print("From "+i+" to "+j+": ");
-		    	int pre=Pk[i][j];
-		    	while((pre!=-1)&&(pre!=i)){
-		    		Log.print(" <-  "+ pre);
-		    		pre=Pk[i][pre];
-		    		if((pre==-1)||(pre==i))
-		    			Log.print(" <-  "+ pre);
-		    	}
-				Log.printLine("\n");
-		    }
-	    }
-
-  }
-
-*/
 }
