@@ -115,7 +115,7 @@ public class PeProvisionerOverbooking extends PeProvisioner {
 	public void deallocateMipsForAllVms() {
 		super.deallocateMipsForAllVms();
 
-		setAvailableMips(PeProvisionerOverbooking.getOverbookedMips(getMips()));	// Overbooking
+		setAvailableMips(PeProvisionerOverbooking.getOverbookedMips(getMips())); // Overbooking
 
 		getPeTable().clear();
 	}

@@ -125,7 +125,7 @@ public class BwProvisionerOverbooking extends BwProvisioner {
 	public void deallocateBwForAllVms() {
 		super.deallocateBwForAllVms();
 
-		setAvailableBw((long) getOverbookedBw(getBw()));	// Overbooking
+		setAvailableBw((long) getOverbookedBw(getBw())); // Overbooking
 		getBwTable().clear();
 	}
 

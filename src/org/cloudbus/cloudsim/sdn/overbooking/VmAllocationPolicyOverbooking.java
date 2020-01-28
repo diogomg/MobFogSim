@@ -93,7 +93,8 @@ public class VmAllocationPolicyOverbooking extends VmAllocationPolicy implements
 
 		boolean result = false;
 
-		// freeReousrces : Weighted-calculated free resource percentage in each host
+		// freeReousrces : Weighted-calculated free resource percentage in each
+		// host
 		double[] freeResources = new double[numHosts];
 		for (int i = 0; i < numHosts; i++) {
 			double mipsFreePercent = (double) getFreeMips().get(i) / this.hostTotalMips;
@@ -121,19 +122,15 @@ public class VmAllocationPolicyOverbooking extends VmAllocationPolicy implements
 
 			// Check whether the host can hold this VM or not.
 			if (getFreeMips().get(idx) < requiredMips) {
-				System.err.format("not enough MIPS. MIPS %d(%.2f) / BW %d (%.2f)\n",
-					getFreeMips().get(idx),
-					(double) getFreeMips().get(idx) / requiredMips,
-					getFreeBw().get(idx),
-					(double) getFreeBw().get(idx) / requiredBw);
+				System.err.format("not enough MIPS. MIPS %d(%.2f) / BW %d (%.2f)\n", getFreeMips()
+					.get(idx), (double) getFreeMips().get(idx) / requiredMips,
+					getFreeBw().get(idx), (double) getFreeBw().get(idx) / requiredBw);
 				continue;
 			}
 			if (getFreeBw().get(idx) < requiredBw) {
-				System.err.format("not enough BW. MIPS %d(%.2f) / BW %d (%.2f)\n",
-					getFreeMips().get(idx),
-					(double) getFreeMips().get(idx) / requiredMips,
-					getFreeBw().get(idx),
-					(double) getFreeBw().get(idx) / requiredBw);
+				System.err.format("not enough BW. MIPS %d(%.2f) / BW %d (%.2f)\n", getFreeMips()
+					.get(idx), (double) getFreeMips().get(idx) / requiredMips,
+					getFreeBw().get(idx), (double) getFreeBw().get(idx) / requiredBw);
 				continue;
 			}
 
