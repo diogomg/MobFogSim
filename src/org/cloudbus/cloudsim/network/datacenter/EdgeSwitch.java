@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.network.datacenter;
@@ -20,14 +19,13 @@ import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.core.predicates.PredicateType;
 
 /**
- * This class allows to simulate Edge switch for Datacenter network. It interacts with other
- * switches in order to exchange packets.
- * 
- * Please refer to following publication for more details:
- * 
- * Saurabh Kumar Garg and Rajkumar Buyya, NetworkCloudSim: Modelling Parallel Applications in Cloud
- * Simulations, Proceedings of the 4th IEEE/ACM International Conference on Utility and Cloud
- * Computing (UCC 2011, IEEE CS Press, USA), Melbourne, Australia, December 5-7, 2011.
+ * This class allows to simulate Edge switch for Datacenter network. It
+ * interacts with other switches in order to exchange packets. Please refer to
+ * following publication for more details: Saurabh Kumar Garg and Rajkumar
+ * Buyya, NetworkCloudSim: Modelling Parallel Applications in Cloud Simulations,
+ * Proceedings of the 4th IEEE/ACM International Conference on Utility and Cloud
+ * Computing (UCC 2011, IEEE CS Press, USA), Melbourne, Australia, December 5-7,
+ * 2011.
  * 
  * @author Saurabh Kumar Garg
  * @since CloudSim Toolkit 3.0
@@ -35,13 +33,16 @@ import org.cloudbus.cloudsim.core.predicates.PredicateType;
 public class EdgeSwitch extends Switch {
 
 	/**
-	 * Constructor for Edge Switch We have to specify switches that are connected to its downlink
-	 * and uplink ports, and corresponding bandwidths. In this switch downlink ports are connected
-	 * to hosts not to a switch.
+	 * Constructor for Edge Switch We have to specify switches that are
+	 * connected to its downlink and uplink ports, and corresponding bandwidths.
+	 * In this switch downlink ports are connected to hosts not to a switch.
 	 * 
-	 * @param name Name of the switch
-	 * @param level At which level switch is with respect to hosts.
-	 * @param dc Pointer to Datacenter
+	 * @param name
+	 *        Name of the switch
+	 * @param level
+	 *        At which level switch is with respect to hosts.
+	 * @param dc
+	 *        Pointer to Datacenter
 	 */
 	public EdgeSwitch(String name, int level, NetworkDatacenter dc) {
 		super(name, level, dc);
@@ -58,7 +59,8 @@ public class EdgeSwitch extends Switch {
 	/**
 	 * Send Packet to switch connected through a uplink port
 	 * 
-	 * @param ev Event/packet to process
+	 * @param ev
+	 *        Event/packet to process
 	 */
 	@Override
 	protected void processpacket_up(SimEvent ev) {
@@ -66,8 +68,6 @@ public class EdgeSwitch extends Switch {
 		// has to send up
 		// check which switch to forward to
 		// add packet in the switch list
-		//
-		// int src=ev.getSource();
 		NetworkPacket hspkt = (NetworkPacket) ev.getData();
 		int recvVMid = hspkt.pkt.reciever;
 		System.out.println("EdgeSwitch processpacket_up 73");
@@ -75,7 +75,8 @@ public class EdgeSwitch extends Switch {
 		schedule(getId(), switching_delay, CloudSimTags.Network_Event_send);
 
 		// packet is recieved from host
-		// packet is to be sent to aggregate level or to another host in the same level
+		// packet is to be sent to aggregate level or to another host in the
+		// same level
 
 		int hostid = dc.VmtoHostlist.get(recvVMid);
 		NetworkHost hs = hostlist.get(hostid);
@@ -96,7 +97,8 @@ public class EdgeSwitch extends Switch {
 		// otherwise
 		// packet is to be sent to upper switch
 		// ASSUMPTION EACH EDGE is Connected to one aggregate level switch
-		// if there are more than one Aggregate level switch one need to modify following code
+		// if there are more than one Aggregate level switch one need to modify
+		// following code
 
 		Switch sw = uplinkswitches.get(0);
 		List<NetworkPacket> pktlist = uplinkswitchpktlist.get(sw.getId());
@@ -112,7 +114,8 @@ public class EdgeSwitch extends Switch {
 	/**
 	 * Send Packet to hosts connected to the switch
 	 * 
-	 * @param ev Event/packet to process
+	 * @param ev
+	 *        Event/packet to process
 	 */
 	@Override
 	protected void processpacketforward(SimEvent ev) {
@@ -144,9 +147,8 @@ public class EdgeSwitch extends Switch {
 					Iterator<NetworkPacket> it = hspktlist.iterator();
 					while (it.hasNext()) {
 						NetworkPacket hspkt = it.next();
-						// hspkt.recieverhostid=tosend;
-						// hs.packetrecieved.add(hspkt);
-						this.send(getId(), hspkt.pkt.data / avband, CloudSimTags.Network_Event_Host, hspkt);
+						this.send(getId(), hspkt.pkt.data / avband,
+							CloudSimTags.Network_Event_Host, hspkt);
 					}
 					hspktlist.clear();
 				}

@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.network.datacenter;
@@ -21,10 +20,11 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.CloudSimTags;
 
 /**
- * CloudletSchedulerSpaceShared implements a policy of scheduling performed by a virtual machine. It
- * consider that there will be only one cloudlet per VM. Other cloudlets will be in a waiting list.
- * We consider that file transfer from cloudlets waiting happens before cloudlet execution. I.e.,
- * even though cloudlets must wait for CPU, data transfer happens as soon as cloudlets are
+ * CloudletSchedulerSpaceShared implements a policy of scheduling performed by a
+ * virtual machine. It consider that there will be only one cloudlet per VM.
+ * Other cloudlets will be in a waiting list. We consider that file transfer
+ * from cloudlets waiting happens before cloudlet execution. I.e., even though
+ * cloudlets must wait for CPU, data transfer happens as soon as cloudlets are
  * submitted.
  * 
  * @author Saurabh Kumar Garg
@@ -58,8 +58,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	public Map<Integer, List<HostPacket>> pktrecv;
 
 	/**
-	 * Creates a new CloudletSchedulerSpaceShared object. This method must be invoked before
-	 * starting the actual simulation.
+	 * Creates a new CloudletSchedulerSpaceShared object. This method must be
+	 * invoked before starting the actual simulation.
 	 * 
 	 * @pre $none
 	 * @post $none
@@ -77,12 +77,15 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	}
 
 	/**
-	 * Updates the processing of cloudlets running under management of this scheduler.
+	 * Updates the processing of cloudlets running under management of this
+	 * scheduler.
 	 * 
-	 * @param currentTime current simulation time
-	 * @param mipsShare array with MIPS share of each processor available to the scheduler
-	 * @return time predicted completion time of the earliest finishing cloudlet, or 0 if there is
-	 *         no next events
+	 * @param currentTime
+	 *        current simulation time
+	 * @param mipsShare
+	 *        array with MIPS share of each processor available to the scheduler
+	 * @return time predicted completion time of the earliest finishing
+	 *         cloudlet, or 0 if there is no next events
 	 * @pre currentTime >= 0
 	 * @post $none
 	 */
@@ -136,7 +139,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 						HostPacket pkt = null;
 						if (it.hasNext()) {
 							pkt = it.next();
-							// Asumption packet will not arrive in the same cycle
+							// Asumption packet will not arrive in the same
+							// cycle
 							if (pkt.reciever == cl.getVmId()) {
 								pkt.recievetime = CloudSim.clock();
 								st.time = CloudSim.clock() - pkt.sendtime;
@@ -145,8 +149,6 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 							}
 						}
 						pktlist.removeAll(pkttoremove);
-						// if(pkt!=null)
-						// else wait for recieving the packet
 					}
 				}
 
@@ -156,15 +158,14 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 				if (cl.stages.get(0).type == NetworkConstants.EXECUTION) {
 					NetDatacenterBroker.linkDC.schedule(
-							NetDatacenterBroker.linkDC.getId(),
-							cl.stages.get(0).time,
-							CloudSimTags.VM_DATACENTER_EVENT);
+						NetDatacenterBroker.linkDC.getId(),
+						cl.stages.get(0).time,
+						CloudSimTags.VM_DATACENTER_EVENT);
 				} else {
 					NetDatacenterBroker.linkDC.schedule(
-							NetDatacenterBroker.linkDC.getId(),
-							0.0001,
-							CloudSimTags.VM_DATACENTER_EVENT);
-					// /sendstage///
+						NetDatacenterBroker.linkDC.getId(),
+						0.0001,
+						CloudSimTags.VM_DATACENTER_EVENT);
 				}
 			}
 
@@ -210,14 +211,15 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 					}
 				}
 				getCloudletWaitingList().removeAll(toRemove);
-			}// for(cont)
+			}
 		}
 
 		// estimate finish time of cloudlets in the execution queue
 		double nextEvent = Double.MAX_VALUE;
 		for (ResCloudlet rcl : getCloudletExecList()) {
 			double remainingLength = rcl.getRemainingCloudletLength();
-			double estimatedFinishTime = currentTime + (remainingLength / (capacity * rcl.getNumberOfPes()));
+			double estimatedFinishTime = currentTime
+				+ (remainingLength / (capacity * rcl.getNumberOfPes()));
 			if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
 				estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
 			}
@@ -241,13 +243,13 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 			for (i = cl.currStagenum; i < cl.stages.size(); i++) {
 				if (cl.stages.get(i).type == NetworkConstants.WAIT_SEND) {
 					HostPacket pkt = new HostPacket(
-							cl.getVmId(),
-							cl.stages.get(i).peer,
-							cl.stages.get(i).data,
-							CloudSim.clock(),
-							-1,
-							cl.getCloudletId(),
-							cl.stages.get(i).vpeer);
+						cl.getVmId(),
+						cl.stages.get(i).peer,
+						cl.stages.get(i).data,
+						CloudSim.clock(),
+						-1,
+						cl.getCloudletId(),
+						cl.stages.get(i).vpeer);
 					List<HostPacket> pktlist = pkttosend.get(cl.getVmId());
 					if (pktlist == null) {
 						pktlist = new ArrayList<HostPacket>();
@@ -261,18 +263,18 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 			}
 			NetDatacenterBroker.linkDC.schedule(
-					NetDatacenterBroker.linkDC.getId(),
-					0.0001,
-					CloudSimTags.VM_DATACENTER_EVENT);
+				NetDatacenterBroker.linkDC.getId(),
+				0.0001,
+				CloudSimTags.VM_DATACENTER_EVENT);
 			if (i == cl.stages.size()) {
 				cl.currStagenum = NetworkConstants.FINISH;
 			} else {
 				cl.currStagenum = i;
 				if (cl.stages.get(i).type == NetworkConstants.EXECUTION) {
 					NetDatacenterBroker.linkDC.schedule(
-							NetDatacenterBroker.linkDC.getId(),
-							cl.stages.get(i).time,
-							CloudSimTags.VM_DATACENTER_EVENT);
+						NetDatacenterBroker.linkDC.getId(),
+						cl.stages.get(i).time,
+						CloudSimTags.VM_DATACENTER_EVENT);
 				}
 
 			}
@@ -283,7 +285,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Cancels execution of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being cancealed
+	 * @param cloudletId
+	 *        ID of the cloudlet being cancealed
 	 * @return the canceled cloudlet, $null if not found
 	 * @pre $none
 	 * @post $none
@@ -335,7 +338,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Pauses execution of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being paused
+	 * @param cloudletId
+	 *        ID of the cloudlet being paused
 	 * @return $true if cloudlet paused, $false otherwise
 	 * @pre $none
 	 * @post $none
@@ -397,7 +401,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Processes a finished cloudlet.
 	 * 
-	 * @param rcl finished cloudlet
+	 * @param rcl
+	 *        finished cloudlet
 	 * @pre rgl != $null
 	 * @post $none
 	 */
@@ -412,7 +417,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Resumes execution of a paused cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet being resumed
+	 * @param cloudletId
+	 *        ID of the cloudlet being resumed
 	 * @return $true if the cloudlet was resumed, $false otherwise
 	 * @pre $none
 	 * @post $none
@@ -462,7 +468,7 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 				long remainingLength = rcl.getRemainingCloudletLength();
 				double estimatedFinishTime = CloudSim.clock()
-						+ (remainingLength / (capacity * rcl.getNumberOfPes()));
+					+ (remainingLength / (capacity * rcl.getNumberOfPes()));
 
 				return estimatedFinishTime;
 			} else {// no enough free PEs: go to the waiting queue
@@ -487,9 +493,12 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Receives an cloudlet to be executed in the VM managed by this scheduler.
 	 * 
-	 * @param cloudlet the submited cloudlet
-	 * @param fileTransferTime time required to move the required files from the SAN to the VM
-	 * @return expected finish time of this cloudlet, or 0 if it is in the waiting queue
+	 * @param cloudlet
+	 *        the submited cloudlet
+	 * @param fileTransferTime
+	 *        time required to move the required files from the SAN to the VM
+	 * @return expected finish time of this cloudlet, or 0 if it is in the
+	 *         waiting queue
 	 * @pre gl != null
 	 * @post $none
 	 */
@@ -547,7 +556,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Gets the status of a cloudlet.
 	 * 
-	 * @param cloudletId ID of the cloudlet
+	 * @param cloudletId
+	 *        ID of the cloudlet
 	 * @return status of the cloudlet, -1 if cloudlet not found
 	 * @pre $none
 	 * @post $none
@@ -578,7 +588,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Get utilization created by all cloudlets.
 	 * 
-	 * @param time the time
+	 * @param time
+	 *        the time
 	 * @return total utilization
 	 */
 	@Override
@@ -591,9 +602,11 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	}
 
 	/**
-	 * Informs about completion of some cloudlet in the VM managed by this scheduler.
+	 * Informs about completion of some cloudlet in the VM managed by this
+	 * scheduler.
 	 * 
-	 * @return $true if there is at least one finished cloudlet; $false otherwise
+	 * @return $true if there is at least one finished cloudlet; $false
+	 *         otherwise
 	 * @pre $none
 	 * @post $none
 	 */
@@ -603,7 +616,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	}
 
 	/**
-	 * Returns the next cloudlet in the finished list, $null if this list is empty.
+	 * Returns the next cloudlet in the finished list, $null if this list is
+	 * empty.
 	 * 
 	 * @return a finished cloudlet
 	 * @pre $none
@@ -648,7 +662,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet waiting list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet waiting list
 	 */
 	@SuppressWarnings("unchecked")
@@ -659,8 +674,10 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Cloudlet waiting list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletWaitingList the cloudlet waiting list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletWaitingList
+	 *        the cloudlet waiting list
 	 */
 	protected <T extends ResCloudlet> void cloudletWaitingList(List<T> cloudletWaitingList) {
 		this.cloudletWaitingList = cloudletWaitingList;
@@ -669,7 +686,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet exec list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet exec list
 	 */
 	@SuppressWarnings("unchecked")
@@ -680,8 +698,10 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet exec list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletExecList the new cloudlet exec list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletExecList
+	 *        the new cloudlet exec list
 	 */
 	protected <T extends ResCloudlet> void setCloudletExecList(List<T> cloudletExecList) {
 		this.cloudletExecList = cloudletExecList;
@@ -690,7 +710,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet paused list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet paused list
 	 */
 	@SuppressWarnings("unchecked")
@@ -701,8 +722,10 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet paused list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletPausedList the new cloudlet paused list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletPausedList
+	 *        the new cloudlet paused list
 	 */
 	protected <T extends ResCloudlet> void setCloudletPausedList(List<T> cloudletPausedList) {
 		this.cloudletPausedList = cloudletPausedList;
@@ -711,7 +734,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Gets the cloudlet finished list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the cloudlet finished list
 	 */
 	@SuppressWarnings("unchecked")
@@ -722,8 +746,10 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 	/**
 	 * Sets the cloudlet finished list.
 	 * 
-	 * @param <T> the generic type
-	 * @param cloudletFinishedList the new cloudlet finished list
+	 * @param <T>
+	 *        the generic type
+	 * @param cloudletFinishedList
+	 *        the new cloudlet finished list
 	 */
 	protected <T extends ResCloudlet> void setCloudletFinishedList(List<T> cloudletFinishedList) {
 		this.cloudletFinishedList = cloudletFinishedList;
@@ -746,7 +772,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentAvailableMipsForCloudlet
+	 * @see org.cloudbus.cloudsim.CloudletScheduler#
+	 * getTotalCurrentAvailableMipsForCloudlet
 	 * (org.cloudbus.cloudsim.ResCloudlet, java.util.List)
 	 */
 	@Override
@@ -766,7 +793,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentAllocatedMipsForCloudlet
+	 * @see org.cloudbus.cloudsim.CloudletScheduler#
+	 * getTotalCurrentAllocatedMipsForCloudlet
 	 * (org.cloudbus.cloudsim.ResCloudlet, double)
 	 */
 	@Override
@@ -776,7 +804,8 @@ public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentRequestedMipsForCloudlet
+	 * @see org.cloudbus.cloudsim.CloudletScheduler#
+	 * getTotalCurrentRequestedMipsForCloudlet
 	 * (org.cloudbus.cloudsim.ResCloudlet, double)
 	 */
 	@Override

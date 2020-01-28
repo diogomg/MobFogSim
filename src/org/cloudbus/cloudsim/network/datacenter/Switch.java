@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.network.datacenter;
@@ -86,32 +85,31 @@ public class Switch extends SimEntity {
 
 	@Override
 	public void processEvent(SimEvent ev) {
-		// Log.printLine(CloudSim.clock()+"[Broker]: event received:"+ev.getTag());
 		switch (ev.getTag()) {
 		// Resource characteristics request
-			case CloudSimTags.Network_Event_UP:
-				// process the packet from down switch or host
-				processpacket_up(ev);
-				break;
-			case CloudSimTags.Network_Event_DOWN:
-				// process the packet from uplink
-				processpacket_down(ev);
-				break;
-			case CloudSimTags.Network_Event_send:
-				processpacketforward(ev);
-				break;
+		case CloudSimTags.Network_Event_UP:
+			// process the packet from down switch or host
+			processpacket_up(ev);
+			break;
+		case CloudSimTags.Network_Event_DOWN:
+			// process the packet from uplink
+			processpacket_down(ev);
+			break;
+		case CloudSimTags.Network_Event_send:
+			processpacketforward(ev);
+			break;
 
-			case CloudSimTags.Network_Event_Host:
-				processhostpacket(ev);
-				break;
-			// Resource characteristics answer
-			case CloudSimTags.RESOURCE_Register:
-				registerHost(ev);
-				break;
-			// other unknown tags are processed by this method
-			default:
-				processOtherEvent(ev);
-				break;
+		case CloudSimTags.Network_Event_Host:
+			processhostpacket(ev);
+			break;
+		// Resource characteristics answer
+		case CloudSimTags.RESOURCE_Register:
+			registerHost(ev);
+			break;
+		// other unknown tags are processed by this method
+		default:
+			processOtherEvent(ev);
+			break;
 		}
 	}
 
@@ -128,7 +126,6 @@ public class Switch extends SimEntity {
 		// check which switch to forward to
 		// add packet in the switch list
 		// add packet in the host list
-		// int src=ev.getSource();
 		NetworkPacket hspkt = (NetworkPacket) ev.getData();
 		int recvVMid = hspkt.pkt.reciever;
 		System.out.println("Swith processpacket_down 134");
@@ -237,8 +234,7 @@ public class Switch extends SimEntity {
 			// get id of edge router
 			int edgeswitchid = dc.VmToSwitchid.get(recvVMid);
 			// search which aggregate switch has it
-			int aggSwtichid = -1;
-			;
+			int aggSwtichid = -1;;
 			for (Switch sw : downlinkswitches) {
 				for (Switch edge : sw.downlinkswitches) {
 					if (edge.getId() == edgeswitchid) {
@@ -325,18 +321,13 @@ public class Switch extends SimEntity {
 					Iterator<NetworkPacket> it = hspktlist.iterator();
 					while (it.hasNext()) {
 						NetworkPacket hspkt = it.next();
-						// hspkt.recieverhostid=tosend;
-						// hs.packetrecieved.add(hspkt);
-						this.send(getId(), hspkt.pkt.data / avband, CloudSimTags.Network_Event_Host, hspkt);
+						this.send(getId(), hspkt.pkt.data / avband,
+							CloudSimTags.Network_Event_Host, hspkt);
 					}
 					hspktlist.clear();
 				}
 			}
 		}
-
-		// or to switch at next level.
-		// clear the list
-
 	}
 
 	//

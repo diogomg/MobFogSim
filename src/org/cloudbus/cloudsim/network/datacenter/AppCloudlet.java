@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.network.datacenter;
@@ -16,14 +15,13 @@ import org.cloudbus.cloudsim.UtilizationModelFull;
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * AppCloudlet class represents an application which user submit for execution within datacenter. It
- * consist of several networkClouds.
- * 
- * Please refer to following publication for more details:
- * 
- * Saurabh Kumar Garg and Rajkumar Buyya, NetworkCloudSim: Modelling Parallel Applications in Cloud
- * Simulations, Proceedings of the 4th IEEE/ACM International Conference on Utility and Cloud
- * Computing (UCC 2011, IEEE CS Press, USA), Melbourne, Australia, December 5-7, 2011.
+ * AppCloudlet class represents an application which user submit for execution
+ * within datacenter. It consist of several networkClouds. Please refer to
+ * following publication for more details: Saurabh Kumar Garg and Rajkumar
+ * Buyya, NetworkCloudSim: Modelling Parallel Applications in Cloud Simulations,
+ * Proceedings of the 4th IEEE/ACM International Conference on Utility and Cloud
+ * Computing (UCC 2011, IEEE CS Press, USA), Melbourne, Australia, December 5-7,
+ * 2011.
  * 
  * @author Saurabh Kumar Garg
  * @since CloudSim Toolkit 1.0
@@ -65,7 +63,8 @@ public class AppCloudlet {
 	/**
 	 * An example of creating APPcloudlet
 	 * 
-	 * @param vmIdList VMs where Cloudlet will be executed
+	 * @param vmIdList
+	 *        VMs where Cloudlet will be executed
 	 */
 	public void createCloudletList(List<Integer> vmIdList) {
 		for (int i = 0; i < numbervm; i++) {
@@ -75,17 +74,16 @@ public class AppCloudlet {
 			long memory = 256;
 			int pesNumber = 4;
 			UtilizationModel utilizationModel = new UtilizationModelFull();
-			// HPCCloudlet cl=new HPCCloudlet();
 			NetworkCloudlet cl = new NetworkCloudlet(
-					NetworkConstants.currentCloudletId,
-					length,
-					pesNumber,
-					fileSize,
-					outputSize,
-					memory,
-					utilizationModel,
-					utilizationModel,
-					utilizationModel);
+				NetworkConstants.currentCloudletId,
+				length,
+				pesNumber,
+				fileSize,
+				outputSize,
+				memory,
+				utilizationModel,
+				utilizationModel,
+				utilizationModel);
 			// setting the owner of these Cloudlets
 			NetworkConstants.currentCloudletId++;
 			cl.setUserId(userId);
@@ -95,6 +93,5 @@ public class AppCloudlet {
 
 		}
 		// based on type
-
 	}
 }
