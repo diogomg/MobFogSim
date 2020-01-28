@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.power;
@@ -16,21 +15,19 @@ import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.util.MathUtil;
 
 /**
- * The Median Absolute Deviation (MAD) VM allocation policy.
- * 
- * If you are using any algorithms, policies or workload included in the power package, please cite
- * the following paper:
- * 
- * Anton Beloglazov, and Rajkumar Buyya, "Optimal Online Deterministic Algorithms and Adaptive
- * Heuristics for Energy and Performance Efficient Dynamic Consolidation of Virtual Machines in
- * Cloud Data Centers", Concurrency and Computation: Practice and Experience (CCPE), Volume 24,
- * Issue 13, Pages: 1397-1420, John Wiley & Sons, Ltd, New York, USA, 2012
+ * The Median Absolute Deviation (MAD) VM allocation policy. If you are using
+ * any algorithms, policies or workload included in the power package, please
+ * cite the following paper: Anton Beloglazov, and Rajkumar Buyya, "Optimal
+ * Online Deterministic Algorithms and Adaptive Heuristics for Energy and
+ * Performance Efficient Dynamic Consolidation of Virtual Machines in Cloud Data
+ * Centers", Concurrency and Computation: Practice and Experience (CCPE), Volume
+ * 24, Issue 13, Pages: 1397-1420, John Wiley & Sons, Ltd, New York, USA, 2012
  * 
  * @author Anton Beloglazov
  * @since CloudSim Toolkit 3.0
  */
 public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
-		PowerVmAllocationPolicyMigrationAbstract {
+	PowerVmAllocationPolicyMigrationAbstract {
 
 	/** The safety parameter. */
 	private double safetyParameter = 0;
@@ -41,17 +38,21 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Instantiates a new power vm allocation policy migration mad.
 	 * 
-	 * @param hostList the host list
-	 * @param vmSelectionPolicy the vm selection policy
-	 * @param safetyParameter the safety parameter
-	 * @param utilizationThreshold the utilization threshold
+	 * @param hostList
+	 *        the host list
+	 * @param vmSelectionPolicy
+	 *        the vm selection policy
+	 * @param safetyParameter
+	 *        the safety parameter
+	 * @param utilizationThreshold
+	 *        the utilization threshold
 	 */
 	public PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation(
-			List<? extends Host> hostList,
-			PowerVmSelectionPolicy vmSelectionPolicy,
-			double safetyParameter,
-			PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy,
-			double utilizationThreshold) {
+		List<? extends Host> hostList,
+		PowerVmSelectionPolicy vmSelectionPolicy,
+		double safetyParameter,
+		PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy,
+		double utilizationThreshold) {
 		super(hostList, vmSelectionPolicy);
 		setSafetyParameter(safetyParameter);
 		setFallbackVmAllocationPolicy(fallbackVmAllocationPolicy);
@@ -60,15 +61,18 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Instantiates a new power vm allocation policy migration mad.
 	 * 
-	 * @param hostList the host list
-	 * @param vmSelectionPolicy the vm selection policy
-	 * @param safetyParameter the safety parameter
+	 * @param hostList
+	 *        the host list
+	 * @param vmSelectionPolicy
+	 *        the vm selection policy
+	 * @param safetyParameter
+	 *        the safety parameter
 	 */
 	public PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation(
-			List<? extends Host> hostList,
-			PowerVmSelectionPolicy vmSelectionPolicy,
-			double safetyParameter,
-			PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy) {
+		List<? extends Host> hostList,
+		PowerVmSelectionPolicy vmSelectionPolicy,
+		double safetyParameter,
+		PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy) {
 		super(hostList, vmSelectionPolicy);
 		setSafetyParameter(safetyParameter);
 		setFallbackVmAllocationPolicy(fallbackVmAllocationPolicy);
@@ -77,7 +81,8 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Checks if is host over utilized.
 	 * 
-	 * @param _host the _host
+	 * @param _host
+	 *        the _host
 	 * @return true, if is host over utilized
 	 */
 	@Override
@@ -101,12 +106,15 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Gets the host utilization mad.
 	 * 
-	 * @param host the host
+	 * @param host
+	 *        the host
 	 * @return the host utilization mad
 	 */
-	protected double getHostUtilizationMad(PowerHostUtilizationHistory host) throws IllegalArgumentException {
+	protected double getHostUtilizationMad(PowerHostUtilizationHistory host)
+		throws IllegalArgumentException {
 		double[] data = host.getUtilizationHistory();
-		if (MathUtil.countNonZeroBeginning(data) >= 12) { // 12 has been suggested as a safe value
+		if (MathUtil.countNonZeroBeginning(data) >= 12) {
+			// 12 has been suggested as a safe value
 			return MathUtil.mad(data);
 		}
 		throw new IllegalArgumentException();
@@ -115,12 +123,13 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Sets the safety parameter.
 	 * 
-	 * @param safetyParameter the new safety parameter
+	 * @param safetyParameter
+	 *        the new safety parameter
 	 */
 	protected void setSafetyParameter(double safetyParameter) {
 		if (safetyParameter < 0) {
 			Log.printLine("The safety parameter cannot be less than zero. The passed value is: "
-					+ safetyParameter);
+				+ safetyParameter);
 			System.exit(0);
 		}
 		this.safetyParameter = safetyParameter;
@@ -138,10 +147,11 @@ public class PowerVmAllocationPolicyMigrationMedianAbsoluteDeviation extends
 	/**
 	 * Sets the fallback vm allocation policy.
 	 * 
-	 * @param fallbackVmAllocationPolicy the new fallback vm allocation policy
+	 * @param fallbackVmAllocationPolicy
+	 *        the new fallback vm allocation policy
 	 */
 	public void setFallbackVmAllocationPolicy(
-			PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy) {
+		PowerVmAllocationPolicyMigrationAbstract fallbackVmAllocationPolicy) {
 		this.fallbackVmAllocationPolicy = fallbackVmAllocationPolicy;
 	}
 

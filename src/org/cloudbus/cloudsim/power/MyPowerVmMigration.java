@@ -5,10 +5,10 @@ import java.util.List;
 import org.cloudbus.cloudsim.Host;
 
 public class MyPowerVmMigration extends
-		PowerVmAllocationPolicyMigrationAbstract {
+	PowerVmAllocationPolicyMigrationAbstract {
 
 	public MyPowerVmMigration(List<? extends Host> hostList,
-			PowerVmSelectionPolicy vmSelectionPolicy) {
+		PowerVmSelectionPolicy vmSelectionPolicy) {
 		super(hostList, vmSelectionPolicy);
 		// TODO Auto-generated constructor stub
 	}

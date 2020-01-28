@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.power;
@@ -16,15 +15,13 @@ import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.util.MathUtil;
 
 /**
- * The Maximum Correlation (MC) VM selection policy.
- * 
- * If you are using any algorithms, policies or workload included in the power package, please cite
- * the following paper:
- * 
- * Anton Beloglazov, and Rajkumar Buyya, "Optimal Online Deterministic Algorithms and Adaptive
- * Heuristics for Energy and Performance Efficient Dynamic Consolidation of Virtual Machines in
- * Cloud Data Centers", Concurrency and Computation: Practice and Experience (CCPE), Volume 24,
- * Issue 13, Pages: 1397-1420, John Wiley & Sons, Ltd, New York, USA, 2012
+ * The Maximum Correlation (MC) VM selection policy. If you are using any
+ * algorithms, policies or workload included in the power package, please cite
+ * the following paper: Anton Beloglazov, and Rajkumar Buyya, "Optimal Online
+ * Deterministic Algorithms and Adaptive Heuristics for Energy and Performance
+ * Efficient Dynamic Consolidation of Virtual Machines in Cloud Data Centers",
+ * Concurrency and Computation: Practice and Experience (CCPE), Volume 24, Issue
+ * 13, Pages: 1397-1420, John Wiley & Sons, Ltd, New York, USA, 2012
  * 
  * @author Anton Beloglazov
  * @since CloudSim Toolkit 3.0
@@ -37,7 +34,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 	/**
 	 * Instantiates a new power vm selection policy maximum correlation.
 	 * 
-	 * @param fallbackPolicy the fallback policy
+	 * @param fallbackPolicy
+	 *        the fallback policy
 	 */
 	public PowerVmSelectionPolicyMaximumCorrelation(final PowerVmSelectionPolicy fallbackPolicy) {
 		super();
@@ -46,7 +44,6 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 
 	/*
 	 * (non-Javadoc)
-	 * 
 	 * @see org.cloudbus.cloudsim.experiments.power.PowerVmSelectionPolicy#
 	 * getVmsToMigrate(org.cloudbus .cloudsim.power.PowerHost)
 	 */
@@ -59,7 +56,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 		List<Double> metrics = null;
 		try {
 			metrics = getCorrelationCoefficients(getUtilizationMatrix(migratableVms));
-		} catch (IllegalArgumentException e) { // the degrees of freedom must be greater than zero
+		} catch (IllegalArgumentException e) {
+			// the degrees of freedom must be greater than zero
 			return getFallbackPolicy().getVmToMigrate(host);
 		}
 		double maxMetric = Double.MIN_VALUE;
@@ -77,7 +75,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 	/**
 	 * Gets the utilization matrix.
 	 * 
-	 * @param vmList the host
+	 * @param vmList
+	 *        the host
 	 * @return the utilization matrix
 	 */
 	protected double[][] getUtilizationMatrix(final List<PowerVm> vmList) {
@@ -96,7 +95,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 	/**
 	 * Gets the min utilization history size.
 	 * 
-	 * @param vmList the vm list
+	 * @param vmList
+	 *        the vm list
 	 * @return the min utilization history size
 	 */
 	protected int getMinUtilizationHistorySize(final List<PowerVm> vmList) {
@@ -113,7 +113,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 	/**
 	 * Gets the correlation coefficients.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the correlation coefficients
 	 */
 	protected List<Double> getCorrelationCoefficients(final double[][] data) {
@@ -134,7 +135,7 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 
 			// RSquare is the "coefficient of determination"
 			correlationCoefficients.add(MathUtil.createLinearRegression(xT,
-					data[i]).calculateRSquared());
+				data[i]).calculateRSquared());
 		}
 		return correlationCoefficients;
 	}
@@ -151,7 +152,8 @@ public class PowerVmSelectionPolicyMaximumCorrelation extends PowerVmSelectionPo
 	/**
 	 * Sets the fallback policy.
 	 * 
-	 * @param fallbackPolicy the new fallback policy
+	 * @param fallbackPolicy
+	 *        the new fallback policy
 	 */
 	public void setFallbackPolicy(final PowerVmSelectionPolicy fallbackPolicy) {
 		this.fallbackPolicy = fallbackPolicy;
