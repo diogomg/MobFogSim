@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.util;
@@ -25,7 +24,8 @@ public class ExecutionTimeMeasurer {
 	/**
 	 * Start.
 	 * 
-	 * @param name the name
+	 * @param name
+	 *        the name
 	 */
 	public static void start(String name) {
 		getExecutionTimes().put(name, System.currentTimeMillis());
@@ -34,7 +34,8 @@ public class ExecutionTimeMeasurer {
 	/**
 	 * End.
 	 * 
-	 * @param name the name
+	 * @param name
+	 *        the name
 	 * @return the double
 	 */
 	public static double end(String name) {

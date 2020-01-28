@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.util;
@@ -26,7 +25,8 @@ public class MathUtil {
 	/**
 	 * Sums a list of numbers.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @return the double
 	 */
 	public static double sum(final List<? extends Number> list) {
@@ -40,7 +40,8 @@ public class MathUtil {
 	/**
 	 * List to array.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @return the double[]
 	 */
 	public static double[] listToArray(final List<? extends Number> list) {
@@ -54,7 +55,8 @@ public class MathUtil {
 	/**
 	 * Gets the median.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @return the median
 	 */
 	public static double median(final List<Double> list) {
@@ -64,8 +66,8 @@ public class MathUtil {
 	/**
 	 * Gets the median.
 	 * 
-	 * @param list the list
-	 * 
+	 * @param list
+	 *        the list
 	 * @return the median
 	 */
 	public static double median(final double[] list) {
@@ -76,7 +78,7 @@ public class MathUtil {
 	 * Returns descriptive statistics for the list of numbers.
 	 * 
 	 * @param list
-	 *            - the list of numbers. Must not be null.
+	 *        - the list of numbers. Must not be null.
 	 * @return - descriptive statistics for the list of numbers.
 	 */
 	public static DescriptiveStatistics getStatistics(final List<Double> list) {
@@ -93,7 +95,8 @@ public class MathUtil {
 	/**
 	 * Returns descriptive statistics for the array of numbers.
 	 * 
-	 * @param list - the array of numbers. Must not be null.
+	 * @param list
+	 *        - the array of numbers. Must not be null.
 	 * @return - descriptive statistics for the array of numbers.
 	 */
 	public static DescriptiveStatistics getStatistics(final double[] list) {
@@ -110,8 +113,8 @@ public class MathUtil {
 	/**
 	 * Gets the average.
 	 * 
-	 * @param list the list
-	 * 
+	 * @param list
+	 *        the list
 	 * @return the average
 	 */
 	public static double mean(final List<Double> list) {
@@ -125,7 +128,8 @@ public class MathUtil {
 	/**
 	 * Variance.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @return the double
 	 */
 	public static double variance(final List<Double> list) {
@@ -147,7 +151,8 @@ public class MathUtil {
 	/**
 	 * Gets the standard deviation.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @return the double
 	 */
 	public static double stDev(final List<Double> list) {
@@ -157,7 +162,8 @@ public class MathUtil {
 	/**
 	 * Gets the mad.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the mad
 	 */
 	public static double mad(final double[] data) {
@@ -176,7 +182,8 @@ public class MathUtil {
 	/**
 	 * Gets the IQR.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the IQR
 	 */
 	public static double iqr(final double[] data) {
@@ -189,7 +196,8 @@ public class MathUtil {
 	/**
 	 * Count non zero beginning of the data.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the int
 	 */
 	public static int countNonZeroBeginning(final double[] data) {
@@ -205,7 +213,8 @@ public class MathUtil {
 	/**
 	 * Count shortest row.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the int
 	 */
 	public static int countShortestRow(final double[][] data) {
@@ -221,7 +230,8 @@ public class MathUtil {
 	/**
 	 * Trim zero tail.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the double[]
 	 */
 	public static double[] trimZeroTail(final double[] data) {
@@ -231,7 +241,8 @@ public class MathUtil {
 	/**
 	 * Gets the loess parameter estimates.
 	 * 
-	 * @param y the y
+	 * @param y
+	 *        the y
 	 * @return the loess parameter estimates
 	 */
 	public static double[] getLoessParameterEstimates(final double[] y) {
@@ -241,11 +252,11 @@ public class MathUtil {
 			x[i] = i + 1;
 		}
 		return createWeigthedLinearRegression(x, y, getTricubeWeigts(n))
-				.regress().getParameterEstimates();
+			.regress().getParameterEstimates();
 	}
 
 	public static SimpleRegression createLinearRegression(final double[] x,
-			final double[] y) {
+		final double[] y) {
 		SimpleRegression regression = new SimpleRegression();
 		for (int i = 0; i < x.length; i++) {
 			regression.addData(x[i], y[i]);
@@ -254,19 +265,19 @@ public class MathUtil {
 	}
 
 	public static OLSMultipleLinearRegression createLinearRegression(
-			final double[][] x, final double[] y) {
+		final double[][] x, final double[] y) {
 		OLSMultipleLinearRegression regression = new OLSMultipleLinearRegression();
 		regression.newSampleData(y, x);
 		return regression;
 	}
 
 	public static SimpleRegression createWeigthedLinearRegression(
-			final double[] x, final double[] y, final double[] weigths) {
+		final double[] x, final double[] y, final double[] weigths) {
 		double[] xW = new double[x.length];
 		double[] yW = new double[y.length];
 
-		// As to Flanagan's documentation they perform weigthed regression if the
-		// number or non-zero weigths is more than 40%
+		// As to Flanagan's documentation they perform weigthed regression if
+		// the number or non-zero weigths is more than 40%
 		int numZeroWeigths = 0;
 		for (int i = 0; i < weigths.length; i++) {
 			if (weigths[i] <= 0) {
@@ -291,7 +302,8 @@ public class MathUtil {
 	/**
 	 * Gets the robust loess parameter estimates.
 	 * 
-	 * @param y the y
+	 * @param y
+	 *        the y
 	 * @return the robust loess parameter estimates
 	 */
 	public static double[] getRobustLoessParameterEstimates(final double[] y) {
@@ -301,16 +313,16 @@ public class MathUtil {
 			x[i] = i + 1;
 		}
 		SimpleRegression tricubeRegression = createWeigthedLinearRegression(x,
-				y, getTricubeWeigts(n));
+			y, getTricubeWeigts(n));
 		double[] residuals = new double[n];
 		for (int i = 0; i < n; i++) {
 			residuals[i] = y[i] - tricubeRegression.predict(x[i]);
 		}
 		SimpleRegression tricubeBySquareRegression = createWeigthedLinearRegression(
-				x, y, getTricubeBisquareWeigts(residuals));
+			x, y, getTricubeBisquareWeigts(residuals));
 
 		double[] estimates = tricubeBySquareRegression.regress()
-				.getParameterEstimates();
+			.getParameterEstimates();
 		if (estimates[0] == Double.NaN || estimates[1] == Double.NaN) {
 			return tricubeRegression.regress().getParameterEstimates();
 		}
@@ -320,7 +332,8 @@ public class MathUtil {
 	/**
 	 * Gets the tricube weigts.
 	 * 
-	 * @param n the n
+	 * @param n
+	 *        the n
 	 * @return the tricube weigts
 	 */
 	public static double[] getTricubeWeigts(final int n) {
@@ -342,7 +355,8 @@ public class MathUtil {
 	/**
 	 * Gets the tricube bisquare weigts.
 	 * 
-	 * @param residuals the residuals
+	 * @param residuals
+	 *        the residuals
 	 * @return the tricube bisquare weigts
 	 */
 	public static double[] getTricubeBisquareWeigts(final double[] residuals) {
@@ -365,7 +379,8 @@ public class MathUtil {
 	/**
 	 * Abs.
 	 * 
-	 * @param data the data
+	 * @param data
+	 *        the data
 	 * @return the double[]
 	 */
 	public static double[] abs(final double[] data) {

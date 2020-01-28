@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.util;
@@ -25,30 +24,34 @@ import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.UtilizationModelFull;
 
 /**
- * This class is responsible for reading resource traces from a file and creating a list of jobs.
+ * This class is responsible for reading resource traces from a file and
+ * creating a list of jobs.
  * <p>
  * <b>NOTE:</b>
  * <ul>
- * <li>This class can only take <tt>one</tt> trace file of the following format: <i>ASCII text, zip,
- * gz.</i>
- * <li>If you need to load multiple trace files, then you need to create multiple instances of this
- * class <tt>each with a unique 
+ * <li>This class can only take <tt>one</tt> trace file of the following format:
+ * <i>ASCII text, zip, gz.</i>
+ * <li>If you need to load multiple trace files, then you need to create
+ * multiple instances of this class <tt>each with a unique 
  *      	 entity name</tt>.
- * <li>If size of the trace file is huge or contains lots of traces please increase the JVM heap
- * size accordingly by using <tt>java -Xmx</tt> option when running the simulation.
+ * <li>If size of the trace file is huge or contains lots of traces please
+ * increase the JVM heap size accordingly by using <tt>java -Xmx</tt> option
+ * when running the simulation.
  * <li>The default job file size for sending to and receiving from a resource is
- * {@link gridsim.net.Link#DEFAULT_MTU}. However, you can specify the file size by using
- * {@link #setGridletFileSize(int)}.
- * <li>A job run time is only for 1 PE <tt>not</tt> the total number of allocated PEs. Therefore, a
- * Gridlet length is also calculated for 1 PE.<br>
- * For example, job #1 in the trace has a run time of 100 seconds for 2 processors. This means each
- * processor runs job #1 for 100 seconds, if the processors have the same specification.
+ * {@link gridsim.net.Link#DEFAULT_MTU}. However, you can specify the file size
+ * by using {@link #setGridletFileSize(int)}.
+ * <li>A job run time is only for 1 PE <tt>not</tt> the total number of
+ * allocated PEs. Therefore, a Gridlet length is also calculated for 1 PE.<br>
+ * For example, job #1 in the trace has a run time of 100 seconds for 2
+ * processors. This means each processor runs job #1 for 100 seconds, if the
+ * processors have the same specification.
  * </ul>
  * <p>
- * By default, this class follows the standard workload format as specified in <a
- * href="http://www.cs.huji.ac.il/labs/parallel/workload/">
+ * By default, this class follows the standard workload format as specified in
+ * <a href="http://www.cs.huji.ac.il/labs/parallel/workload/">
  * http://www.cs.huji.ac.il/labs/parallel/workload/</a> <br>
- * However, you can use other format by calling the below methods before running the simulation:
+ * However, you can use other format by calling the below methods before running
+ * the simulation:
  * <ul>
  * <li> {@link #setComment(String)}
  * <li> {@link #setField(int, int, int, int, int)}
@@ -56,7 +59,6 @@ import org.cloudbus.cloudsim.UtilizationModelFull;
  * 
  * @author Anthony Sulistio and Marcos Dias de Assuncao
  * @since 5.0
- * 
  * @see Workload
  */
 public class WorkloadFileReader implements WorkloadModel {
@@ -101,11 +103,14 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Create a new {@link WorkloadFileReader} object.
 	 * 
-	 * @param fileName the workload trace filename in one of the following format: <i>ASCII text,
-	 *        zip, gz.</i>
-	 * @param rating the resource's PE rating
+	 * @param fileName
+	 *        the workload trace filename in one of the following format:
+	 *        <i>ASCII text, zip, gz.</i>
+	 * @param rating
+	 *        the resource's PE rating
 	 * @throws FileNotFoundException
-	 * @throws IllegalArgumentException This happens for the following conditions:
+	 * @throws IllegalArgumentException
+	 *         This happens for the following conditions:
 	 *         <ul>
 	 *         <li>the workload trace file name is null or empty
 	 *         <li>the resource PE rating <= 0
@@ -132,7 +137,8 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Reads job information from a given file.
 	 * 
-	 * @return the list of gridlets read from the file; <code>null</code> in case of failure.
+	 * @return the list of gridlets read from the file; <code>null</code> in
+	 *         case of failure.
 	 */
 	@Override
 	public ArrayList<Cloudlet> generateWorkload() {
@@ -161,8 +167,10 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Identifies the start of a comment line.
 	 * 
-	 * @param cmt a character that denotes the start of a comment, e.g. ";" or "#"
-	 * @return <code>true</code> if it is successful, <code>false</code> otherwise
+	 * @param cmt
+	 *        a character that denotes the start of a comment, e.g. ";" or "#"
+	 * @return <code>true</code> if it is successful, <code>false</code>
+	 *         otherwise
 	 * @pre comment != null
 	 * @post $none
 	 */
@@ -176,24 +184,32 @@ public class WorkloadFileReader implements WorkloadModel {
 	}
 
 	/**
-	 * Tells this class what to look in the trace file. This method should be called before the
-	 * start of the simulation.
+	 * Tells this class what to look in the trace file. This method should be
+	 * called before the start of the simulation.
 	 * <p>
-	 * By default, this class follows the standard workload format as specified in <a
-	 * href="http://www.cs.huji.ac.il/labs/parallel/workload/">
+	 * By default, this class follows the standard workload format as specified
+	 * in <a href="http://www.cs.huji.ac.il/labs/parallel/workload/">
 	 * http://www.cs.huji.ac.il/labs/parallel/workload/</a> <br>
 	 * However, you can use other format by calling this method.
 	 * <p>
-	 * The parameters must be a positive integer number starting from 1. A special case is where
-	 * <tt>jobNum == -1</tt>, meaning the job or gridlet ID starts at 1.
+	 * The parameters must be a positive integer number starting from 1. A
+	 * special case is where <tt>jobNum == -1</tt>, meaning the job or gridlet
+	 * ID starts at 1.
 	 * 
-	 * @param maxField max. number of field/column in one row
-	 * @param jobNum field/column number for locating the job ID
-	 * @param submitTime field/column number for locating the job submit time
-	 * @param runTime field/column number for locating the job run time
-	 * @param numProc field/column number for locating the number of PEs required to run a job
+	 * @param maxField
+	 *        max. number of field/column in one row
+	 * @param jobNum
+	 *        field/column number for locating the job ID
+	 * @param submitTime
+	 *        field/column number for locating the job submit time
+	 * @param runTime
+	 *        field/column number for locating the job run time
+	 * @param numProc
+	 *        field/column number for locating the number of PEs required to run
+	 *        a job
 	 * @return <code>true</code> if successful, <code>false</code> otherwise
-	 * @throws IllegalArgumentException if any of the arguments are not within the acceptable ranges
+	 * @throws IllegalArgumentException
+	 *         if any of the arguments are not within the acceptable ranges
 	 * @pre maxField > 0
 	 * @pre submitTime > 0
 	 * @pre runTime > 0
@@ -201,11 +217,11 @@ public class WorkloadFileReader implements WorkloadModel {
 	 * @post $none
 	 */
 	public boolean setField(
-			final int maxField,
-			final int jobNum,
-			final int submitTime,
-			final int runTime,
-			final int numProc) {
+		final int maxField,
+		final int jobNum,
+		final int submitTime,
+		final int runTime,
+		final int numProc) {
 		// need to subtract by 1 since array starts at 0.
 		if (jobNum > 0) {
 			JOB_NUM = jobNum - 1;
@@ -251,13 +267,20 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Creates a Gridlet with the given information and adds to the list
 	 * 
-	 * @param id a Gridlet ID
-	 * @param submitTime Gridlet's submit time
-	 * @param runTime Gridlet's run time
-	 * @param numProc number of processors
-	 * @param reqRunTime user estimated run time
-	 * @param userID user id
-	 * @param groupID user's group id
+	 * @param id
+	 *        a Gridlet ID
+	 * @param submitTime
+	 *        Gridlet's submit time
+	 * @param runTime
+	 *        Gridlet's run time
+	 * @param numProc
+	 *        number of processors
+	 * @param reqRunTime
+	 *        user estimated run time
+	 * @param userID
+	 *        user id
+	 * @param groupID
+	 *        user's group id
 	 * @pre id >= 0
 	 * @pre submitTime >= 0
 	 * @pre runTime >= 0
@@ -265,33 +288,35 @@ public class WorkloadFileReader implements WorkloadModel {
 	 * @post $none
 	 */
 	private void createJob(
-			final int id,
-			final long submitTime,
-			final int runTime,
-			final int numProc,
-			final int reqRunTime,
-			final int userID,
-			final int groupID) {
+		final int id,
+		final long submitTime,
+		final int runTime,
+		final int numProc,
+		final int reqRunTime,
+		final int userID,
+		final int groupID) {
 		// create the cloudlet
 		final int len = runTime * rating;
 		UtilizationModel utilizationModel = new UtilizationModelFull();
 		final Cloudlet wgl = new Cloudlet(
-				id,
-				len,
-				numProc,
-				0,
-				0,
-				utilizationModel,
-				utilizationModel,
-				utilizationModel);
+			id,
+			len,
+			numProc,
+			0,
+			0,
+			utilizationModel,
+			utilizationModel,
+			utilizationModel);
 		jobs.add(wgl);
 	}
 
 	/**
 	 * Extracts relevant information from a given array
 	 * 
-	 * @param array an array of String
-	 * @param line a line number
+	 * @param array
+	 *        an array of String
+	 * @param line
+	 *        a line number
 	 * @pre array != null
 	 * @pre line > 0
 	 */
@@ -354,8 +379,10 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Breaks a line of string into many fields.
 	 * 
-	 * @param line a line of string
-	 * @param lineNum a line number
+	 * @param line
+	 *        a line of string
+	 * @param lineNum
+	 *        a line number
 	 * @pre line != null
 	 * @pre lineNum > 0
 	 * @post $none
@@ -391,10 +418,13 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Reads a text file one line at the time
 	 * 
-	 * @param fl a file name
+	 * @param fl
+	 *        a file name
 	 * @return <code>true</code> if successful, <code>false</code> otherwise.
-	 * @throws IOException if the there was any error reading the file
-	 * @throws FileNotFoundException if the file was not found
+	 * @throws IOException
+	 *         if the there was any error reading the file
+	 * @throws FileNotFoundException
+	 *         if the file was not found
 	 */
 	private boolean readFile(final File fl) throws IOException, FileNotFoundException {
 		boolean success = false;
@@ -423,16 +453,20 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Reads a gzip file one line at the time
 	 * 
-	 * @param fl a gzip file name
+	 * @param fl
+	 *        a gzip file name
 	 * @return <code>true</code> if successful; <code>false</code> otherwise.
-	 * @throws IOException if the there was any error reading the file
-	 * @throws FileNotFoundException if the file was not found
+	 * @throws IOException
+	 *         if the there was any error reading the file
+	 * @throws FileNotFoundException
+	 *         if the file was not found
 	 */
 	private boolean readGZIPFile(final File fl) throws IOException, FileNotFoundException {
 		boolean success = false;
 		BufferedReader reader = null;
 		try {
-			reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(fl))));
+			reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(
+				new FileInputStream(fl))));
 
 			// read one line at the time
 			int line = 1;
@@ -455,9 +489,12 @@ public class WorkloadFileReader implements WorkloadModel {
 	/**
 	 * Reads a Zip file.
 	 * 
-	 * @param fl a zip file name
-	 * @return <code>true</code> if reading a file is successful; <code>false</code> otherwise.
-	 * @throws IOException if the there was any error reading the file
+	 * @param fl
+	 *        a zip file name
+	 * @return <code>true</code> if reading a file is successful;
+	 *         <code>false</code> otherwise.
+	 * @throws IOException
+	 *         if the there was any error reading the file
 	 */
 	private boolean readZipFile(final File fl) throws IOException {
 		boolean success = false;
