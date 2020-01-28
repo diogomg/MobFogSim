@@ -1,16 +1,17 @@
 package org.fog.application;
 
 /**
- * Class represents application edges which connect modules together and represent data dependency between them.
+ * Class represents application edges which connect modules together and
+ * represent data dependency between them.
+ * 
  * @author Harshit Gupta
- *
  */
 public class AppEdge {
-	
+
 	public static final int SENSOR = 1; // App Edge originates from a sensor
 	public static final int ACTUATOR = 2; // App Edge leads to an actuator
 	public static final int MODULE = 3; // App Edge is between application modules
-	
+
 	/**
 	 * Name of source application module
 	 */
@@ -36,7 +37,7 @@ public class AppEdge {
 	 */
 	private int direction;
 	private int edgeType;
-	
+
 	/**
 	 * Periodicity of application edge (in case it is periodic).
 	 */
@@ -45,13 +46,13 @@ public class AppEdge {
 	 * Denotes if the application edge is a periodic edge.
 	 */
 	private boolean isPeriodic;
-	
-	public AppEdge(){
-		
+
+	public AppEdge() {
+
 	}
-	
-	public AppEdge(String source, String destination, double tupleCpuLength, 
-			double tupleNwLength, String tupleType, int direction, int edgeType){
+
+	public AppEdge(String source, String destination, double tupleCpuLength,
+		double tupleNwLength, String tupleType, int direction, int edgeType) {
 		setSource(source);
 		setDestination(destination);
 		setTupleCpuLength(tupleCpuLength);
@@ -61,9 +62,9 @@ public class AppEdge {
 		setEdgeType(edgeType);
 		setPeriodic(false);
 	}
-	
-	public AppEdge(String source, String destination, double periodicity, double tupleCpuLength, 
-			double tupleNwLength, String tupleType, int direction, int edgeType){
+
+	public AppEdge(String source, String destination, double periodicity, double tupleCpuLength,
+		double tupleNwLength, String tupleType, int direction, int edgeType) {
 		setSource(source);
 		setDestination(destination);
 		setTupleCpuLength(tupleCpuLength);
@@ -74,34 +75,43 @@ public class AppEdge {
 		setPeriodic(true);
 		setPeriodicity(periodicity);
 	}
-	
+
 	public String getSource() {
 		return source;
 	}
+
 	public void setSource(String source) {
 		this.source = source;
 	}
+
 	public String getDestination() {
 		return destination;
 	}
+
 	public void setDestination(String destination) {
 		this.destination = destination;
 	}
+
 	public double getTupleCpuLength() {
 		return tupleCpuLength;
 	}
+
 	public void setTupleCpuLength(double tupleCpuLength) {
 		this.tupleCpuLength = tupleCpuLength;
 	}
+
 	public double getTupleNwLength() {
 		return tupleNwLength;
 	}
+
 	public void setTupleNwLength(double tupleNwLength) {
 		this.tupleNwLength = tupleNwLength;
 	}
+
 	public String getTupleType() {
 		return tupleType;
 	}
+
 	public void setTupleType(String tupleType) {
 		this.tupleType = tupleType;
 	}
@@ -141,8 +151,7 @@ public class AppEdge {
 	@Override
 	public String toString() {
 		return "AppEdge [source=" + source + ", destination=" + destination
-				+ ", tupleType=" + tupleType + "]";
+			+ ", tupleType=" + tupleType + "]";
 	}
-	
-	
+
 }
