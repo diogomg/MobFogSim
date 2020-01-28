@@ -6,7 +6,6 @@ import org.cloudbus.cloudsim.sdn.graph.core.Coordinates;
 
 /**
  * The model that represents node (host or vm) for the graph.
- * 
  */
 public class Node implements Serializable {
 	private static final long serialVersionUID = 823544330517091616L;
@@ -15,8 +14,7 @@ public class Node implements Serializable {
 	private String name;
 	private String type;
 
-	public Node() {
-	}
+	public Node() {}
 
 	public Node(String name, String type) {
 		this.name = name;
@@ -31,7 +29,7 @@ public class Node implements Serializable {
 	public String getName() {
 		return name;
 	}
-	
+
 	public void setType(String type) {
 		this.type = type;
 	}
@@ -39,7 +37,7 @@ public class Node implements Serializable {
 	public String getType() {
 		return type;
 	}
-	
+
 	public void setCoordinate(Coordinates coord) {
 		this.coord.setX(coord.getX());
 		this.coord.setY(coord.getY());

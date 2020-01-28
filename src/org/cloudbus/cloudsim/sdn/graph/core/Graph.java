@@ -8,15 +8,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * A graph model. Normally a model should not have any logic, but in this case we implement logic to manipulate the
- * adjacencyList like reorganizing, adding nodes, removing nodes, e.g
- *
+ * A graph model. Normally a model should not have any logic, but in this case
+ * we implement logic to manipulate the adjacencyList like reorganizing, adding
+ * nodes, removing nodes, e.g
  */
 public class Graph implements Serializable {
 	private static final long serialVersionUID = 745864022429447529L;
-	
-	private Map<Node, List<Edge>> adjacencyList;
 
+	private Map<Node, List<Edge>> adjacencyList;
 
 	public Graph() {
 		// when creating a new graph ensure that a new adjacencyList is created
@@ -35,7 +34,10 @@ public class Graph implements Serializable {
 		return adjacencyList;
 	}
 
-	/** Adds a given edge to the adjacency list. If the base node is not yet part of the adjacency list a new entry is added */
+	/**
+	 * Adds a given edge to the adjacency list. If the base node is not yet part
+	 * of the adjacency list a new entry is added
+	 */
 	public void addEdge(Node key, Edge value) {
 
 		if (adjacencyList.containsKey(key)) {
@@ -91,12 +93,14 @@ public class Graph implements Serializable {
 	public void removeEdge(Node key, Edge value) {
 
 		if (!adjacencyList.containsKey(key)) {
-			throw new IllegalArgumentException("The adjacency list does not contain a node for the given key: " + key);
+			throw new IllegalArgumentException(
+				"The adjacency list does not contain a node for the given key: " + key);
 		}
 		List<Edge> edges = adjacencyList.get(key);
 
 		if (!edges.contains(value)) {
-			throw new IllegalArgumentException("The list of edges does not contain the given edge to remove: " + value);
+			throw new IllegalArgumentException(
+				"The list of edges does not contain the given edge to remove: " + value);
 		}
 
 		edges.remove(value);
@@ -108,7 +112,7 @@ public class Graph implements Serializable {
 				toRemove.add(edge);
 			}
 		}
-		//normally only one element
+		// normally only one element
 		reverseEdges.removeAll(toRemove);
 	}
 
@@ -116,7 +120,8 @@ public class Graph implements Serializable {
 	public void removeNode(Node key) {
 
 		if (!adjacencyList.containsKey(key)) {
-			throw new IllegalArgumentException("The adjacency list does not contain a node for the given key: " + key);
+			throw new IllegalArgumentException(
+				"The adjacency list does not contain a node for the given key: " + key);
 		}
 
 		adjacencyList.remove(key);
@@ -134,16 +139,15 @@ public class Graph implements Serializable {
 			entry.getValue().removeAll(toRemove);
 		}
 	}
-	
-	public void clearGraph(){
+
+	public void clearGraph() {
 		adjacencyList.clear();
 	}
-	
-	public String toJsonString(){
+
+	public String toJsonString() {
 		String jsonText = Bridge.graphToJson(this);
 		return jsonText;
 	}
-	
 
 	@Override
 	public String toString() {
