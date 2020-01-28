@@ -1,9 +1,7 @@
 /*
- * Title:        CloudSimSDN
- * Description:  SDN extension for CloudSim
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2015, The University of Melbourne, Australia
+ * Title: CloudSimSDN Description: SDN extension for CloudSim Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2015, The University of
+ * Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.sdn;
@@ -22,7 +20,7 @@ public class Arc {
 	int flowId;
 	long requiredBandwidth;
 	double requiredLatency;
-	
+
 	public Arc(int srcId, int dstId, int flowId, long reqBW, double reqLatency) {
 		super();
 		this.srcId = srcId;
@@ -39,6 +37,7 @@ public class Arc {
 	public int getDstId() {
 		return dstId;
 	}
+
 	public int getFlowId() {
 		return flowId;
 	}

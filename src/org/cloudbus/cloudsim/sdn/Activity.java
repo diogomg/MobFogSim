@@ -1,9 +1,7 @@
 /*
- * Title:        CloudSimSDN
- * Description:  SDN extension for CloudSim
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2015, The University of Melbourne, Australia
+ * Title: CloudSimSDN Description: SDN extension for CloudSim Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2015, The University of
+ * Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.sdn;
@@ -15,5 +13,4 @@ package org.cloudbus.cloudsim.sdn;
  * @author Rodrigo N. Calheiros
  * @since CloudSimSDN 1.0
  */
-public interface Activity {
-}
+public interface Activity {}
