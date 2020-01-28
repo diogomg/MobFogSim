@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.sdn.example;
@@ -20,9 +19,9 @@ import org.cloudbus.cloudsim.VmScheduler;
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
- * VmSchedulerSpaceShared is a VMM allocation policy that allocates one or more Pe to a VM, and
- * doesn't allow sharing of PEs. If there is no free PEs to the VM, allocation fails. Free PEs are
- * not allocated to VMs
+ * VmSchedulerSpaceShared is a VMM allocation policy that allocates one or more
+ * Pe to a VM, and doesn't allow sharing of PEs. If there is no free PEs to the
+ * VM, allocation fails. Free PEs are not allocated to VMs
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
@@ -39,7 +38,8 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 	/**
 	 * Instantiates a new vm scheduler space shared.
 	 * 
-	 * @param pelist the pelist
+	 * @param pelist
+	 *        the pelist
 	 */
 	public VmSchedulerSpaceSharedEnergy(List<? extends Pe> pelist) {
 		super(pelist);
@@ -50,8 +50,9 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.VmScheduler#allocatePesForVm(org.cloudbus.cloudsim.Vm,
-	 * java.util.List)
+	 * @see
+	 * org.cloudbus.cloudsim.VmScheduler#allocatePesForVm(org.cloudbus.cloudsim
+	 * .Vm, java.util.List)
 	 */
 	@Override
 	public boolean allocatePesForVm(Vm vm, List<Double> mipsShare) {
@@ -88,7 +89,9 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.VmScheduler#deallocatePesForVm(org.cloudbus.cloudsim.Vm)
+	 * @see
+	 * org.cloudbus.cloudsim.VmScheduler#deallocatePesForVm(org.cloudbus.cloudsim
+	 * .Vm)
 	 */
 	@Override
 	public void deallocatePesForVm(Vm vm) {
@@ -107,7 +110,8 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 	/**
 	 * Sets the pe allocation map.
 	 * 
-	 * @param peAllocationMap the pe allocation map
+	 * @param peAllocationMap
+	 *        the pe allocation map
 	 */
 	protected void setPeAllocationMap(Map<String, List<Pe>> peAllocationMap) {
 		this.peAllocationMap = peAllocationMap;
@@ -125,7 +129,8 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 	/**
 	 * Sets the free pes vector.
 	 * 
-	 * @param freePes the new free pes vector
+	 * @param freePes
+	 *        the new free pes vector
 	 */
 	protected void setFreePes(List<Pe> freePes) {
 		this.freePes = freePes;
@@ -140,68 +145,79 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 		return freePes;
 	}
 
-
 	/************************************************
-	 *  Calculate Utilization history
+	 * Calculate Utilization history
 	 ************************************************/
 	public class HistoryEntry {
 		public double startTime;
 		public double usedMips;
-		HistoryEntry(double t, double m) { startTime=t; usedMips=m;}
+
+		HistoryEntry(double t, double m) {
+			startTime = t;
+			usedMips = m;
+		}
 	}
+
 	private List<HistoryEntry> utilizationHistories = null;
+
 	public List<HistoryEntry> getUtilizationHisotry() {
 		return utilizationHistories;
 	}
+
 	public double getUtilizationTotalMips() {
-		double total=0;
-		double lastTime=0;
-		double lastMips=0;
-		for(HistoryEntry h:this.utilizationHistories) {
+		double total = 0;
+		double lastTime = 0;
+		double lastMips = 0;
+		for (HistoryEntry h : this.utilizationHistories) {
 			total += lastMips * (h.startTime - lastTime);
 			lastTime = h.startTime;
 			lastMips = h.usedMips;
 		}
 		return total;
 	}
-	private static double powerOffDuration = 1*3600; //if host is idle for 1 hours, it's turned off.
-	
+
+	// if host is idle for 1 hours, it's turned off.
+	private static double powerOffDuration = 1 * 3600;
+
 	public double getUtilizationEnergyConsumption() {
-		
-		double total=0;
-		double lastTime=0;
-		double lastMips=0;
-		for(HistoryEntry h:this.utilizationHistories) {
+
+		double total = 0;
+		double lastTime = 0;
+		double lastMips = 0;
+		for (HistoryEntry h : this.utilizationHistories) {
 			double duration = h.startTime - lastTime;
-			double utilPercentage = lastMips/ getTotalMips();
+			double utilPercentage = lastMips / getTotalMips();
 			double power = calculatePower(utilPercentage);
 			double energyConsumption = power * duration;
-			
+
 			// Assume that the host is turned off when duration is long enough
-			if(duration > powerOffDuration && lastMips == 0)
+			if (duration > powerOffDuration && lastMips == 0)
 				energyConsumption = 0;
-			
+
 			total += energyConsumption;
 			lastTime = h.startTime;
 			lastMips = h.usedMips;
 		}
-		return total/3600;	// transform to Whatt*hour from What*seconds
+		return total / 3600;	// transform to Whatt*hour from What*seconds
 	}
+
 	private void addUtilizationEntry() {
 		double time = CloudSim.clock();
 		double totalMips = getTotalMips();
 		double usingMips = totalMips - this.getAvailableMips();
-		if(usingMips < 0) {
+		if (usingMips < 0) {
 			System.err.println("No way!");
 		}
-		if(utilizationHistories == null)
+		if (utilizationHistories == null)
 			utilizationHistories = new ArrayList<HistoryEntry>();
 		this.utilizationHistories.add(new HistoryEntry(time, usingMips));
 	}
+
 	private double calculatePower(double u) {
 		double power = 120 + 154 * u;
 		return power;
 	}
+
 	private double getTotalMips() {
 		return this.getPeList().size() * this.getPeCapacity();
 	}
@@ -209,6 +225,6 @@ public class VmSchedulerSpaceSharedEnergy extends VmScheduler {
 	@Override
 	protected void setAvailableMips(double availableMips) {
 		super.setAvailableMips(availableMips);
-		addUtilizationEntry();		
+		addUtilizationEntry();
 	}
 }

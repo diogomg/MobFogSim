@@ -16,7 +16,7 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	protected final double hostTotalMips;
 	protected final double hostTotalBw;
 	protected final int hostTotalPes;
-	
+
 	/** The vm table. */
 	private Map<String, Host> vmTable;
 
@@ -25,7 +25,7 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 
 	/** The free pes. */
 	private List<Integer> freePes;
-	
+
 	private Map<String, Long> usedMips;
 	private List<Long> freeMips;
 	private Map<String, Long> usedBw;
@@ -34,7 +34,8 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Creates the new VmAllocationPolicySimple object.
 	 * 
-	 * @param list the list
+	 * @param list
+	 *        the list
 	 * @pre $none
 	 * @post $none
 	 */
@@ -44,15 +45,15 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 		setFreePes(new ArrayList<Integer>());
 		setFreeMips(new ArrayList<Long>());
 		setFreeBw(new ArrayList<Long>());
-		
+
 		for (Host host : getHostList()) {
 			getFreePes().add(host.getNumberOfPes());
 			getFreeMips().add((long) host.getTotalMips());
 			getFreeBw().add(host.getBw());
 		}
 		hostTotalMips = getHostList().get(0).getTotalMips();
-		hostTotalBw =  getHostList().get(0).getBw();
-		hostTotalPes =  getHostList().get(0).getNumberOfPes();
+		hostTotalBw = getHostList().get(0).getBw();
+		hostTotalPes = getHostList().get(0).getNumberOfPes();
 
 		setVmTable(new HashMap<String, Host>());
 		setUsedPes(new HashMap<String, Integer>());
@@ -64,10 +65,12 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 		double ret = mipsPercent * bwPercent;
 		return ret;
 	}
+
 	/**
 	 * Allocates a host for a given VM.
 	 * 
-	 * @param vm VM specification
+	 * @param vm
+	 *        VM specification
 	 * @return $true if the host could be allocated; $false otherwise
 	 * @pre $none
 	 * @post $none
@@ -77,7 +80,7 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 		if (getVmTable().containsKey(vm.getUid())) { // if this vm was not created
 			return false;
 		}
-		
+
 		int numHosts = getHostList().size();
 
 		// 1. Find/Order the best host for this VM by comparing a metric
@@ -86,16 +89,17 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 		long requiredBw = vm.getCurrentRequestedBw();
 
 		boolean result = false;
-		
+
 		double[] freeResources = new double[numHosts];
 		for (int i = 0; i < numHosts; i++) {
-			double mipsFreePercent = (double)getFreeMips().get(i) / this.hostTotalMips; 
-			double bwFreePercent = (double)getFreeBw().get(i) / this.hostTotalBw;
-			
+			double mipsFreePercent = (double) getFreeMips().get(i) / this.hostTotalMips;
+			double bwFreePercent = (double) getFreeBw().get(i) / this.hostTotalBw;
+
 			freeResources[i] = this.convertWeightedMetric(mipsFreePercent, bwFreePercent);
 		}
 
-		for(int tries = 0; result == false && tries < numHosts; tries++) {// we still trying until we find a host or until we try all of them
+		// we still trying until we find a host or until we try all of them
+		for (int tries = 0; result == false && tries < numHosts; tries++) {
 			double lessFree = Double.POSITIVE_INFINITY;
 			int idx = -1;
 
@@ -108,57 +112,62 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 			}
 			freeResources[idx] = Double.POSITIVE_INFINITY;
 			Host host = getHostList().get(idx);
-			
+
 			// Check whether the host can hold this VM or not.
-			if(getFreeMips().get(idx) < requiredMips ||
-					getFreeBw().get(idx) < requiredBw ||
-					getFreePes().get(idx) < requiredPes) {
-				//Cannot host the VM
+			if (getFreeMips().get(idx) < requiredMips ||
+				getFreeBw().get(idx) < requiredBw ||
+				getFreePes().get(idx) < requiredPes) {
+				// Cannot host the VM
 				continue;
 			}
-			
+
 			result = host.vmCreate(vm);
 
 			if (result) { // if vm were succesfully created in the host
 				getVmTable().put(vm.getUid(), host);
 				getUsedPes().put(vm.getUid(), requiredPes);
 				getFreePes().set(idx, getFreePes().get(idx) - requiredPes);
-				
+
 				getUsedMips().put(vm.getUid(), (long) requiredMips);
-				getFreeMips().set(idx,  (long) (getFreeMips().get(idx) - requiredMips));
+				getFreeMips().set(idx, (long) (getFreeMips().get(idx) - requiredMips));
 
 				getUsedBw().put(vm.getUid(), (long) requiredBw);
-				getFreeBw().set(idx,  (long) (getFreeBw().get(idx) - requiredBw));
+				getFreeBw().set(idx, (long) (getFreeBw().get(idx) - requiredBw));
 
 				break;
 			}
 		}
-		
+
 		logMaxNumHostsUsed();
 		return result;
 	}
-	
-	protected int maxNumHostsUsed=0;
+
+	protected int maxNumHostsUsed = 0;
+
 	protected void logMaxNumHostsUsed() {
 		// Get how many are used
-		int numHostsUsed=0;
-		for(int freePes:getFreePes()) {
-			if(freePes < hostTotalPes) {
+		int numHostsUsed = 0;
+		for (int freePes : getFreePes()) {
+			if (freePes < hostTotalPes) {
 				numHostsUsed++;
 			}
 		}
-		if(maxNumHostsUsed < numHostsUsed)
+		if (maxNumHostsUsed < numHostsUsed)
 			maxNumHostsUsed = numHostsUsed;
-		System.err.println("Number of online hosts:"+numHostsUsed + ", max was ="+maxNumHostsUsed);
-		
-		
+		System.err.println("Number of online hosts:" + numHostsUsed + ", max was ="
+			+ maxNumHostsUsed);
+
 	}
-	public int getMaxNumHostsUsed() { return maxNumHostsUsed;}
+
+	public int getMaxNumHostsUsed() {
+		return maxNumHostsUsed;
+	}
 
 	/**
 	 * Releases the host used by a VM.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @pre $none
 	 * @post none
 	 */
@@ -168,13 +177,13 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 		if (host != null) {
 			int idx = getHostList().indexOf(host);
 			host.vmDestroy(vm);
-			
+
 			Integer pes = getUsedPes().remove(vm.getUid());
 			getFreePes().set(idx, getFreePes().get(idx) + pes);
-			
+
 			Long mips = getUsedMips().remove(vm.getUid());
 			getFreeMips().set(idx, getFreeMips().get(idx) + mips);
-			
+
 			Long bw = getUsedBw().remove(vm.getUid());
 			getFreeBw().set(idx, getFreeBw().get(idx) + bw);
 		}
@@ -183,7 +192,8 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Gets the host that is executing the given VM belonging to the given user.
 	 * 
-	 * @param vm the vm
+	 * @param vm
+	 *        the vm
 	 * @return the Host with the given vmID and userID; $null if not found
 	 * @pre $none
 	 * @post $none
@@ -196,8 +206,10 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Gets the host that is executing the given VM belonging to the given user.
 	 * 
-	 * @param vmId the vm id
-	 * @param userId the user id
+	 * @param vmId
+	 *        the vm id
+	 * @param userId
+	 *        the user id
 	 * @return the Host with the given vmID and userID; $null if not found
 	 * @pre $none
 	 * @post $none
@@ -219,7 +231,8 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Sets the vm table.
 	 * 
-	 * @param vmTable the vm table
+	 * @param vmTable
+	 *        the vm table
 	 */
 	protected void setVmTable(Map<String, Host> vmTable) {
 		this.vmTable = vmTable;
@@ -237,7 +250,8 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Sets the used pes.
 	 * 
-	 * @param usedPes the used pes
+	 * @param usedPes
+	 *        the used pes
 	 */
 	protected void setUsedPes(Map<String, Integer> usedPes) {
 		this.usedPes = usedPes;
@@ -255,7 +269,8 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	/**
 	 * Sets the free pes.
 	 * 
-	 * @param freePes the new free pes
+	 * @param freePes
+	 *        the new free pes
 	 */
 	protected void setFreePes(List<Integer> freePes) {
 		this.freePes = freePes;
@@ -264,32 +279,39 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 	protected Map<String, Long> getUsedMips() {
 		return usedMips;
 	}
+
 	protected void setUsedMips(Map<String, Long> usedMips) {
 		this.usedMips = usedMips;
 	}
+
 	protected Map<String, Long> getUsedBw() {
 		return usedBw;
 	}
+
 	protected void setUsedBw(Map<String, Long> usedBw) {
 		this.usedBw = usedBw;
 	}
+
 	protected List<Long> getFreeMips() {
 		return this.freeMips;
 	}
+
 	protected void setFreeMips(List<Long> freeMips) {
 		this.freeMips = freeMips;
 	}
-	
+
 	protected List<Long> getFreeBw() {
 		return this.freeBw;
 	}
+
 	protected void setFreeBw(List<Long> freeBw) {
 		this.freeBw = freeBw;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see cloudsim.VmAllocationPolicy#optimizeAllocation(double, cloudsim.VmList, double)
+	 * @see cloudsim.VmAllocationPolicy#optimizeAllocation(double,
+	 * cloudsim.VmList, double)
 	 */
 	@Override
 	public List<Map<String, Object>> optimizeAllocation(List<? extends Vm> vmList) {
@@ -299,8 +321,9 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.cloudbus.cloudsim.VmAllocationPolicy#allocateHostForVm(org.cloudbus.cloudsim.Vm,
-	 * org.cloudbus.cloudsim.Host)
+	 * @see
+	 * org.cloudbus.cloudsim.VmAllocationPolicy#allocateHostForVm(org.cloudbus
+	 * .cloudsim.Vm, org.cloudbus.cloudsim.Host)
 	 */
 	@Override
 	public boolean allocateHostForVm(Vm vm, Host host) {
@@ -313,12 +336,11 @@ public class VmAllocationPolicyCombinedMostFullFirst extends VmAllocationPolicy 
 			getFreePes().set(idx, getFreePes().get(idx) - requiredPes);
 
 			Log.formatLine(
-					"%.2f: VM #" + vm.getId() + " has been allocated to the host #" + host.getId(),
-					CloudSim.clock());
+				"%.2f: VM #" + vm.getId() + " has been allocated to the host #" + host.getId(),
+				CloudSim.clock());
 			return true;
 		}
 
 		return false;
-	}	
+	}
 }
-
