@@ -1,10 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Descripimport java.util.Random;
-mulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Descripimport java.util.Random; mulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.distributions;
@@ -31,9 +29,12 @@ public class GammaDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new gamma distr.
 	 * 
-	 * @param seed the seed
-	 * @param alpha the alpha
-	 * @param beta the beta
+	 * @param seed
+	 *        the seed
+	 * @param alpha
+	 *        the alpha
+	 * @param beta
+	 *        the beta
 	 */
 	public GammaDistr(Random seed, int alpha, double beta) {
 		if (alpha <= 0 || beta <= 0.0) {
@@ -48,8 +49,10 @@ public class GammaDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new gamma distr.
 	 * 
-	 * @param alpha the alpha
-	 * @param beta the beta
+	 * @param alpha
+	 *        the alpha
+	 * @param beta
+	 *        the beta
 	 */
 	public GammaDistr(int alpha, double beta) {
 		if (alpha <= 0 || beta <= 0.0) {

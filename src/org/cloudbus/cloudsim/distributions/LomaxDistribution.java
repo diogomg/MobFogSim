@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.distributions;
@@ -24,9 +23,12 @@ public class LomaxDistribution extends ParetoDistr implements ContinuousDistribu
 	/**
 	 * Instantiates a new lomax distribution.
 	 * 
-	 * @param shape the shape
-	 * @param location the location
-	 * @param shift the shift
+	 * @param shape
+	 *        the shape
+	 * @param location
+	 *        the location
+	 * @param shift
+	 *        the shift
 	 */
 	public LomaxDistribution(double shape, double location, double shift) {
 		super(shape, location);
@@ -41,10 +43,14 @@ public class LomaxDistribution extends ParetoDistr implements ContinuousDistribu
 	/**
 	 * Instantiates a new lomax distribution.
 	 * 
-	 * @param seed the seed
-	 * @param shape the shape
-	 * @param location the location
-	 * @param shift the shift
+	 * @param seed
+	 *        the seed
+	 * @param shape
+	 *        the shape
+	 * @param location
+	 *        the location
+	 * @param shift
+	 *        the shift
 	 */
 	public LomaxDistribution(Random seed, double shape, double location, double shift) {
 		super(seed, shape, location);

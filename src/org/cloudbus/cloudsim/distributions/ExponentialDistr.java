@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.distributions;
@@ -27,8 +26,10 @@ public class ExponentialDistr implements ContinuousDistribution {
 	/**
 	 * Creates a new exponential number generator.
 	 * 
-	 * @param seed the seed to be used.
-	 * @param mean the mean for the distribution.
+	 * @param seed
+	 *        the seed to be used.
+	 * @param mean
+	 *        the mean for the distribution.
 	 */
 	public ExponentialDistr(long seed, double mean) {
 		if (mean <= 0.0) {
@@ -41,7 +42,8 @@ public class ExponentialDistr implements ContinuousDistribution {
 	/**
 	 * Creates a new exponential number generator.
 	 * 
-	 * @param mean the mean for the distribution.
+	 * @param mean
+	 *        the mean for the distribution.
 	 */
 	public ExponentialDistr(double mean) {
 		if (mean <= 0.0) {

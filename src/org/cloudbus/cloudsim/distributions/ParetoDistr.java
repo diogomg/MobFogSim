@@ -1,10 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Descripimport java.util.Random;
-mulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Descripimport java.util.Random; mulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.distributions;
@@ -31,9 +29,12 @@ public class ParetoDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new pareto distr.
 	 * 
-	 * @param seed the seed
-	 * @param shape the shape
-	 * @param location the location
+	 * @param seed
+	 *        the seed
+	 * @param shape
+	 *        the shape
+	 * @param location
+	 *        the location
 	 */
 	public ParetoDistr(Random seed, double shape, double location) {
 		if (shape <= 0.0 || location <= 0.0) {
@@ -48,8 +49,10 @@ public class ParetoDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new pareto distr.
 	 * 
-	 * @param shape the shape
-	 * @param location the location
+	 * @param shape
+	 *        the shape
+	 * @param location
+	 *        the location
 	 */
 	public ParetoDistr(double shape, double location) {
 		if (shape <= 0.0 || location <= 0.0) {

@@ -1,10 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Descripimport java.util.Random;
-mulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Descripimport java.util.Random; mulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.distributions;
@@ -31,13 +29,17 @@ public class ZipfDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new zipf distr.
 	 * 
-	 * @param seed the seed
-	 * @param shape the shape
-	 * @param population the population
+	 * @param seed
+	 *        the seed
+	 * @param shape
+	 *        the shape
+	 * @param population
+	 *        the population
 	 */
 	public ZipfDistr(long seed, double shape, int population) {
 		if (shape <= 0.0 || population < 1) {
-			throw new IllegalArgumentException("Mean must be greater than 0.0 and population greater than 0");
+			throw new IllegalArgumentException(
+				"Mean must be greater than 0.0 and population greater than 0");
 		}
 		numGen = new Random(seed);
 		this.shape = shape;
@@ -48,12 +50,15 @@ public class ZipfDistr implements ContinuousDistribution {
 	/**
 	 * Instantiates a new zipf distr.
 	 * 
-	 * @param shape the shape
-	 * @param population the population
+	 * @param shape
+	 *        the shape
+	 * @param population
+	 *        the population
 	 */
 	public ZipfDistr(double shape, int population) {
 		if (shape <= 0.0) {
-			throw new IllegalArgumentException("Mean must be greated than 0.0 and population greater than 0");
+			throw new IllegalArgumentException(
+				"Mean must be greated than 0.0 and population greater than 0");
 		}
 		numGen = new Random(System.currentTimeMillis());
 		this.shape = shape;
@@ -84,8 +89,10 @@ public class ZipfDistr implements ContinuousDistribution {
 	/**
 	 * Compute den.
 	 * 
-	 * @param shape the shape
-	 * @param population the population
+	 * @param shape
+	 *        the shape
+	 * @param population
+	 *        the population
 	 */
 	private void computeDen(double shape, int population) {
 		den = 0.0;
