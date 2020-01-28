@@ -93,15 +93,7 @@ public class SimpleNetworkOperatingSystem extends NetworkOperatingSystem {
 		return true;
 	}
 
-	private Link selectLinkFirst(List<Link> links) {
-		return links.get(0);
-	}
-
 	int i = 0;
-
-	private Link selectLinkRandom(List<Link> links) {
-		return links.get(i++ % links.size());
-	}
 
 	private Link selectLinkByFlow(List<Link> links, int flowId) {
 		if (flowId == -1)
