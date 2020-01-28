@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.core;
@@ -14,8 +13,8 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * This class implements the deferred event queue used by {@link Simulation}. The event queue uses a
- * linked list to store the events.
+ * This class implements the deferred event queue used by {@link Simulation}.
+ * The event queue uses a linked list to store the events.
  * 
  * @author Marcos Dias de Assuncao
  * @since CloudSim Toolkit 1.0
@@ -31,10 +30,11 @@ public class DeferredQueue {
 	private double maxTime = -1;
 
 	/**
-	 * Adds a new event to the queue. Adding a new event to the queue preserves the temporal order
-	 * of the events.
+	 * Adds a new event to the queue. Adding a new event to the queue preserves
+	 * the temporal order of the events.
 	 * 
-	 * @param newEvent The event to be added to the queue.
+	 * @param newEvent
+	 *        The event to be added to the queue.
 	 */
 	public void addEvent(SimEvent newEvent) {
 		// The event has to be inserted as the last of all events

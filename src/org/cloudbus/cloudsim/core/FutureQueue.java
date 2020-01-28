@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.core;
@@ -14,8 +13,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- * This class implements the future event queue used by {@link Simulation}. The event queue uses a
- * {@link TreeSet} in order to store the events.
+ * This class implements the future event queue used by {@link Simulation}. The
+ * event queue uses a {@link TreeSet} in order to store the events.
  * 
  * @author Marcos Dias de Assuncao
  * @since CloudSim Toolkit 1.0
@@ -31,10 +30,11 @@ public class FutureQueue {
 	private long serial = 0;
 
 	/**
-	 * Add a new event to the queue. Adding a new event to the queue preserves the temporal order of
-	 * the events in the queue.
+	 * Add a new event to the queue. Adding a new event to the queue preserves
+	 * the temporal order of the events in the queue.
 	 * 
-	 * @param newEvent The event to be put in the queue.
+	 * @param newEvent
+	 *        The event to be put in the queue.
 	 */
 	public void addEvent(SimEvent newEvent) {
 		newEvent.setSerial(serial++);
@@ -44,7 +44,8 @@ public class FutureQueue {
 	/**
 	 * Add a new event to the head of the queue.
 	 * 
-	 * @param newEvent The event to be put in the queue.
+	 * @param newEvent
+	 *        The event to be put in the queue.
 	 */
 	public void addEventFirst(SimEvent newEvent) {
 		newEvent.setSerial(0);
@@ -72,7 +73,8 @@ public class FutureQueue {
 	/**
 	 * Removes the event from the queue.
 	 * 
-	 * @param event the event
+	 * @param event
+	 *        the event
 	 * @return true, if successful
 	 */
 	public boolean remove(SimEvent event) {
@@ -82,7 +84,8 @@ public class FutureQueue {
 	/**
 	 * Removes all the events from the queue.
 	 * 
-	 * @param events the events
+	 * @param events
+	 *        the events
 	 * @return true, if successful
 	 */
 	public boolean removeAll(Collection<SimEvent> events) {

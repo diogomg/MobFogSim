@@ -1,15 +1,15 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.core;
 
 /**
- * This class represents a simulation event which is passed between the entities in the simulation.
+ * This class represents a simulation event which is passed between the entities
+ * in the simulation.
  * 
  * @author Costas Simatos
  * @see Simulation
@@ -97,8 +97,9 @@ public class SimEvent implements Cloneable, Comparable<SimEvent> {
 
 	@Override
 	public String toString() {
-		return "Event tag = " + tag + " source = " + CloudSim.getEntity(entSrc).getName() + " destination = "
-				+ CloudSim.getEntity(entDst).getName();
+		return "Event tag = " + tag + " source = " + CloudSim.getEntity(entSrc).getName()
+			+ " destination = "
+			+ CloudSim.getEntity(entDst).getName();
 	}
 
 	/**
@@ -160,7 +161,8 @@ public class SimEvent implements Cloneable, Comparable<SimEvent> {
 	}
 
 	/**
-	 * Get the simulation time that this event was removed from the queue for service.
+	 * Get the simulation time that this event was removed from the queue for
+	 * service.
 	 * 
 	 * @return The simulation time
 	 */
@@ -217,7 +219,8 @@ public class SimEvent implements Cloneable, Comparable<SimEvent> {
 	/**
 	 * Set the source entity of this event.
 	 * 
-	 * @param s The unique id number of the entity
+	 * @param s
+	 *        The unique id number of the entity
 	 */
 	public void setSource(int s) {
 		entSrc = s;
@@ -226,7 +229,8 @@ public class SimEvent implements Cloneable, Comparable<SimEvent> {
 	/**
 	 * Set the destination entity of this event.
 	 * 
-	 * @param d The unique id number of the entity
+	 * @param d
+	 *        The unique id number of the entity
 	 */
 	public void setDestination(int d) {
 		entDst = d;

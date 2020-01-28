@@ -1,17 +1,17 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.core;
 
 /**
- * Contains various static command tags that indicate a type of action that needs to be undertaken
- * by CloudSim entities when they receive or send events. <b>NOTE:</b> To avoid conflicts with other
- * tags, CloudSim reserves negative numbers, 0 - 299, and 9600.
+ * Contains various static command tags that indicate a type of action that
+ * needs to be undertaken by CloudSim entities when they receive or send events.
+ * <b>NOTE:</b> To avoid conflicts with other tags, CloudSim reserves negative
+ * numbers, 0 - 299, and 9600.
  * 
  * @author Manzur Murshed
  * @author Rajkumar Buyya
@@ -42,14 +42,14 @@ public class CloudSimTags {
 	public static final int END_OF_SIMULATION = -1;
 
 	/**
-	 * Denotes an abrupt end of simulation. That is, one event of this type is enough for
-	 * {@link CloudSimShutdown} to trigger the end of the simulation
+	 * Denotes an abrupt end of simulation. That is, one event of this type is
+	 * enough for {@link CloudSimShutdown} to trigger the end of the simulation
 	 */
 	public static final int ABRUPT_END_OF_SIMULATION = -2;
 
 	/**
-	 * Denotes insignificant simulation entity or time. This tag will not be used for identification
-	 * purposes.
+	 * Denotes insignificant simulation entity or time. This tag will not be
+	 * used for identification purposes.
 	 */
 	public static final int INSIGNIFICANT = BASE + 0;
 
@@ -57,56 +57,60 @@ public class CloudSimTags {
 	public static final int EXPERIMENT = BASE + 1;
 
 	/**
-	 * Denotes a grid resource to be registered. This tag is normally used between
-	 * CloudInformationService and CloudResouce entity.
+	 * Denotes a grid resource to be registered. This tag is normally used
+	 * between CloudInformationService and CloudResouce entity.
 	 */
 	public static final int REGISTER_RESOURCE = BASE + 2;
 
 	/**
-	 * Denotes a grid resource, that can support advance reservation, to be registered. This tag is
-	 * normally used between CloudInformationService and CloudResouce entity.
+	 * Denotes a grid resource, that can support advance reservation, to be
+	 * registered. This tag is normally used between CloudInformationService and
+	 * CloudResouce entity.
 	 */
 	public static final int REGISTER_RESOURCE_AR = BASE + 3;
 
 	/**
-	 * Denotes a list of all hostList, including the ones that can support advance reservation. This
-	 * tag is normally used between CloudInformationService and CloudSim entity.
+	 * Denotes a list of all hostList, including the ones that can support
+	 * advance reservation. This tag is normally used between
+	 * CloudInformationService and CloudSim entity.
 	 */
 	public static final int RESOURCE_LIST = BASE + 4;
 
 	/**
-	 * Denotes a list of hostList that only support advance reservation. This tag is normally used
-	 * between CloudInformationService and CloudSim entity.
+	 * Denotes a list of hostList that only support advance reservation. This
+	 * tag is normally used between CloudInformationService and CloudSim entity.
 	 */
 	public static final int RESOURCE_AR_LIST = BASE + 5;
 
 	/**
-	 * Denotes grid resource characteristics information. This tag is normally used between CloudSim
-	 * and CloudResource entity.
+	 * Denotes grid resource characteristics information. This tag is normally
+	 * used between CloudSim and CloudResource entity.
 	 */
 	public static final int RESOURCE_CHARACTERISTICS = BASE + 6;
 
 	/**
-	 * Denotes grid resource allocation policy. This tag is normally used between CloudSim and
-	 * CloudResource entity.
+	 * Denotes grid resource allocation policy. This tag is normally used
+	 * between CloudSim and CloudResource entity.
 	 */
 	public static final int RESOURCE_DYNAMICS = BASE + 7;
 
 	/**
-	 * Denotes a request to get the total number of Processing Elements (PEs) of a resource. This
-	 * tag is normally used between CloudSim and CloudResource entity.
+	 * Denotes a request to get the total number of Processing Elements (PEs) of
+	 * a resource. This tag is normally used between CloudSim and CloudResource
+	 * entity.
 	 */
 	public static final int RESOURCE_NUM_PE = BASE + 8;
 
 	/**
-	 * Denotes a request to get the total number of free Processing Elements (PEs) of a resource.
-	 * This tag is normally used between CloudSim and CloudResource entity.
+	 * Denotes a request to get the total number of free Processing Elements
+	 * (PEs) of a resource. This tag is normally used between CloudSim and
+	 * CloudResource entity.
 	 */
 	public static final int RESOURCE_NUM_FREE_PE = BASE + 9;
 
 	/**
-	 * Denotes a request to record events for statistical purposes. This tag is normally used
-	 * between CloudSim and CloudStatistics entity.
+	 * Denotes a request to record events for statistical purposes. This tag is
+	 * normally used between CloudSim and CloudStatistics entity.
 	 */
 	public static final int RECORD_STATISTICS = BASE + 10;
 
@@ -114,25 +118,27 @@ public class CloudSimTags {
 	public static final int RETURN_STAT_LIST = BASE + 11;
 
 	/**
-	 * Denotes a request to send an Accumulator object based on category into an event scheduler.
-	 * This tag is normally used between ReportWriter and CloudStatistics entity.
+	 * Denotes a request to send an Accumulator object based on category into an
+	 * event scheduler. This tag is normally used between ReportWriter and
+	 * CloudStatistics entity.
 	 */
 	public static final int RETURN_ACC_STATISTICS_BY_CATEGORY = BASE + 12;
 
 	/**
-	 * Denotes a request to register a CloudResource entity to a regional CloudInformationService
-	 * (GIS) entity
+	 * Denotes a request to register a CloudResource entity to a regional
+	 * CloudInformationService (GIS) entity
 	 */
 	public static final int REGISTER_REGIONAL_GIS = BASE + 13;
 
 	/**
-	 * Denotes a request to get a list of other regional GIS entities from the system GIS entity
+	 * Denotes a request to get a list of other regional GIS entities from the
+	 * system GIS entity
 	 */
 	public static final int REQUEST_REGIONAL_GIS = BASE + 14;
 
 	/**
-	 * Denotes request for grid resource characteristics information. This tag is normally used
-	 * between CloudSim and CloudResource entity.
+	 * Denotes request for grid resource characteristics information. This tag
+	 * is normally used between CloudSim and CloudResource entity.
 	 */
 	public static final int RESOURCE_CHARACTERISTICS_REQUEST = BASE + 15;
 
@@ -143,20 +149,20 @@ public class CloudSimTags {
 	public static final int INFOPKT_RETURN = NETBASE + 6;
 
 	/**
-	 * Denotes the return of a Cloudlet back to sender. This tag is normally used by CloudResource
-	 * entity.
+	 * Denotes the return of a Cloudlet back to sender. This tag is normally
+	 * used by CloudResource entity.
 	 */
 	public static final int CLOUDLET_RETURN = BASE + 20;
 
 	/**
-	 * Denotes the submission of a Cloudlet. This tag is normally used between CloudSim User and
-	 * CloudResource entity.
+	 * Denotes the submission of a Cloudlet. This tag is normally used between
+	 * CloudSim User and CloudResource entity.
 	 */
 	public static final int CLOUDLET_SUBMIT = BASE + 21;
 
 	/**
-	 * Denotes the submission of a Cloudlet with an acknowledgement. This tag is normally used
-	 * between CloudSim User and CloudResource entity.
+	 * Denotes the submission of a Cloudlet with an acknowledgement. This tag is
+	 * normally used between CloudSim User and CloudResource entity.
 	 */
 	public static final int CLOUDLET_SUBMIT_ACK = BASE + 22;
 
@@ -170,7 +176,8 @@ public class CloudSimTags {
 	public static final int CLOUDLET_PAUSE = BASE + 25;
 
 	/**
-	 * Pauses a Cloudlet submitted in the CloudResource entity with an acknowledgement.
+	 * Pauses a Cloudlet submitted in the CloudResource entity with an
+	 * acknowledgement.
 	 */
 	public static final int CLOUDLET_PAUSE_ACK = BASE + 26;
 
@@ -178,7 +185,8 @@ public class CloudSimTags {
 	public static final int CLOUDLET_RESUME = BASE + 27;
 
 	/**
-	 * Resumes a Cloudlet submitted in the CloudResource entity with an acknowledgement.
+	 * Resumes a Cloudlet submitted in the CloudResource entity with an
+	 * acknowledgement.
 	 */
 	public static final int CLOUDLET_RESUME_ACK = BASE + 28;
 
@@ -191,14 +199,14 @@ public class CloudSimTags {
 	public static final int CLOUDLET_MOVE_ACK = BASE + 30;
 
 	/**
-	 * Denotes a request to create a new VM in a Datacentre With acknowledgement information sent by
-	 * the Datacentre
+	 * Denotes a request to create a new VM in a Datacentre With acknowledgement
+	 * information sent by the Datacentre
 	 */
 	public static final int VM_CREATE = BASE + 31;
 
 	/**
-	 * Denotes a request to create a new VM in a Datacentre With acknowledgement information sent by
-	 * the Datacentre
+	 * Denotes a request to create a new VM in a Datacentre With acknowledgement
+	 * information sent by the Datacentre
 	 */
 	public static final int VM_CREATE_ACK = BASE + 32;
 
@@ -218,8 +226,8 @@ public class CloudSimTags {
 	public static final int VM_MIGRATE = BASE + 35;
 
 	/**
-	 * Denotes a request to migrate a new VM in a Datacentre With acknowledgement information sent
-	 * by the Datacentre
+	 * Denotes a request to migrate a new VM in a Datacentre With
+	 * acknowledgement information sent by the Datacentre
 	 */
 	public static final int VM_MIGRATE_ACK = BASE + 36;
 
