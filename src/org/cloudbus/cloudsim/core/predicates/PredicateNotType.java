@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.core.predicates;
@@ -26,25 +25,30 @@ public class PredicateNotType extends Predicate {
 	/**
 	 * Constructor used to select events whose tags do not match a given tag.
 	 * 
-	 * @param tag An event tag value
+	 * @param tag
+	 *        An event tag value
 	 */
 	public PredicateNotType(int tag) {
 		tags = new int[] { tag };
 	}
 
 	/**
-	 * Constructor used to select events whose tag values do not match any of the given tags.
+	 * Constructor used to select events whose tag values do not match any of
+	 * the given tags.
 	 * 
-	 * @param tags the list of tags
+	 * @param tags
+	 *        the list of tags
 	 */
 	public PredicateNotType(int[] tags) {
 		this.tags = tags.clone();
 	}
 
 	/**
-	 * The match function called by {@link Simulation}, not used directly by the user.
+	 * The match function called by {@link Simulation}, not used directly by the
+	 * user.
 	 * 
-	 * @param ev the ev
+	 * @param ev
+	 *        the ev
 	 * @return true, if match
 	 */
 	@Override
