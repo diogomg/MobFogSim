@@ -40,16 +40,16 @@ import org.apache.commons.math3.random.Well19937c;
    ],
  */
 public class VMRequestGenerator {
-	
-	public static void main(String [] argv) {
+
+	public static void main(String[] argv) {
 		int numVms = 100;
 		String jsonFileName = "virtual2.json";
-		
+
 		VMRequestGenerator reqg = new VMRequestGenerator();
-		
+
 		List<VMSpec> vms = reqg.generateVMs(numVms);
 		List<LinkSpec> links = reqg.generateLinks();
-		
+
 		reqg.wrtieJSON(vms, links, jsonFileName);
 
 	}
@@ -88,13 +88,14 @@ public class VMRequestGenerator {
 		String source;
 		String destination;
 		Long bw;
-		
-		public LinkSpec(String name,String source,String destination,Long bw) {
+
+		public LinkSpec(String name, String source, String destination, Long bw) {
 			this.name = name;
 			this.source = source;
 			this.destination = destination;
 			this.bw = bw;
 		}
+
 		@SuppressWarnings("unchecked")
 		JSONObject toJSON() {
 			LinkSpec link = this;
@@ -102,46 +103,45 @@ public class VMRequestGenerator {
 			obj.put("name", link.name);
 			obj.put("source", link.source);
 			obj.put("destination", link.destination);
-			if(link.bw != null)
+			if (link.bw != null)
 				obj.put("bw", link.bw);
 			return obj;
 		}
 	}
-	
+
 	int vmId = 0;
-	
+
 	@SuppressWarnings("unchecked")
 	public void wrtieJSON(List<VMSpec> vms, List<LinkSpec> links, String jsonFileName) {
 		JSONObject obj = new JSONObject();
 
 		JSONArray vmList = new JSONArray();
 		JSONArray linkList = new JSONArray();
-		
-		for(VMSpec vm:vms) {
+
+		for (VMSpec vm : vms) {
 			vmList.add(vm.toJSON());
 		}
-		
-		for(LinkSpec link:links) {
+
+		for (LinkSpec link : links) {
 			linkList.add(link.toJSON());
 		}
-		
+
 		obj.put("nodes", vmList);
 		obj.put("links", linkList);
-	 
+
 		try {
-	 
 			FileWriter file = new FileWriter(jsonFileName);
 			file.write(obj.toJSONString());
 			file.flush();
 			file.close();
-	 
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	 
+
 		System.out.println(obj);
 	}
-	
+
 	enum VMtype {
 		WebServer,
 		AppServer,
@@ -149,11 +149,12 @@ public class VMRequestGenerator {
 		Proxy,
 		Firewall
 	}
-	
-	public VMSpec generateVM(long vmSize, int pes, long mips, int vmRam, long bw, double startTime, double endTime) {
+
+	public VMSpec generateVM(long vmSize, int pes, long mips, int vmRam, long bw,
+		double startTime, double endTime) {
 		VMSpec vm = new VMSpec();
-		
-		vm.name = "vm"+ String.format("%02d", vmId++);
+
+		vm.name = "vm" + String.format("%02d", vmId++);
 		vm.type = "vm";
 		vm.size = vmSize;
 		vm.pe = pes;
@@ -162,53 +163,53 @@ public class VMRequestGenerator {
 		vm.bw = bw;
 		vm.starttime = startTime;
 		vm.endtime = endTime;
-		
+
 		return vm;
 	}
-	
+
 	public VMSpec generateVM(VMtype vmtype, double startTime, double endTime) {
 		int pes = 1;
 		long vmSize = 1000;
-		long mips=2000;
+		long mips = 2000;
 		int vmRam = 512;
-		long bw=1000000000/10;
+		long bw = 1000000000 / 10;
 
-		switch(vmtype) {
+		switch (vmtype) {
 		case WebServer:
-			//m1.large
-			mips=2000;
-			pes=2;
+			// m1.large
+			mips = 2000;
+			pes = 2;
 			break;
 		case AppServer:
-			//m2.xlarge
-			mips=3000L;
-			pes=8;
+			// m2.xlarge
+			mips = 3000L;
+			pes = 8;
 			break;
 		case DBServer:
-			//c1.xlarge
-			mips=2400L;
-			pes=8;
+			// c1.xlarge
+			mips = 2400L;
+			pes = 8;
 			break;
 		case Proxy:
-			mips=2000;
-			pes=8;
-			bw=500000000;
+			mips = 2000;
+			pes = 8;
+			bw = 500000000;
 			break;
 		case Firewall:
-			mips=3000L;
-			pes=8;
-			bw=500000000;
+			mips = 3000L;
+			pes = 8;
+			bw = 500000000;
 			break;
 		}
 		return generateVM(vmSize, pes, mips, vmRam, bw, startTime, endTime);
 	}
-	
+
 	public List<VMSpec> generateVMGroup(int numVMsInGroup, double startTime, double endTime) {
 		System.out.printf("Generating VM Group(%d): %f - %f\n", numVMsInGroup, startTime, endTime);
-		
+
 		List<VMSpec> vms = new ArrayList<VMSpec>();
-		
-		switch(numVMsInGroup) {
+
+		switch (numVMsInGroup) {
 		case 2:
 			vms.add(this.generateVM(VMtype.WebServer, startTime, endTime));
 			vms.add(this.generateVM(VMtype.AppServer, startTime, endTime));
@@ -232,59 +233,61 @@ public class VMRequestGenerator {
 			vms.add(this.generateVM(VMtype.Firewall, startTime, endTime));
 			break;
 		default:
-			System.err.println("Unknown group number"+numVMsInGroup);
+			System.err.println("Unknown group number" + numVMsInGroup);
 			break;
 		}
-		
+
 		return vms;
 	}
-	
+
 	private static long seed = 10;
-	
+
 	public List<VMSpec> generateVMs(int totalVmNum) {
 		double lastStartTime = 0;
-		
+
 		double startMean = 1800; // sec = 30min
-		double durScale=14400; // sec = 4 hours
-		double durShape=1.2;
-		
+		double durScale = 14400; // sec = 4 hours
+		double durShape = 1.2;
+
 		Random rVmNum = new Random(seed);
-		ExponentialDistribution rStartTime = new ExponentialDistribution(new Well19937c(seed), startMean, ExponentialDistribution.DEFAULT_INVERSE_ABSOLUTE_ACCURACY);	
-		ParetoDistribution rDuration = new ParetoDistribution(new Well19937c(seed), durScale, durShape);
-		
+		ExponentialDistribution rStartTime = new ExponentialDistribution(new Well19937c(seed),
+			startMean, ExponentialDistribution.DEFAULT_INVERSE_ABSOLUTE_ACCURACY);
+		ParetoDistribution rDuration = new ParetoDistribution(new Well19937c(seed), durScale,
+			durShape);
+
 		List<VMSpec> vms = new ArrayList<VMSpec>();
 
-		while(this.vmId < totalVmNum) {
-			int vmsInGroup = rVmNum.nextInt(4)+2;
+		while (this.vmId < totalVmNum) {
+			int vmsInGroup = rVmNum.nextInt(4) + 2;
 			double duration = Math.floor(rDuration.sample());
-			
-			vms.addAll(generateVMGroup(vmsInGroup, lastStartTime, lastStartTime+duration));
+
+			vms.addAll(generateVMGroup(vmsInGroup, lastStartTime, lastStartTime + duration));
 			lastStartTime += Math.floor(rStartTime.sample());
 		}
-		
+
 		return vms;
 	}
-	
+
 	public List<LinkSpec> generateLinks() {
-		// Dummy links 
+		// Dummy links
 		List<LinkSpec> links = new ArrayList<LinkSpec>();
 
-		links.add(new LinkSpec("default", "vm01","vm02", null));
-		links.add(new LinkSpec("default", "vm02","vm01", null));
-		links.add(new LinkSpec("default", "vm02","vm03", null));
-		links.add(new LinkSpec("default", "vm03","vm02", null));
-		
+		links.add(new LinkSpec("default", "vm01", "vm02", null));
+		links.add(new LinkSpec("default", "vm02", "vm01", null));
+		links.add(new LinkSpec("default", "vm02", "vm03", null));
+		links.add(new LinkSpec("default", "vm03", "vm02", null));
+
 		return links;
 	}
-	
-	public static double round(double value, int places) {
-	    if (places < 0) throw new IllegalArgumentException();
 
-	    BigDecimal bd = new BigDecimal(value);
-	    bd = bd.setScale(places, RoundingMode.HALF_UP);
-	    return bd.doubleValue();
-	    //return value;
+	public static double round(double value, int places) {
+		if (places < 0)
+			throw new IllegalArgumentException();
+
+		BigDecimal bd = new BigDecimal(value);
+		bd = bd.setScale(places, RoundingMode.HALF_UP);
+		return bd.doubleValue();
+		// return value;
 	}
-	
-	
+
 }
