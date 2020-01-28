@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.cloudbus.cloudsim.lists;
@@ -21,23 +20,27 @@ import org.cloudbus.cloudsim.ResCloudlet;
 public class ResCloudletList {
 
 	/**
-	 * Returns a given Cloudlet. This method needs a combination of Cloudlet Id and User Id because
-	 * each Cloud Users might have exactly same Cloudlet Ids.
+	 * Returns a given Cloudlet. This method needs a combination of Cloudlet Id
+	 * and User Id because each Cloud Users might have exactly same Cloudlet
+	 * Ids.
 	 * 
-	 * @param cloudletId a Cloudlet Id
-	 * @param userId an User Id
-	 * @param list the list
+	 * @param cloudletId
+	 *        a Cloudlet Id
+	 * @param userId
+	 *        an User Id
+	 * @param list
+	 *        the list
 	 * @return the Cloudlet.
-	 * @throws IndexOutOfBoundsException - if a Cloudlet with specified Id and user id is not in the
-	 *             list.
+	 * @throws IndexOutOfBoundsException
+	 *         - if a Cloudlet with specified Id and user id is not in the list.
 	 * @pre cloudletId >= 0
 	 * @pre userId >= 0
 	 * @post $none
 	 */
 	public static <T extends ResCloudlet> ResCloudlet getByIdAndUserId(
-			List<T> list,
-			int cloudletId,
-			int userId) {
+		List<T> list,
+		int cloudletId,
+		int userId) {
 		for (T rcl : list) {
 			if (rcl.getCloudletId() == cloudletId && rcl.getUserId() == userId) {
 				return rcl;
@@ -47,14 +50,19 @@ public class ResCloudletList {
 	}
 
 	/**
-	 * Finds the index of a Cloudlet inside the list. This method needs a combination of Cloudlet Id
-	 * and User Id because each Cloud User might have exactly the same Cloudlet Id.
+	 * Finds the index of a Cloudlet inside the list. This method needs a
+	 * combination of Cloudlet Id and User Id because each Cloud User might have
+	 * exactly the same Cloudlet Id.
 	 * 
-	 * @param cloudletId a Cloudlet Id
-	 * @param userId an User Id
-	 * @param list the list
-	 * @return the index in this list of the first occurrence of the specified Cloudlet, or
-	 *         <code>-1</code> if the list does not contain this Cloudlet.
+	 * @param cloudletId
+	 *        a Cloudlet Id
+	 * @param userId
+	 *        an User Id
+	 * @param list
+	 *        the list
+	 * @return the index in this list of the first occurrence of the specified
+	 *         Cloudlet, or <code>-1</code> if the list does not contain this
+	 *         Cloudlet.
 	 * @pre cloudletId >= 0
 	 * @pre userId >= 0
 	 * @post $none
@@ -73,10 +81,14 @@ public class ResCloudletList {
 	/**
 	 * Move a ResCloudlet object from this linked-list into a specified one.
 	 * 
-	 * @param listFrom the list from
-	 * @param listTo the list to
-	 * @param cloudlet the cloudlet
-	 * @return <b>true</b> if the moving operation successful, otherwise return <b>false</b>
+	 * @param listFrom
+	 *        the list from
+	 * @param listTo
+	 *        the list to
+	 * @param cloudlet
+	 *        the cloudlet
+	 * @return <b>true</b> if the moving operation successful, otherwise return
+	 *         <b>false</b>
 	 * @pre obj != null
 	 * @pre list != null
 	 * @post $result == true || $result == false
@@ -90,14 +102,18 @@ public class ResCloudletList {
 	}
 
 	/**
-	 * Returns the position of the cloudlet with that id, if it exists. Otherwise -1.
-	 * @param cloudletList - the list of cloudlets.
-	 * @param id - the id we search for.
+	 * Returns the position of the cloudlet with that id, if it exists.
+	 * Otherwise -1.
+	 * 
+	 * @param cloudletList
+	 *        - the list of cloudlets.
+	 * @param id
+	 *        - the id we search for.
 	 * @return - the position of the cloudlet with that id, or -1 otherwise.
 	 */
 	public static <T extends ResCloudlet> int getPositionById(List<T> cloudletList, int id) {
-		int i = 0 ;
-	        for (T cloudlet : cloudletList) {
+		int i = 0;
+		for (T cloudlet : cloudletList) {
 			if (cloudlet.getCloudletId() == id) {
 				return i;
 			}
