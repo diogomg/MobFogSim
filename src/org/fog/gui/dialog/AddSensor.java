@@ -29,9 +29,9 @@ import org.fog.gui.core.SpringUtilities;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddSensor extends JDialog {
 	private static final long serialVersionUID = -511667786177319577L;
-	
+
 	private final Graph graph;
-	
+
 	private JTextField sensorName;
 	private JTextField sensorType;
 	private JComboBox distribution;
@@ -40,16 +40,16 @@ public class AddSensor extends JDialog {
 	private JTextField deterministicValue;
 	private JTextField normalMean;
 	private JTextField normalStdDev;
-	
 
 	/**
 	 * Constructor.
 	 * 
-	 * @param frame the parent frame
+	 * @param frame
+	 *        the parent frame
 	 */
 	public AddSensor(final Graph graph, final JFrame frame) {
 		this.graph = graph;
-		
+
 		setLayout(new BorderLayout());
 
 		add(createInputPanelArea(), BorderLayout.CENTER);
@@ -69,15 +69,15 @@ public class AddSensor extends JDialog {
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.LINE_AXIS));
-		
+
 		JButton okBtn = new JButton("Ok");
 		JButton cancelBtn = new JButton("Cancel");
-		
+
 		cancelBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent event) {
-            	setVisible(false);
-            }
-        });
+			public void actionPerformed(ActionEvent event) {
+				setVisible(false);
+			}
+		});
 
 		okBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -95,8 +95,8 @@ public class AddSensor extends JDialog {
 					double uniformUp_ = -1;
 					double deterministicVal_ = -1;
 					String _sensorType = sensorType.getText();
-					String dist = (String)distribution.getSelectedItem();
-					if(dist.equals("Normal")){
+					String dist = (String) distribution.getSelectedItem();
+					if (dist.equals("Normal")) {
 						try {
 							normalMean_ = Double.parseDouble(normalMean.getText());
 							normalStdDev_ = Double.parseDouble(normalStdDev.getText());
@@ -104,13 +104,15 @@ public class AddSensor extends JDialog {
 							catchedError = true;
 							prompt("Input should be numerical character", "Error");
 						}
-						if(!catchedError){
-							SensorGui sensor = new SensorGui(sensorName.getText().toString(), _sensorType, (String)distribution.getSelectedItem(),
-											normalMean_, normalStdDev_, uniformLow_, uniformUp_, deterministicVal_);
+						if (!catchedError) {
+							SensorGui sensor = new SensorGui(sensorName.getText().toString(),
+								_sensorType, (String) distribution.getSelectedItem(),
+								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
+								deterministicVal_);
 							graph.addNode(sensor);
 							setVisible(false);
 						}
-					} else if(dist.equals("Uniform")){
+					} else if (dist.equals("Uniform")) {
 						try {
 							uniformLow_ = Double.parseDouble(uniformLowerBound.getText());
 							uniformUp_ = Double.parseDouble(uniformUpperBound.getText());
@@ -118,22 +120,26 @@ public class AddSensor extends JDialog {
 							catchedError = true;
 							prompt("Input should be numerical character", "Error");
 						}
-						if(!catchedError){
-							SensorGui sensor = new SensorGui(sensorName.getText().toString(), _sensorType, (String)distribution.getSelectedItem(),
-									normalMean_, normalStdDev_, uniformLow_, uniformUp_, deterministicVal_);
+						if (!catchedError) {
+							SensorGui sensor = new SensorGui(sensorName.getText().toString(),
+								_sensorType, (String) distribution.getSelectedItem(),
+								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
+								deterministicVal_);
 							graph.addNode(sensor);
 							setVisible(false);
 						}
-					} else if(dist.equals("Deterministic")){
+					} else if (dist.equals("Deterministic")) {
 						try {
 							deterministicVal_ = Double.parseDouble(deterministicValue.getText());
 						} catch (NumberFormatException e1) {
 							catchedError = true;
 							prompt("Input should be numerical character", "Error");
 						}
-						if(!catchedError){
-							SensorGui sensor = new SensorGui(sensorName.getText().toString(), _sensorType, (String)distribution.getSelectedItem(),
-									normalMean_, normalStdDev_, uniformLow_, uniformUp_, deterministicVal_);
+						if (!catchedError) {
+							SensorGui sensor = new SensorGui(sensorName.getText().toString(),
+								_sensorType, (String) distribution.getSelectedItem(),
+								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
+								deterministicVal_);
 							graph.addNode(sensor);
 							setVisible(false);
 						}
@@ -152,81 +158,80 @@ public class AddSensor extends JDialog {
 	}
 
 	private JPanel createInputPanelArea() {
-	    String[] distributionType = {"Normal", "Uniform", "Deterministic"};
- 
-        //Create and populate the panel.
-        JPanel springPanel = new JPanel(new SpringLayout());
-        springPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-		
+		String[] distributionType = { "Normal", "Uniform", "Deterministic" };
+
+		// Create and populate the panel.
+		JPanel springPanel = new JPanel(new SpringLayout());
+		springPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
 		JLabel lName = new JLabel("Name: ");
 		springPanel.add(lName);
 		sensorName = new JTextField();
 		lName.setLabelFor(sensorName);
 		springPanel.add(sensorName);
-		
+
 		JLabel lType = new JLabel("Type: ");
 		springPanel.add(lType);
 		sensorType = new JTextField();
 		lType.setLabelFor(sensorType);
 		springPanel.add(sensorType);
-				
+
 		JLabel distLabel = new JLabel("Distribution Type: ", JLabel.TRAILING);
-		springPanel.add(distLabel);	
+		springPanel.add(distLabel);
 		distribution = new JComboBox(distributionType);
 		distLabel.setLabelFor(distribution);
 		distribution.setSelectedIndex(-1);
 		distribution.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
-				JComboBox ctype = (JComboBox)e.getSource();
-				String item = (String)ctype.getSelectedItem();
-				updatePanel(item);				
+				JComboBox ctype = (JComboBox) e.getSource();
+				String item = (String) ctype.getSelectedItem();
+				updatePanel(item);
 			}
 		});
-		
-		
-		springPanel.add(distribution);		
-		
+
+		springPanel.add(distribution);
+
 		JLabel normalMeanLabel = new JLabel("Mean: ");
-		springPanel.add(normalMeanLabel);	
+		springPanel.add(normalMeanLabel);
 		normalMean = new JTextField();
 		normalMeanLabel.setLabelFor(normalMean);
 		springPanel.add(normalMean);
-		
+
 		JLabel normalStdDevLabel = new JLabel("StdDev: ");
-		springPanel.add(normalStdDevLabel);	
+		springPanel.add(normalStdDevLabel);
 		normalStdDev = new JTextField();
 		normalStdDevLabel.setLabelFor(normalStdDev);
 		springPanel.add(normalStdDev);
-		
+
 		JLabel uniformLowLabel = new JLabel("Min: ");
-		springPanel.add(uniformLowLabel);	
+		springPanel.add(uniformLowLabel);
 		uniformLowerBound = new JTextField();
 		uniformLowLabel.setLabelFor(uniformLowerBound);
 		springPanel.add(uniformLowerBound);
-		
+
 		JLabel uniformUpLabel = new JLabel("Max: ");
-		springPanel.add(uniformUpLabel);	
+		springPanel.add(uniformUpLabel);
 		uniformUpperBound = new JTextField();
 		uniformUpLabel.setLabelFor(uniformUpperBound);
 		springPanel.add(uniformUpperBound);
-		
+
 		JLabel deterministicValueLabel = new JLabel("Value: ");
-		springPanel.add(deterministicValueLabel);	
+		springPanel.add(deterministicValueLabel);
 		deterministicValue = new JTextField();
 		uniformLowLabel.setLabelFor(deterministicValue);
-		springPanel.add(deterministicValue);		
-						
-       //Lay out the panel.
-        SpringUtilities.makeCompactGrid(springPanel,
-                                        8, 2,        //rows, columns
-                                        6, 6,        //initX, initY
-                                        6, 6);       //xPad, yPad
+		springPanel.add(deterministicValue);
+
+		// Lay out the panel.
+		SpringUtilities.makeCompactGrid(springPanel,
+			8, 2,        // rows, columns
+			6, 6,        // initX, initY
+			6, 6);       // xPad, yPad
 		return springPanel;
 	}
-	
-    protected void updatePanel(String item) {
-		switch(item){
+
+	protected void updatePanel(String item) {
+		switch (item) {
 		case "Normal":
 			normalMean.setVisible(true);
 			normalStdDev.setVisible(true);
@@ -251,20 +256,20 @@ public class AddSensor extends JDialog {
 		default:
 			break;
 		}
-		
+
 	}
 
-	public static void setUIFont (javax.swing.plaf.FontUIResource f){
-        java.util.Enumeration keys = UIManager.getDefaults().keys();
-        while (keys.hasMoreElements()) {
-          Object key = keys.nextElement();
-          Object value = UIManager.get (key);
-          if (value != null && value instanceof javax.swing.plaf.FontUIResource)
-            UIManager.put (key, f);
-          }
-    }
-    
-	private void prompt(String msg, String type){
+	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
+		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		while (keys.hasMoreElements()) {
+			Object key = keys.nextElement();
+			Object value = UIManager.get(key);
+			if (value != null && value instanceof javax.swing.plaf.FontUIResource)
+				UIManager.put(key, f);
+		}
+	}
+
+	private void prompt(String msg, String type) {
 		JOptionPane.showMessageDialog(AddSensor.this, msg, type, JOptionPane.ERROR_MESSAGE);
 	}
 }

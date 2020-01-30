@@ -35,12 +35,11 @@ import org.fog.gui.core.NodeCellRenderer;
 /** A dialog to add a new edge */
 public class AddPhysicalEdge extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
-	
+
 	private final Graph graph;
 	private JComboBox sourceNode;
 	private JComboBox targetNode;
 	private JTextField tfLatency;
-
 
 	public AddPhysicalEdge(final Graph graph, final JFrame frame) {
 
@@ -56,7 +55,8 @@ public class AddPhysicalEdge extends JDialog {
 		setPreferredSize(new Dimension(400, 200));
 		setResizable(false);
 		pack();
-		setLocationRelativeTo(frame); // must be called between pack and setVisible to work properly
+		// must be called between pack and setVisible to work properly
+		setLocationRelativeTo(frame);
 		setVisible(true);
 	}
 
@@ -74,7 +74,8 @@ public class AddPhysicalEdge extends JDialog {
 		JPanel textAreaPanel = new JPanel();
 		textAreaPanel.setLayout(new BoxLayout(textAreaPanel, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet().toArray());
+		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet()
+			.toArray());
 
 		sourceNodeModel.setSelectedItem(null);
 
@@ -106,7 +107,8 @@ public class AddPhysicalEdge extends JDialog {
 					List<Node> nodesToDisplay = new ArrayList<Node>();
 					Set<Node> allNodes = graph.getAdjacencyList().keySet();
 
-					// get edged for selected node and throw out all target nodes where already an edge exists
+					// get edged for selected node and throw out all target
+					// nodes where already an edge exists
 					List<Edge> edgesForSelectedNode = graph.getAdjacencyList().get(selectedNode);
 					Set<Node> nodesInEdges = new HashSet<Node>();
 					for (Edge edge : edgesForSelectedNode) {
@@ -119,7 +121,8 @@ public class AddPhysicalEdge extends JDialog {
 						}
 					}
 
-					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay.toArray());
+					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay
+						.toArray());
 					targetNode.setModel(targetNodeModel);
 				}
 			}
@@ -174,9 +177,9 @@ public class AddPhysicalEdge extends JDialog {
 				if (tfLatency.getText() == null || tfLatency.getText().isEmpty()) {
 					catchedError = true;
 					prompt("Please type latency", "Error");
-				}else {
+				} else {
 					try {
-						latency = Double.valueOf(tfLatency.getText());											
+						latency = Double.valueOf(tfLatency.getText());
 					} catch (NumberFormatException e1) {
 						catchedError = true;
 						prompt("Latency should be double type", "Error");
@@ -184,7 +187,8 @@ public class AddPhysicalEdge extends JDialog {
 				}
 
 				if (!catchedError) {
-					if (sourceNode.getSelectedItem() == null || targetNode.getSelectedItem() == null) {
+					if (sourceNode.getSelectedItem() == null
+						|| targetNode.getSelectedItem() == null) {
 						prompt("Please select node", "Error");
 					} else {
 
@@ -209,8 +213,8 @@ public class AddPhysicalEdge extends JDialog {
 
 		return buttonPanel;
 	}
-	
-	private void prompt(String msg, String type){
+
+	private void prompt(String msg, String type) {
 		JOptionPane.showMessageDialog(AddPhysicalEdge.this, msg, type, JOptionPane.ERROR_MESSAGE);
 	}
 

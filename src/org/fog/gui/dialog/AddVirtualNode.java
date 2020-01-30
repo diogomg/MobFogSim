@@ -29,9 +29,9 @@ import org.fog.gui.core.Node;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddVirtualNode extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
-	
+
 	private final Graph graph;
-	
+
 	private JTextField tfName;
 	private JComboBox cType;
 	private JTextField tfSize;
@@ -42,11 +42,12 @@ public class AddVirtualNode extends JDialog {
 	/**
 	 * Constructor.
 	 * 
-	 * @param frame the parent frame
+	 * @param frame
+	 *        the parent frame
 	 */
 	public AddVirtualNode(final Graph graph, final JFrame frame) {
 		this.graph = graph;
-		
+
 		setLayout(new BorderLayout());
 
 		add(createInputPanelArea(), BorderLayout.CENTER);
@@ -66,15 +67,15 @@ public class AddVirtualNode extends JDialog {
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.LINE_AXIS));
-		
+
 		JButton okBtn = new JButton("Ok");
 		JButton cancelBtn = new JButton("Cancel");
-		
+
 		cancelBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent event) {
-            	setVisible(false);
-            }
-        });
+			public void actionPerformed(ActionEvent event) {
+				setVisible(false);
+			}
+		});
 
 		okBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -105,9 +106,10 @@ public class AddVirtualNode extends JDialog {
 						catchedError = true;
 						prompt("Input should be numerical character", "Error");
 					}
-					if(!catchedError){
-						Node node = new VmNode(tfName.getText().toString(), (String)cType.getSelectedItem(),
-										t1, t2, t3, t4);
+					if (!catchedError) {
+						Node node = new VmNode(tfName.getText().toString(), (String) cType
+							.getSelectedItem(),
+							t1, t2, t3, t4);
 						graph.addNode(node);
 						setVisible(false);
 					}
@@ -125,74 +127,74 @@ public class AddVirtualNode extends JDialog {
 	}
 
 	private JPanel createInputPanelArea() {
-	    String[] vmType = {"vm"};
- 
-        //Create and populate the panel.
-        JPanel springPanel = new JPanel(new SpringLayout());
-        springPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-		
+		String[] vmType = { "vm" };
+
+		// Create and populate the panel.
+		JPanel springPanel = new JPanel(new SpringLayout());
+		springPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
 		JLabel lName = new JLabel("Name: ");
 		springPanel.add(lName);
 		tfName = new JTextField();
 		lName.setLabelFor(tfName);
 		springPanel.add(tfName);
-		
+
 		JLabel lType = new JLabel("Type: ", JLabel.TRAILING);
-		springPanel.add(lType);	
+		springPanel.add(lType);
 		cType = new JComboBox(vmType);
 		lType.setLabelFor(cType);
 		cType.setSelectedIndex(-1);
 		cType.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
-				
+
 			}
 		});
-		springPanel.add(cType);		
-		
+		springPanel.add(cType);
+
 		JLabel lSize = new JLabel("Size: ");
-		springPanel.add(lSize);	
+		springPanel.add(lSize);
 		tfSize = new JTextField();
 		lSize.setLabelFor(tfSize);
-		springPanel.add(tfSize);		
-		
+		springPanel.add(tfSize);
+
 		JLabel lPes = new JLabel("Pes: ");
-		springPanel.add(lPes);	
+		springPanel.add(lPes);
 		tfPes = new JTextField();
 		lPes.setLabelFor(tfPes);
-		springPanel.add(tfPes);	
-		
+		springPanel.add(tfPes);
+
 		JLabel lMips = new JLabel("Mips: ");
-		springPanel.add(lMips);	
+		springPanel.add(lMips);
 		tfMips = new JTextField();
 		lMips.setLabelFor(tfMips);
-		springPanel.add(tfMips);		
-		
+		springPanel.add(tfMips);
+
 		JLabel lRam = new JLabel("Ram: ");
 		springPanel.add(lRam);
 		tfRam = new JTextField();
 		lRam.setLabelFor(tfRam);
 		springPanel.add(tfRam);
-				
-       //Lay out the panel.
-        SpringUtilities.makeCompactGrid(springPanel,
-                                        6, 2,        //rows, columns
-                                        6, 6,        //initX, initY
-                                        6, 6);       //xPad, yPad
+
+		// Lay out the panel.
+		SpringUtilities.makeCompactGrid(springPanel,
+			6, 2,        // rows, columns
+			6, 6,        // initX, initY
+			6, 6);       // xPad, yPad
 		return springPanel;
 	}
-	
-    public static void setUIFont (javax.swing.plaf.FontUIResource f){
-        java.util.Enumeration keys = UIManager.getDefaults().keys();
-        while (keys.hasMoreElements()) {
-          Object key = keys.nextElement();
-          Object value = UIManager.get (key);
-          if (value != null && value instanceof javax.swing.plaf.FontUIResource)
-            UIManager.put (key, f);
-          }
-    }
-    
-	private void prompt(String msg, String type){
+
+	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
+		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		while (keys.hasMoreElements()) {
+			Object key = keys.nextElement();
+			Object value = UIManager.get(key);
+			if (value != null && value instanceof javax.swing.plaf.FontUIResource)
+				UIManager.put(key, f);
+		}
+	}
+
+	private void prompt(String msg, String type) {
 		JOptionPane.showMessageDialog(AddVirtualNode.this, msg, type, JOptionPane.ERROR_MESSAGE);
 	}
 }

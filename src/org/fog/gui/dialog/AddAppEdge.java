@@ -37,14 +37,13 @@ import org.fog.gui.core.SpringUtilities;
 /** A dialog to add a new edge */
 public class AddAppEdge extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
-	
+
 	private final Graph graph;
 	private JComboBox sourceNode;
 	private JComboBox targetNode;
 	private JTextField tupleType;
 	private JTextField tupleCpuLen;
 	private JTextField tupleNwLen;
-
 
 	public AddAppEdge(final Graph graph, final JFrame frame) {
 
@@ -60,7 +59,8 @@ public class AddAppEdge extends JDialog {
 		setPreferredSize(new Dimension(400, 250));
 		setResizable(false);
 		pack();
-		setLocationRelativeTo(frame); // must be called between pack and setVisible to work properly
+		// must be called between pack and setVisible to work properly
+		setLocationRelativeTo(frame);
 		setVisible(true);
 	}
 
@@ -77,11 +77,12 @@ public class AddAppEdge extends JDialog {
 
 		JPanel textAreaPanel = new JPanel();
 		textAreaPanel.setLayout(new BoxLayout(textAreaPanel, BoxLayout.LINE_AXIS));
-		
+
 		JPanel textAreaPanel2 = new JPanel();
 		textAreaPanel2.setLayout(new BoxLayout(textAreaPanel2, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet().toArray());
+		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet()
+			.toArray());
 
 		sourceNodeModel.setSelectedItem(null);
 
@@ -113,7 +114,8 @@ public class AddAppEdge extends JDialog {
 					List<Node> nodesToDisplay = new ArrayList<Node>();
 					Set<Node> allNodes = graph.getAdjacencyList().keySet();
 
-					// get edged for selected node and throw out all target nodes where already an edge exists
+					// get edged for selected node and throw out all target
+					// nodes where already an edge exists
 					List<Edge> edgesForSelectedNode = graph.getAdjacencyList().get(selectedNode);
 					Set<Node> nodesInEdges = new HashSet<Node>();
 					for (Edge edge : edgesForSelectedNode) {
@@ -126,7 +128,8 @@ public class AddAppEdge extends JDialog {
 						}
 					}
 
-					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay.toArray());
+					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay
+						.toArray());
 					targetNode.setModel(targetNodeModel);
 				}
 			}
@@ -138,37 +141,33 @@ public class AddAppEdge extends JDialog {
 		inputPanel.add(Box.createHorizontalGlue());
 		inputPanelWrapper.add(inputPanel);
 
-		
-		
 		JPanel springPanel = new JPanel(new SpringLayout());
-        //springPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-		
-        
-        JLabel tupleTypeLabel = new JLabel("Tuple Type : ");
+
+		JLabel tupleTypeLabel = new JLabel("Tuple Type : ");
 		springPanel.add(tupleTypeLabel);
 		tupleType = new JTextField();
 		tupleTypeLabel.setLabelFor(tupleType);
 		springPanel.add(tupleType);
-		
+
 		JLabel tupleCpuLenLabel = new JLabel("Tuple CPU Len : ");
 		springPanel.add(tupleCpuLenLabel);
 		tupleCpuLen = new JTextField();
 		tupleCpuLenLabel.setLabelFor(tupleCpuLen);
 		springPanel.add(tupleCpuLen);
-		
+
 		JLabel tupleNwLenLabel = new JLabel("Tuple NW Len : ");
 		springPanel.add(tupleNwLenLabel);
 		tupleNwLen = new JTextField();
 		tupleNwLenLabel.setLabelFor(tupleNwLen);
 		springPanel.add(tupleNwLen);
-		
+
 		SpringUtilities.makeCompactGrid(springPanel,
-                3, 2,        //rows, cols
-                6, 6,        //initX, initY
-                6, 6);       //xPad, yPad
-		
+			3, 2,        // rows, cols
+			6, 6,        // initX, initY
+			6, 6);       // xPad, yPad
+
 		inputPanelWrapper.add(springPanel);
-		
+
 		return inputPanelWrapper;
 	}
 
@@ -194,7 +193,7 @@ public class AddAppEdge extends JDialog {
 				String name = "default";
 				long bandwidth = 0;
 				boolean catchedError = false;
-				
+
 				if (tupleType.getText() == null || tupleType.getText().isEmpty()) {
 					catchedError = true;
 					prompt("Please enter Tuple Type", "Error");
@@ -206,12 +205,13 @@ public class AddAppEdge extends JDialog {
 					prompt("Please enter Tuple NW Length", "Error");
 				}
 				else {
-					name = ((Node)sourceNode.getSelectedItem()).getName()+"-"+((Node)sourceNode.getSelectedItem()).getName();								
+					name = ((Node) sourceNode.getSelectedItem()).getName() + "-"
+						+ ((Node) sourceNode.getSelectedItem()).getName();
 				}
 
-				
 				if (!catchedError) {
-					if (sourceNode.getSelectedItem() == null || targetNode.getSelectedItem() == null) {
+					if (sourceNode.getSelectedItem() == null
+						|| targetNode.getSelectedItem() == null) {
 						prompt("Please select node", "Error");
 					} else {
 
@@ -236,8 +236,8 @@ public class AddAppEdge extends JDialog {
 
 		return buttonPanel;
 	}
-	
-	private void prompt(String msg, String type){
+
+	private void prompt(String msg, String type) {
 		JOptionPane.showMessageDialog(AddAppEdge.this, msg, type, JOptionPane.ERROR_MESSAGE);
 	}
 

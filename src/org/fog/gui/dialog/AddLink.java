@@ -36,12 +36,11 @@ import org.fog.gui.core.NodeCellRenderer;
 /** A dialog to add a new edge */
 public class AddLink extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
-	
+
 	private final Graph graph;
 	private JComboBox sourceNode;
 	private JComboBox targetNode;
 	private JTextField tfLatency;
-
 
 	public AddLink(final Graph graph, final JFrame frame) {
 
@@ -57,7 +56,8 @@ public class AddLink extends JDialog {
 		setPreferredSize(new Dimension(400, 200));
 		setResizable(false);
 		pack();
-		setLocationRelativeTo(frame); // must be called between pack and setVisible to work properly
+		// must be called between pack and setVisible to work properly
+		setLocationRelativeTo(frame);
 		setVisible(true);
 	}
 
@@ -75,7 +75,8 @@ public class AddLink extends JDialog {
 		JPanel textAreaPanel = new JPanel();
 		textAreaPanel.setLayout(new BoxLayout(textAreaPanel, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet().toArray());
+		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(
+			graph.getAdjacencyList().keySet().toArray());
 
 		sourceNodeModel.setSelectedItem(null);
 
@@ -107,24 +108,28 @@ public class AddLink extends JDialog {
 					List<Node> nodesToDisplay = new ArrayList<Node>();
 					Set<Node> allNodes = graph.getAdjacencyList().keySet();
 
-					// get edged for selected node and throw out all target nodes where already an edge exists
+					// get edged for selected node and throw out all target
+					// nodes where already an edge exists
 					List<Edge> edgesForSelectedNode = graph.getAdjacencyList().get(selectedNode);
 					Set<Node> nodesInEdges = new HashSet<Node>();
 					for (Edge edge : edgesForSelectedNode) {
 						nodesInEdges.add(edge.getNode());
 					}
-					if(!(selectedNode.getType().equals("SENSOR")||selectedNode.getType().equals("ACTUATOR")) || edgesForSelectedNode.size()==0){
+					if (!(selectedNode.getType().equals("SENSOR") || selectedNode.getType().equals(
+						"ACTUATOR"))
+						|| edgesForSelectedNode.size() == 0) {
 						for (Node node : allNodes) {
-							if((selectedNode.getType().equals("SENSOR")||selectedNode.getType().equals("ACTUATOR")) && !node.getType().equals("FOG_DEVICE"))
+							if ((selectedNode.getType().equals("SENSOR") || selectedNode.getType()
+								.equals("ACTUATOR")) && !node.getType().equals("FOG_DEVICE"))
 								continue;
 							if (!node.equals(selectedNode) && !nodesInEdges.contains(node)) {
 								nodesToDisplay.add(node);
 							}
-						}						
+						}
 					}
-					
 
-					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay.toArray());
+					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay
+						.toArray());
 					targetNode.setModel(targetNodeModel);
 				}
 			}
@@ -179,9 +184,9 @@ public class AddLink extends JDialog {
 				if (tfLatency.getText() == null || tfLatency.getText().isEmpty()) {
 					catchedError = true;
 					prompt("Please type latency", "Error");
-				}else {
+				} else {
 					try {
-						latency = Double.valueOf(tfLatency.getText());											
+						latency = Double.valueOf(tfLatency.getText());
 					} catch (NumberFormatException e1) {
 						catchedError = true;
 						prompt("Latency should be double type", "Error");
@@ -189,7 +194,8 @@ public class AddLink extends JDialog {
 				}
 
 				if (!catchedError) {
-					if (sourceNode.getSelectedItem() == null || targetNode.getSelectedItem() == null) {
+					if (sourceNode.getSelectedItem() == null
+						|| targetNode.getSelectedItem() == null) {
 						prompt("Please select node", "Error");
 					} else {
 
@@ -214,8 +220,8 @@ public class AddLink extends JDialog {
 
 		return buttonPanel;
 	}
-	
-	private void prompt(String msg, String type){
+
+	private void prompt(String msg, String type) {
 		JOptionPane.showMessageDialog(AddLink.this, msg, type, JOptionPane.ERROR_MESSAGE);
 	}
 
