@@ -2,10 +2,8 @@ package org.fog.gui.core;
 
 import java.io.Serializable;
 
-
 /**
  * The model that represents node (host or vm) for the graph.
- * 
  */
 public class Node implements Serializable {
 	private static final long serialVersionUID = 823544330517091616L;
@@ -33,7 +31,7 @@ public class Node implements Serializable {
 	public String getName() {
 		return name;
 	}
-	
+
 	public void setType(String type) {
 		this.type = type;
 	}
@@ -41,7 +39,7 @@ public class Node implements Serializable {
 	public String getType() {
 		return type;
 	}
-	
+
 	public void setCoordinate(Coordinates coord) {
 		this.coord.setX(coord.getX());
 		this.coord.setY(coord.getY());

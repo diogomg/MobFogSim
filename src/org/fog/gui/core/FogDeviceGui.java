@@ -2,11 +2,10 @@ package org.fog.gui.core;
 
 /**
  * The model that represents virtual machine node for the graph.
- * 
  */
 public class FogDeviceGui extends Node {
 	private static final long serialVersionUID = -8635044061126993668L;
-	
+
 	private int level;
 	private String name;
 	private long mips;
@@ -14,11 +13,11 @@ public class FogDeviceGui extends Node {
 	private long upBw;
 	private long downBw;
 	private double ratePerMips;
-	
-	public FogDeviceGui() {
-	}
 
-	public FogDeviceGui(String name, long mips, int ram, long upBw, long downBw, int level, double rate) {
+	public FogDeviceGui() {}
+
+	public FogDeviceGui(String name, long mips, int ram, long upBw, long downBw, int level,
+		double rate) {
 		super(name, "FOG_DEVICE");
 		this.name = name;
 		this.mips = mips;
@@ -28,7 +27,6 @@ public class FogDeviceGui extends Node {
 		this.level = level;
 		this.ratePerMips = rate;
 	}
-
 
 	public String getName() {
 		return name;
@@ -72,7 +70,8 @@ public class FogDeviceGui extends Node {
 
 	@Override
 	public String toString() {
-		return "FogDevice [mips=" + mips + " ram=" + ram + " upBw=" + upBw + " downBw=" + downBw + "]";
+		return "FogDevice [mips=" + mips + " ram=" + ram + " upBw=" + upBw + " downBw=" + downBw
+			+ "]";
 	}
 
 	public int getLevel() {

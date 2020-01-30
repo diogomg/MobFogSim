@@ -5,7 +5,7 @@ public class PlaceHolder {
 	protected Coordinates coordinates;
 	protected boolean isOccupied;
 	protected Node node;
-	
+
 	public Node getNode() {
 		return node;
 	}
@@ -22,17 +22,17 @@ public class PlaceHolder {
 		this.isOccupied = isOccupied;
 	}
 
-	public PlaceHolder(Coordinates coordinates){
+	public PlaceHolder(Coordinates coordinates) {
 		setCoordinates(coordinates);
 		setOccupied(false);
 	}
-	
-	public PlaceHolder(){
+
+	public PlaceHolder() {
 		setCoordinates(new Coordinates());
 		setOccupied(false);
 	}
-	
-	public PlaceHolder(int x, int y){
+
+	public PlaceHolder(int x, int y) {
 		setCoordinates(new Coordinates(x, y));
 		setOccupied(false);
 	}
