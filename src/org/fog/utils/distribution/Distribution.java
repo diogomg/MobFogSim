@@ -7,10 +7,11 @@ public abstract class Distribution {
 	public static int NORMAL = 1;
 	public static int DETERMINISTIC = 2;
 	public static int UNIFORM = 3;
-	
+
 	protected Random random;
+
 	public abstract double getNextValue();
-	
+
 	public Random getRandom() {
 		return random;
 	}
@@ -20,5 +21,6 @@ public abstract class Distribution {
 	}
 
 	public abstract int getDistributionType();
+
 	public abstract double getMeanInterTransmitTime();
 }

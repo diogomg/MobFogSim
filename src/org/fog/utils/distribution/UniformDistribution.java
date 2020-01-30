@@ -1,19 +1,19 @@
 package org.fog.utils.distribution;
 
-public class UniformDistribution extends Distribution{
+public class UniformDistribution extends Distribution {
 
 	private double min;
 	private double max;
-	
-	public UniformDistribution(double min, double max){
+
+	public UniformDistribution(double min, double max) {
 		super();
 		setMin(min);
 		setMax(max);
 	}
-	
+
 	@Override
 	public double getNextValue() {
-		return getRandom().nextDouble()*(getMax()-getMin())+getMin();
+		return getRandom().nextDouble() * (getMax() - getMin()) + getMin();
 	}
 
 	public double getMin() {
@@ -31,7 +31,7 @@ public class UniformDistribution extends Distribution{
 	public void setMax(double max) {
 		this.max = max;
 	}
-	
+
 	@Override
 	public int getDistributionType() {
 		return Distribution.UNIFORM;
@@ -39,7 +39,7 @@ public class UniformDistribution extends Distribution{
 
 	@Override
 	public double getMeanInterTransmitTime() {
-		return (min+max)/2;
+		return (min + max) / 2;
 	}
 
 }

@@ -1,6 +1,6 @@
 package org.fog.utils.distribution;
 
-public class DeterministicDistribution extends Distribution{
+public class DeterministicDistribution extends Distribution {
 
 	private double value;
 
@@ -8,12 +8,12 @@ public class DeterministicDistribution extends Distribution{
 		super();
 		setValue(value);
 	}
-	
+
 	@Override
 	public double getNextValue() {
 		return value;
 	}
-	
+
 	public double getValue() {
 		return value;
 	}
@@ -31,5 +31,5 @@ public class DeterministicDistribution extends Distribution{
 	public double getMeanInterTransmitTime() {
 		return value;
 	}
-	
+
 }
