@@ -7,14 +7,14 @@ import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.fog.vmmigration.MyStatistics;
 
-public class Tuple extends Cloudlet{
+public class Tuple extends Cloudlet {
 
 	public static final int UP = 1;
 	public static final int DOWN = 2;
 	public static final int ACTUATOR = 3;
-	
+
 	private String appId;
-	
+
 	private String tupleType;
 	private String destModuleName;
 	private String srcModuleName;
@@ -25,22 +25,21 @@ public class Tuple extends Cloudlet{
 	private double initialTime;
 	private double finalTime;
 	private int myTupleId;
-	
+
 	/**
-	 * Map to keep track of which module instances has a tuple traversed.
-	 * 
-	 * Map from moduleName to vmId of a module instance
+	 * Map to keep track of which module instances has a tuple traversed. Map
+	 * from moduleName to vmId of a module instance
 	 */
 	private Map<String, Integer> moduleCopyMap;
-	
+
 	public Tuple(String appId, int cloudletId, int direction, long cloudletLength, int pesNumber,
-			long cloudletFileSize, long cloudletOutputSize,
-			UtilizationModel utilizationModelCpu,
-			UtilizationModel utilizationModelRam,
-			UtilizationModel utilizationModelBw) {
+		long cloudletFileSize, long cloudletOutputSize,
+		UtilizationModel utilizationModelCpu,
+		UtilizationModel utilizationModelRam,
+		UtilizationModel utilizationModelBw) {
 		super(cloudletId, cloudletLength, pesNumber, cloudletFileSize,
-				cloudletOutputSize, utilizationModelCpu, utilizationModelRam,
-				utilizationModelBw);
+			cloudletOutputSize, utilizationModelCpu, utilizationModelRam,
+			utilizationModelBw);
 		setAppId(appId);
 		setDirection(direction);
 		setSourceDeviceId(-1);

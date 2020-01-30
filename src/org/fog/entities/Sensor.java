@@ -16,8 +16,8 @@ import org.fog.utils.Logger;
 import org.fog.utils.TimeKeeper;
 import org.fog.utils.distribution.Distribution;
 
-public class Sensor extends SimEntity{
-	
+public class Sensor extends SimEntity {
+
 	private int gatewayDeviceId;
 	private GeoLocation geoLocation;
 	private long outputSize;
@@ -30,9 +30,10 @@ public class Sensor extends SimEntity{
 	private int controllerId;
 	private Application app;
 	private double latency;
-	
-	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency, GeoLocation geoLocation, 
-			Distribution transmitDistribution, int cpuLength, int nwLength, String tupleType, String destModuleName) {
+
+	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
+		GeoLocation geoLocation, Distribution transmitDistribution, int cpuLength, int nwLength,
+		String tupleType, String destModuleName) {
 		super(name);
 		this.setAppId(appId);
 		this.gatewayDeviceId = gatewayDeviceId;
@@ -44,11 +45,11 @@ public class Sensor extends SimEntity{
 		setTupleType(tupleType);
 		setSensorName(sensorName);
 		setLatency(latency);
-		
+
 	}
-	
-	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency, GeoLocation geoLocation, 
-			Distribution transmitDistribution, String tupleType) {
+
+	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
+		GeoLocation geoLocation, Distribution transmitDistribution, String tupleType) {
 		super(name);
 		this.setAppId(appId);
 		this.gatewayDeviceId = gatewayDeviceId;
@@ -60,17 +61,20 @@ public class Sensor extends SimEntity{
 		setSensorName(sensorName);
 		setLatency(latency);
 	}
-	
+
 	/**
-	 * This constructor is called from the code that generates PhysicalTopology from JSON
+	 * This constructor is called from the code that generates PhysicalTopology
+	 * from JSON
+	 * 
 	 * @param name
 	 * @param tupleType
-	 * @param string 
+	 * @param string
 	 * @param userId
 	 * @param appId
 	 * @param transmitDistribution
 	 */
-	public Sensor(String name, String tupleType, int userId, String appId, Distribution transmitDistribution) {
+	public Sensor(String name, String tupleType, int userId, String appId,
+		Distribution transmitDistribution) {
 		super(name);
 		this.setAppId(appId);
 		this.setTransmitDistribution(transmitDistribution);
@@ -78,47 +82,44 @@ public class Sensor extends SimEntity{
 		setSensorName(tupleType);
 		setUserId(userId);
 	}
-	
-	public void transmit(){
+
+	public void transmit() {
 		AppEdge _edge = null;
-		for(AppEdge edge : getApp().getEdges()){ 
-			if(edge.getSource().equals(getTupleType())){
+		for (AppEdge edge : getApp().getEdges()) {
+			if (edge.getSource().equals(getTupleType())) {
 				_edge = edge;
 			}
 		}
-//		System.out.println("Sensor.java Edge: "+_edge);
-		
+
 		long cpuLength = (long) _edge.getTupleCpuLength();
 		long nwLength = (long) _edge.getTupleNwLength();
 
-		Tuple tuple = new Tuple(getAppId(), FogUtils.generateTupleId(), Tuple.UP, cpuLength, 1, nwLength, outputSize, 
-				new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull());
+		Tuple tuple = new Tuple(getAppId(), FogUtils.generateTupleId(), Tuple.UP, cpuLength, 1,
+			nwLength, outputSize, new UtilizationModelFull(), new UtilizationModelFull(),
+			new UtilizationModelFull());
 		tuple.setUserId(getUserId());
 		tuple.setTupleType(getTupleType());
-		
+
 		tuple.setDestModuleName(_edge.getDestination());
 		tuple.setSrcModuleName(getSensorName());
-		Logger.debug(getName(), "Sending tuple with tupleId = "+tuple.getCloudletId()+" to "+CloudSim.getEntityName(gatewayDeviceId));
-//		Logger.debug(getName(), "Sending tuple "+tuple.getCloudletId()+"to "+tuple.getDestModuleName()+" with delay="+delay);
+		Logger.debug(getName(), "Sending tuple with tupleId = " + tuple.getCloudletId() + " to "
+			+ CloudSim.getEntityName(gatewayDeviceId));
 
 		int actualTupleId = updateTimings(getSensorName(), tuple.getDestModuleName());
 		tuple.setActualTupleId(actualTupleId);
-		
-//		System.out.println("Clock: "+CloudSim.clock()+" - Sensor.java - Destination: "+CloudSim.getEntityName(gatewayDeviceId));
-		
-		
-		
-		send(gatewayDeviceId, getLatency(), FogEvents.TUPLE_ARRIVAL,tuple);
+
+		send(gatewayDeviceId, getLatency(), FogEvents.TUPLE_ARRIVAL, tuple);
 	}
-	
-	private int updateTimings(String src, String dest){
+
+	private int updateTimings(String src, String dest) {
 		Application application = getApp();
-		for(AppLoop loop : application.getLoops()){
-			if(loop.hasEdge(src, dest)){
-				
+		for (AppLoop loop : application.getLoops()) {
+			if (loop.hasEdge(src, dest)) {
+
 				int tupleId = TimeKeeper.getInstance().getUniqueId();
-				if(!TimeKeeper.getInstance().getLoopIdToTupleIds().containsKey(loop.getLoopId()))
-					TimeKeeper.getInstance().getLoopIdToTupleIds().put(loop.getLoopId(), new ArrayList<Integer>());
+				if (!TimeKeeper.getInstance().getLoopIdToTupleIds().containsKey(loop.getLoopId()))
+					TimeKeeper.getInstance().getLoopIdToTupleIds()
+						.put(loop.getLoopId(), new ArrayList<Integer>());
 				TimeKeeper.getInstance().getLoopIdToTupleIds().get(loop.getLoopId()).add(tupleId);
 				TimeKeeper.getInstance().getEmitTimes().put(tupleId, CloudSim.clock());
 				return tupleId;
@@ -126,7 +127,7 @@ public class Sensor extends SimEntity{
 		}
 		return -1;
 	}
-	
+
 	@Override
 	public void startEntity() {
 		send(gatewayDeviceId, CloudSim.getMinTimeBetweenEvents(), FogEvents.SENSOR_JOINED, geoLocation);
@@ -135,21 +136,20 @@ public class Sensor extends SimEntity{
 
 	@Override
 	public void processEvent(SimEvent ev) {
-		switch(ev.getTag()){
+		switch (ev.getTag()) {
 		case FogEvents.TUPLE_ACK:
-//			transmit(transmitDistribution.getNextValue());
 			break;
 		case FogEvents.EMIT_TUPLE:
-			transmit(); //Comentario pelo myiFogSim
+			transmit();
 			send(getId(), getTransmitDistribution().getNextValue(), FogEvents.EMIT_TUPLE);
 			break;
 		}
-			
+
 	}
 
 	@Override
 	public void shutdownEntity() {
-		
+
 	}
 
 	public int getGatewayDeviceId() {

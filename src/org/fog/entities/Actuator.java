@@ -21,7 +21,7 @@ import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.LatencyByDistance;
 import org.fog.vmmigration.MyStatistics;
 
-public class Actuator extends SimEntity{
+public class Actuator extends SimEntity {
 
 	private int gatewayDeviceId;
 	private double latency;
@@ -32,7 +32,8 @@ public class Actuator extends SimEntity{
 	private Application app;
 	private int myId;
 
-	public Actuator(String name, int userId, String appId, int gatewayDeviceId, double latency, GeoLocation geoLocation, String actuatorType, String srcModuleName) {
+	public Actuator(String name, int userId, String appId, int gatewayDeviceId, double latency,
+		GeoLocation geoLocation, String actuatorType, String srcModuleName) {
 		super(name);
 		this.setAppId(appId);
 		this.gatewayDeviceId = gatewayDeviceId;
@@ -58,116 +59,121 @@ public class Actuator extends SimEntity{
 
 	@Override
 	public void processEvent(SimEvent ev) {
-		switch(ev.getTag()){
+		switch (ev.getTag()) {
 		case FogEvents.TUPLE_ARRIVAL:
 			processTupleArrival(ev);
 			break;
-		}		
+		}
 	}
-	
-	public void printResults(String a, String filename){
-		try(FileWriter fw1 = new FileWriter(filename, true);
-			    BufferedWriter bw1 = new BufferedWriter(fw1);
-			    PrintWriter out1 = new PrintWriter(bw1))
+
+	public void printResults(String a, String filename) {
+		try (FileWriter fw1 = new FileWriter(filename, true);
+			BufferedWriter bw1 = new BufferedWriter(fw1);
+			PrintWriter out1 = new PrintWriter(bw1))
 		{
 			out1.println(a);
-		}
-		catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
+		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 	private void processTupleArrival(SimEvent ev) {
-		Tuple tuple = (Tuple)ev.getData();
-		//if(tuple.getDirection()==Tuple.ACTUATOR){
+		Tuple tuple = (Tuple) ev.getData();
 		tuple.setFinalTime(CloudSim.clock());
-		//}
 
 		String srcModule = tuple.getSrcModuleName();
 		String destModule = tuple.getDestModuleName();
 		Application app = getApp();
 
-		for(AppLoop loop : app.getLoops()){
-			if(loop.hasEdge(srcModule, destModule) && loop.isEndModule(destModule)){
-				Logger.debug(getName(), "Received tuple "+tuple.getCloudletId()+" on "+tuple.getDestModuleName()+". TupleSource: "+tuple.getSrcModuleName());
-				//				Logger.debug(getName(), "Source: "+ CloudSim.getEntityName(ev.getSource())+ " Destination: "+CloudSim.getEntityName(ev.getDestination()));
+		for (AppLoop loop : app.getLoops()) {
+			if (loop.hasEdge(srcModule, destModule) && loop.isEndModule(destModule)) {
+				Logger.debug(getName(),
+					"Received tuple " + tuple.getCloudletId() + " on " + tuple.getDestModuleName()
+						+ ". TupleSource: " + tuple.getSrcModuleName());
 
-				Double startTime = TimeKeeper.getInstance().getEmitTimes().get(tuple.getActualTupleId());
-				if(startTime==null)
+				Double startTime = TimeKeeper.getInstance().getEmitTimes()
+					.get(tuple.getActualTupleId());
+				if (startTime == null)
 					break;
-				if(!TimeKeeper.getInstance().getLoopIdToCurrentAverage().containsKey(loop.getLoopId())){
+				if (!TimeKeeper.getInstance().getLoopIdToCurrentAverage()
+					.containsKey(loop.getLoopId())) {
 					TimeKeeper.getInstance().getLoopIdToCurrentAverage().put(loop.getLoopId(), 0.0);
 					TimeKeeper.getInstance().getLoopIdToCurrentNum().put(loop.getLoopId(), 0);
 					TimeKeeper.getInstance().getMaxLoopExecutionTime().put(loop.getLoopId(), 0.0);
-					printResults(String.valueOf(0), loop.getLoopId()+"LoopId.txt");
-					printResults(String.valueOf(0), loop.getLoopId()+"LoopMaxId.txt");
+					printResults(String.valueOf(0), loop.getLoopId() + "LoopId.txt");
+					printResults(String.valueOf(0), loop.getLoopId() + "LoopMaxId.txt");
 				}
 				MobileDevice st = (MobileDevice) CloudSim.getEntity(getGatewayDeviceId());
-				double currentAverage = TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loop.getLoopId());
-				int currentCount = TimeKeeper.getInstance().getLoopIdToCurrentNum().get(loop.getLoopId());
-				double delay = CloudSim.clock()- TimeKeeper.getInstance().getEmitTimes().get(tuple.getActualTupleId());
-				if(MobileController.getSmartThings().contains(st)){
-					if(st != null){
-						if(st.getSourceAp() != null){
-							if(st.getSourceAp().getServerCloudletToVmMigrate() != null){
-								if(st.getVmLocalServerCloudlet() != null){
+				double currentAverage = TimeKeeper.getInstance().getLoopIdToCurrentAverage()
+					.get(loop.getLoopId());
+				int currentCount = TimeKeeper.getInstance().getLoopIdToCurrentNum()
+					.get(loop.getLoopId());
+				double delay = CloudSim.clock()
+					- TimeKeeper.getInstance().getEmitTimes().get(tuple.getActualTupleId());
+				if (MobileController.getSmartThings().contains(st)) {
+					if (st != null) {
+						if (st.getSourceAp() != null) {
+							if (st.getSourceAp().getServerCloudletToVmMigrate() != null) {
+								if (st.getVmLocalServerCloudlet() != null) {
 									System.out.println("Nao NULO");
-									if(st.getSourceAp().getServerCloudlet().equals(st.getVmLocalServerCloudlet())){
+									if (st.getSourceAp().getServerCloudlet()
+										.equals(st.getVmLocalServerCloudlet())) {
 										System.out.println("Primeiro IF");
-										delay +=  NetworkTopology.getDelay(st.getId(), st.getSourceAp().getId())
-											+ NetworkTopology.getDelay(st.getSourceAp().getId(), st.getVmLocalServerCloudlet().getId())
-											+ LatencyByDistance.latencyConnection(st.getVmLocalServerCloudlet(), st);
+										delay += NetworkTopology.getDelay(st.getId(), st
+											.getSourceAp().getId())
+											+ NetworkTopology.getDelay(st.getSourceAp().getId(), st
+												.getVmLocalServerCloudlet().getId())
+											+ LatencyByDistance.latencyConnection(
+												st.getVmLocalServerCloudlet(), st);
 									}
-									else{
-										double sum = NetworkTopology.getDelay(st.getId(), st.getSourceAp().getId())
-												+ NetworkTopology.getDelay(st.getSourceAp().getId(), st.getSourceAp().getServerCloudlet().getId())
-												+ 1.0 //router
-												+ NetworkTopology.getDelay(st.getSourceAp().getServerCloudlet().getId(), st.getVmLocalServerCloudlet().getId())
-												+ LatencyByDistance.latencyConnection(st.getVmLocalServerCloudlet(), st);
+									else {
+										double sum = NetworkTopology.getDelay(st.getId(), st
+											.getSourceAp().getId())
+											+ NetworkTopology.getDelay(st.getSourceAp().getId(), st
+												.getSourceAp().getServerCloudlet().getId())
+											+ 1.0 // router
+											+ NetworkTopology.getDelay(st.getSourceAp()
+												.getServerCloudlet().getId(), st
+												.getVmLocalServerCloudlet().getId())
+											+ LatencyByDistance.latencyConnection(
+												st.getVmLocalServerCloudlet(), st);
 										delay += sum;
 									}
 								}
-								else{
-//									System.out.println("st.getVmLocalServerCloudlet() NULL");
+								else {
 									st.getVmLocalServerCloudlet();
 								}
 							}
-							else{
-								//System.out.println("st.getSourceAp().getServerCloudletToVmMigrate() NULL");
+							else {
 								st.getSourceAp().getServerCloudletToVmMigrate();
 							}
 						}
-						else{
-//							System.out.println("GetSourceAP NULL");
+						else {
 							st.getSourceAp();
 						}
 					}
-					else{
-//						System.out.println("st NULL");
-						System.out.println(st);;
-					}
-				
 
-
-					MyStatistics.getInstance().putLatencyFileValue(delay, CloudSim.clock(), app.getAppId(), getMyId(),st.getVmLocalServerCloudlet().getName(), tuple.getTupleType());
-					if(delay>TimeKeeper.getInstance().getMaxLoopExecutionTime().get(loop.getLoopId())){
-						TimeKeeper.getInstance().getMaxLoopExecutionTime().put(loop.getLoopId(), delay);
-						printResults(String.valueOf(delay), loop.getLoopId()+"LoopMaxId.txt");
+					MyStatistics.getInstance().putLatencyFileValue(delay, CloudSim.clock(),
+						app.getAppId(), getMyId(), st.getVmLocalServerCloudlet().getName(),
+						tuple.getTupleType());
+					if (delay > TimeKeeper.getInstance().getMaxLoopExecutionTime()
+						.get(loop.getLoopId())) {
+						TimeKeeper.getInstance().getMaxLoopExecutionTime()
+							.put(loop.getLoopId(), delay);
+						printResults(String.valueOf(delay), loop.getLoopId() + "LoopMaxId.txt");
 					}
 					TimeKeeper.getInstance().getEmitTimes().remove(tuple.getActualTupleId());
-					double newAverage = (currentAverage*currentCount + delay)/(currentCount+1);
-					TimeKeeper.getInstance().getLoopIdToCurrentAverage().put(loop.getLoopId(), newAverage);
-					TimeKeeper.getInstance().getLoopIdToCurrentNum().put(loop.getLoopId(), currentCount+1);
-					printResults(String.valueOf(delay), loop.getLoopId()+"LoopId.txt");
+					double newAverage = (currentAverage * currentCount + delay)
+						/ (currentCount + 1);
+					TimeKeeper.getInstance().getLoopIdToCurrentAverage()
+						.put(loop.getLoopId(), newAverage);
+					TimeKeeper.getInstance().getLoopIdToCurrentNum()
+						.put(loop.getLoopId(), currentCount + 1);
+					printResults(String.valueOf(delay), loop.getLoopId() + "LoopId.txt");
 					break;
 				}
 			}

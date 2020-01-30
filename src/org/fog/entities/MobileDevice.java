@@ -31,22 +31,20 @@ import org.cloudbus.cloudsim.Vm;
 
 public class MobileDevice extends FogDevice {
 
-
-	private int direction; //NONE, NORTH, SOUTH, ...
+	private int direction; // NONE, NORTH, SOUTH, ...
 	private int speed; // in m/s
 	protected Coordinate futureCoord;// = new Coordinate();//myiFogSim
-	//private double distanceAp;
 	private FogDevice sourceServerCloudlet;
 	private FogDevice destinationServerCloudlet;
 	private FogDevice vmLocalServerCloudlet;
 	private ApDevice sourceAp;
 	private ApDevice destinationAp;
-	private Vm vmMobileDevice; 
+	private Vm vmMobileDevice;
 	private double migTime;
 	private boolean migPoint;
 	private boolean migZone;
-	private Set<MobileSensor> sensors;//Set of Sensors
-	private Set<MobileActuator> actuators;//Set of Actuators
+	private Set<MobileSensor> sensors;// Set of Sensors
+	private Set<MobileActuator> actuators;// Set of Actuators
 	private float maxServiceValue;
 	private boolean migStatus;
 	private boolean postCopyStatus;
@@ -62,10 +60,6 @@ public class MobileDevice extends FogDevice {
 	private boolean status;
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
-
-
-	//ivate String nome;
-
 
 	@Override
 	public int hashCode() {
@@ -102,7 +96,6 @@ public class MobileDevice extends FogDevice {
 
 		setDirection(0);
 		setSpeed(0);
-		//	setDistanceAp(0);
 		setSourceServerCloudlet(null);
 		setDestinationServerCloudlet(null);
 		setVmLocalServerCloudlet(null);
@@ -123,18 +116,15 @@ public class MobileDevice extends FogDevice {
 		sensors = new HashSet<>();
 		setStatus(true);
 		this.futureCoord = new Coordinate();
-		setFutureCoord(-1,-1);
+		setFutureCoord(-1, -1);
 
 	}
-	public MobileDevice(String name, int coordX, int coordY, int id, int dir, int sp) {
-		//			public MobileDevice(String name, Coordinate coord, int coordX, int coordY, int id, int dir, int sp) {
 
-		// TODO Auto-generated constructor stub
-		//		super(name, coord, coordX, coordY, id);
+	public MobileDevice(String name, int coordX, int coordY, int id, int dir, int sp) {
+
 		super(name, coordX, coordY, id);
 		setDirection(dir);
 		setSpeed(sp);
-		//	setDistanceAp(0);
 		setSourceServerCloudlet(null);
 		setDestinationServerCloudlet(null);
 		setVmLocalServerCloudlet(null);
@@ -152,33 +142,28 @@ public class MobileDevice extends FogDevice {
 		setStatus(true);
 		setAbortMigration(false);
 		this.futureCoord = new Coordinate();
-		setFutureCoord(-1,-1);
+		setFutureCoord(-1, -1);
 
 		actuators = new HashSet<>();
 		sensors = new HashSet<>();
 
-
 	}
-	//	@Override
-	//	public void startEntity() {
-	//		sendNow(getId(),MobileEvents.MAKE_DECISION_MIGRATION,this);
-	//	}
-	public MobileDevice(String name,
-			FogDeviceCharacteristics characteristics,
-			AppModuleAllocationPolicy vmAllocationPolicy,
-			LinkedList<Storage> storageList, double schedulingInterval, double uplinkBandwidth
-			, double downlinkBandwidth, double uplinkLatency,
-			double d, int coordX, int coordY, int id, int dir, int sp, float maxServiceValue, double vmSize
-			, VmMigrationTechnique migrationTechnique) throws Exception {
-		// TODO Auto-generated constructor stub
+
+	// @Override
+	public MobileDevice(String name, FogDeviceCharacteristics characteristics,
+		AppModuleAllocationPolicy vmAllocationPolicy, LinkedList<Storage> storageList,
+		double schedulingInterval, double uplinkBandwidth, double downlinkBandwidth,
+		double uplinkLatency, double d, int coordX, int coordY, int id, int dir, int sp,
+		float maxServiceValue, double vmSize
+		, VmMigrationTechnique migrationTechnique) throws Exception {
+
 		super(name, characteristics, vmAllocationPolicy
-				, storageList, schedulingInterval
-				, uplinkBandwidth
-				, downlinkBandwidth
-				, uplinkLatency, sp, coordX, coordY, id);
+			, storageList, schedulingInterval
+			, uplinkBandwidth
+			, downlinkBandwidth
+			, uplinkLatency, sp, coordX, coordY, id);
 		setDirection(dir);
 		setSpeed(sp);
-		//		setDistanceAp(0);
 		setSourceServerCloudlet(null);
 		setDestinationServerCloudlet(null);
 		setVmLocalServerCloudlet(null);
@@ -197,7 +182,7 @@ public class MobileDevice extends FogDevice {
 		setAbortMigration(false);
 		setMigrationTechnique(migrationTechnique);
 		this.futureCoord = new Coordinate();
-		setFutureCoord(-1,-1);
+		setFutureCoord(-1, -1);
 		actuators = new HashSet<>();
 		sensors = new HashSet<>();
 		setMaxServiceValue(maxServiceValue);
@@ -206,19 +191,17 @@ public class MobileDevice extends FogDevice {
 
 	@Override
 	public String toString() {
-		return this.getName() + "[coordX="+this.getCoord().getCoordX()
-				+ ", coordY="+this.getCoord().getCoordY()
-				+ ", direction=" + direction + ", speed=" + speed
-				+ /*", distanceAp=" + distanceAp + */", sourceCloudletServer="
-				+ sourceServerCloudlet + ", destinationCloudletServer="
-				+ destinationServerCloudlet + ", sourceAp=" + sourceAp
-				+ ", destinationAp=" + destinationAp + ", vmMobileDevice="
-				+ vmMobileDevice + ", migTime=" + migTime + ", sensors="
-				+ sensors + ", actuators=" + actuators + "]";
+		return this.getName() + "[coordX=" + this.getCoord().getCoordX() + ", coordY="
+			+ this.getCoord().getCoordY() + ", direction=" + direction + ", speed=" + speed
+			+ ", sourceCloudletServer=" + sourceServerCloudlet + ", destinationCloudletServer="
+			+ destinationServerCloudlet + ", sourceAp=" + sourceAp + ", destinationAp="
+			+ destinationAp + ", vmMobileDevice=" + vmMobileDevice + ", migTime=" + migTime
+			+ ", sensors=" + sensors + ", actuators=" + actuators + "]";
 	}
+
 	@Override
 	protected void processOtherEvent(SimEvent ev) {
-		switch(ev.getTag()){
+		switch (ev.getTag()) {
 		case FogEvents.TUPLE_ARRIVAL:
 			processTupleArrival(ev);
 			break;
@@ -260,231 +243,168 @@ public class MobileDevice extends FogDevice {
 		}
 	}
 
-	public void saveLostTupple(String a, String filename){
-		try(FileWriter fw1 = new FileWriter(filename, true);
-			    BufferedWriter bw1 = new BufferedWriter(fw1);
-			    PrintWriter out1 = new PrintWriter(bw1))
-		{
+	public void saveLostTupple(String a, String filename) {
+		try (FileWriter fw1 = new FileWriter(filename, true);
+			BufferedWriter bw1 = new BufferedWriter(fw1);
+			PrintWriter out1 = new PrintWriter(bw1)) {
 			out1.println(a);
-		}
-		catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
+		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	protected void processTupleArrival(SimEvent ev){
 
-		Tuple tuple = (Tuple)ev.getData();
+	protected void processTupleArrival(SimEvent ev) {
+
+		Tuple tuple = (Tuple) ev.getData();
 		MyStatistics.getInstance().setMyCountTotalTuple(1);
 
-		boolean flagContinue=false;
-		if(!MobileController.getSmartThings().contains(this)){
+		boolean flagContinue = false;
+		if (!MobileController.getSmartThings().contains(this)) {
 			return;
 		}
-			
-		for(MobileDevice st: MobileController.getSmartThings()){// verifica se o smartthing ainda esta na lista
-			for(Sensor s: st.getSensors()){
-				if(tuple.getAppId().equals(s.getAppId())){
-					flagContinue=true;
+
+		for (MobileDevice st : MobileController.getSmartThings()) {
+			for (Sensor s : st.getSensors()) {
+				if (tuple.getAppId().equals(s.getAppId())) {
+					flagContinue = true;
 					break;
 				}
 			}
 		}
-		if(!flagContinue){
+		if (!flagContinue) {
 			return;
 		}
-		
-		if(tuple.getInitialTime()==-1){
-			MyStatistics.getInstance().getTupleLatency().put(tuple.getMyTupleId(), CloudSim.clock()-getUplinkLatency());
-			tuple.setInitialTime(CloudSim.clock()-getUplinkLatency());
+
+		if (tuple.getInitialTime() == -1) {
+			MyStatistics.getInstance().getTupleLatency()
+				.put(tuple.getMyTupleId(), CloudSim.clock() - getUplinkLatency());
+			tuple.setInitialTime(CloudSim.clock() - getUplinkLatency());
 		}
 
-		if(getName().equals("cloud")){
+		if (getName().equals("cloud")) {
 			updateCloudTraffic();
 		}
 
-		/*if(getName().equals("d-0") && tuple.getTupleType().equals("_SENSOR")){
-System.out.println(++numClients);
-}*/
-		Logger.debug(getName(), "Received tuple "+tuple.getCloudletId()+" with tupleType = "+tuple.getTupleType()+"\t| Source : "+
-				CloudSim.getEntityName(ev.getSource())+"|Dest : "+CloudSim.getEntityName(ev.getDestination()));
+		Logger.debug(
+			getName(),
+			"Received tuple " + tuple.getCloudletId() + " with tupleType = " + tuple.getTupleType()
+				+ "\t| Source : " + CloudSim.getEntityName(ev.getSource()) + "|Dest : "
+				+ CloudSim.getEntityName(ev.getDestination()));
 		send(ev.getSource(), CloudSim.getMinTimeBetweenEvents(), FogEvents.TUPLE_ACK);
 
-		if(FogUtils.appIdToGeoCoverageMap.containsKey(tuple.getAppId())){
+		if (FogUtils.appIdToGeoCoverageMap.containsKey(tuple.getAppId())) {
 		}
 
-		if(tuple.getDirection() == Tuple.ACTUATOR){
-			//			System.out.println("MobileDevice.java - Destination: "+CloudSim.getEntityName(ev.getDestination()));
-			//			System.out.println("MobileDevice.java - Source: "+CloudSim.getEntityName(ev.getSource()));
-			//			System.out.println("******to Actuador ******");
+		if (tuple.getDirection() == Tuple.ACTUATOR) {
 			sendTupleToActuator(tuple);
 			return;
 		}
-		//		int index=0;
 
-
-		if((isMigStatus()||isHandoffStatus())){// && (ev.getSource()!=ev.getDestination())){
-//			if(!tuple.getTupleType().contains("EEG")){
-			
+		if ((isMigStatus() || isHandoffStatus())) {
 			MyStatistics.getInstance().setMyCountLostTuple(1);
-			saveLostTupple(String.valueOf(CloudSim.clock()), tuple.getUserId()+"mdlostTupple.txt");
-
-				if(isMigStatus()){//send again
-//					if(MyStatistics.getInstance().getInitialWithoutVmTime().get(getMyId())==null){
-//						MyStatistics.getInstance().startWithoutVmTime(getMyId(), CloudSim.clock());
-//					}
-				
-					//fazer mediçao aqui.
-					//				MyStatistics.getInstance().putLatencyFile(CloudSim.clock());
-//										LogMobile.debug("MobileDevice.java", getName()+" is in Migration");
-					//				System.out.println("Clock: "+CloudSim.clock()+" - MobileDevice.java - Destination: "+CloudSim.getEntityName(ev.getDestination())+": Tuple "+tuple.getCloudletId());
-					//				System.out.println("Clock: "+CloudSim.clock()+" - MobileDevice.java - Source: "+CloudSim.getEntityName(ev.getSource()));
-					//				Logger.ENABLED=true;  
-					//				System.out.println("Clock: "+CloudSim.clock()+" - TupleId: "+tuple.getMyTupleId()+" MobileDevice.java - Migration");
-//					double mt= getMigTime();
-//					double clock = CloudSim.clock();
-//					double semVm = MyStatistics.getInstance().getInitialWithoutVmTime().get(getMyId());
-//					double iddatuple = (tuple.getCloudletId()/1000.0);
-//					double delay = getMigTime() - (CloudSim.clock() - MyStatistics.getInstance().getInitialWithoutVmTime().get(getMyId()));
-//					if(delay < 100){
-//						delay = 1000;
-//					}
-//					send(ev.getDestination(),1000, FogEvents.TUPLE_ARRIVAL, tuple);
-					return;
-				}
-				else{//send again
-					//	MyStatistics.getInstance().putLatencyFile(CloudSim.clock());
-					//					LogMobile.debug("MobileDevice.java", getName()+" is in Handoff");
-					//				System.out.println("Clock: "+CloudSim.clock()+" - MobileDevice.java - Destination: "+CloudSim.getEntityName(ev.getDestination())+": Tuple "+tuple.getCloudletId());
-					//				System.out.println("Clock: "+CloudSim.clock()+" - MobileDevice.java - Source: "+CloudSim.getEntityName(ev.getSource()));
-					//				System.out.println("Clock: "+CloudSim.clock()+" - TupleId: "+tuple.getMyTupleId()+" MobileDevice.java - Handoff");
-//					send(ev.getDestination(), 100, FogEvents.TUPLE_ARRIVAL, tuple);
-					return;
-				}
-//			}
+			saveLostTupple(String.valueOf(CloudSim.clock()), tuple.getUserId() + "mdlostTupple.txt");
+			return;
 		}
 		else {
-//			if(MyStatistics.getInstance().getInitialWithoutVmTime().get(getMyId())!=null){
-//				MyStatistics.getInstance().finalWithoutVmTime(getMyId(), CloudSim.clock());
-//				MyStatistics.getInstance().getInitialWithoutVmTime().remove(getMyId());
-//			}
-			if(getHost().getVmList().size() > 0){
-				for(Vm vm:getHost().getVmList()){
-					//	if(vm.getVmm().equals("Xen")){//if(tuple.getAppId().equals("MyApp_vr_game"+vm.getId())){
-					final AppModule operator = (AppModule)vm;//getHost().getVmList().get(index);
-					if(CloudSim.clock() > 0){
+			if (getHost().getVmList().size() > 0) {
+				for (Vm vm : getHost().getVmList()) {
+					final AppModule operator = (AppModule) vm;
+					if (CloudSim.clock() > 0) {
 						getHost().getVmScheduler().deallocatePesForVm(operator);
-						getHost().getVmScheduler().allocatePesForVm(operator, new ArrayList<Double>(){
-							protected static final long serialVersionUID = 1L;
-							{add((double) getHost().getTotalMips());}});
+						getHost().getVmScheduler().allocatePesForVm(operator,
+							new ArrayList<Double>() {
+								protected static final long serialVersionUID = 1L;
+								{
+									add((double) getHost().getTotalMips());
+								}
+							});
 					}
-
 					break;
-					//}
-					//				System.out.println("tuple.getAppId(): "+tuple.getAppId());
-					//				System.out.println("Vm #: "+getHost().getVmList().get(index).getId()+ " UserId: "+getHost().getVmList().get(index).getUserId()+" Name: "+getHost().getVmList().get(index).getVmm());
-					//				index++;
 				}
-
 			}
-			if(getName().equals("cloud") && tuple.getDestModuleName()==null){
+			if (getName().equals("cloud") && tuple.getDestModuleName() == null) {
 				sendNow(getControllerId(), FogEvents.TUPLE_FINISHED, null);
 			}
-			//			if(tuple.getTupleType().contains("EEG")){
-			//				Logger.ENABLED=true;  
-			//				Logger.debug(getName(), "Received tuple "+tuple.getMyTupleId()+" with tupleType = "+tuple.getTupleType()+"\t| Source : "+
-			//					CloudSim.getEntityName(ev.getSource())+"|Dest : "+CloudSim.getEntityName(ev.getDestination()));
-			//				Logger.ENABLED=false;  
-			//			}
-
-
-			if(appToModulesMap.containsKey(tuple.getAppId())){
-				if(appToModulesMap.get(tuple.getAppId()).contains(tuple.getDestModuleName())){
+			if (appToModulesMap.containsKey(tuple.getAppId())) {
+				if (appToModulesMap.get(tuple.getAppId()).contains(tuple.getDestModuleName())) {
 					int vmId = -1;
-					for(Vm vm : getHost().getVmList()){
-						//if(vm.getVmm().equals("Xen")){
-						if(((AppModule)vm).getName().equals(tuple.getDestModuleName()))
+					for (Vm vm : getHost().getVmList()) {
+						if (((AppModule) vm).getName().equals(tuple.getDestModuleName()))
 							vmId = vm.getId();
-						//}
 					}
-					if(vmId < 0
-							|| (tuple.getModuleCopyMap().containsKey(tuple.getDestModuleName()) && 
-									tuple.getModuleCopyMap().get(tuple.getDestModuleName())!=vmId )){
+					if (vmId < 0
+						|| (tuple.getModuleCopyMap().containsKey(tuple.getDestModuleName()) && tuple
+							.getModuleCopyMap().get(tuple.getDestModuleName()) != vmId)) {
 						return;
 					}
 					tuple.setVmId(vmId);
-					//Logger.error(getName(), "Executing tuple for operator " + moduleName);
 
 					updateTimingsOnReceipt(tuple);
 
 					executeTuple(ev, tuple.getDestModuleName());
-				}else if(tuple.getDestModuleName()!=null){
-					if(tuple.getDirection() == Tuple.UP)
+				} else if (tuple.getDestModuleName() != null) {
+					if (tuple.getDirection() == Tuple.UP)
 						sendUp(tuple);
-					else if(tuple.getDirection() == Tuple.DOWN){
-						for(int childId : getChildrenIds())
+					else if (tuple.getDirection() == Tuple.DOWN) {
+						for (int childId : getChildrenIds())
 							sendDown(tuple, childId);
 					}
-				}else{
+				} else {
 					sendUp(tuple);
 				}
-			}else{
-				if(tuple.getDirection() == Tuple.UP)
+			} else {
+				if (tuple.getDirection() == Tuple.UP)
 					sendUp(tuple);
-				else if(tuple.getDirection() == Tuple.DOWN){
-					for(int childId : getChildrenIds())
+				else if (tuple.getDirection() == Tuple.DOWN) {
+					for (int childId : getChildrenIds())
 						sendDown(tuple, childId);
 				}
 			}
 		}
 	}
+
 	private void sendPeriodicTuple(SimEvent ev) {
-		AppEdge edge = (AppEdge)ev.getData();
+		AppEdge edge = (AppEdge) ev.getData();
 		String srcModule = edge.getSource();
 		AppModule module = null;
-		for(Vm vm : getHost().getVmList()){
-			//	if(vm.getVmm().equals("Xen")){
-			if(((AppModule)vm).getName().equals(srcModule)){
-				module=(AppModule)vm;
+		for (Vm vm : getHost().getVmList()) {
+			if (((AppModule) vm).getName().equals(srcModule)) {
+				module = (AppModule) vm;
 				break;
 			}
-			//}
 		}
-		if(module == null)
+		if (module == null)
 			return;
 
 		int instanceCount = getModuleInstanceCount().get(module.getAppId()).get(srcModule);
 
 		/*
-		 * Since tuples sent through a DOWN application edge are anyways broadcasted, only UP tuples are replicated
+		 * Since tuples sent through a DOWN application edge are anyways
+		 * broadcasted, only UP tuples are replicated
 		 */
-		for(int i = 0;i<((edge.getDirection()==Tuple.UP)?instanceCount:1);i++){
+		for (int i = 0; i < ((edge.getDirection() == Tuple.UP) ? instanceCount : 1); i++) {
 			Tuple tuple = applicationMap.get(module.getAppId()).createTuple(edge, getId());
 			updateTimingsOnSending(tuple);
-			sendToSelf(tuple);			
+			sendToSelf(tuple);
 		}
 		send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
 	}
 
 	private void updateModuleInstanceCount(SimEvent ev) {
-		ModuleLaunchConfig config = (ModuleLaunchConfig)ev.getData();
+		ModuleLaunchConfig config = (ModuleLaunchConfig) ev.getData();
 		String appId = config.getModule().getAppId();
-		if(!moduleInstanceCount.containsKey(appId))
+		if (!moduleInstanceCount.containsKey(appId))
 			moduleInstanceCount.put(appId, new HashMap<String, Integer>());
 		moduleInstanceCount.get(appId).put(config.getModule().getName(), config.getInstanceCount());
-		System.out.println(getName()+ " Creating "+config.getInstanceCount()+" instances of module "+config.getModule().getName());
+		System.out.println(getName() + " Creating " + config.getInstanceCount()
+			+ " instances of module " + config.getModule().getName());
 	}
+
 	private void manageResources(SimEvent ev) {
-		//		updateEnergyConsumption();
 		send(getId(), Config.RESOURCE_MGMT_INTERVAL, FogEvents.RESOURCE_MGMT);
 	}
 
@@ -511,25 +431,15 @@ System.out.println(++numClients);
 	public void setSpeed(int speed) {
 		this.speed = speed;
 	}
-	
-	public Coordinate getFutureCoord() {//myiFogSim
+
+	public Coordinate getFutureCoord() {// myiFogSim
 		return futureCoord;
 	}
 
-	public void setFutureCoord(int coordX, int coordY) { //myiFogSim
+	public void setFutureCoord(int coordX, int coordY) {
 		this.futureCoord.setCoordX(coordX);
 		this.futureCoord.setCoordY(coordY);
 	}
-
-	//	public double getDistanceAp() {
-	//		return distanceAp;
-	//	}
-	//
-	//	public void setDistanceAp(double distanceAp) {
-	//		this.distanceAp = distanceAp;
-	//	}
-
-
 
 	public FogDevice getSourceServerCloudlet() {
 		return sourceServerCloudlet;
@@ -732,11 +642,9 @@ System.out.println(++numClients);
 	}
 
 	public void setNextServerClouletId(int i) {
-		// TODO Auto-generated method stub
 	}
 
 	public int getNextServerClouletId() {
-		// TODO Auto-generated method stub
 		return 1;
 	}
 }

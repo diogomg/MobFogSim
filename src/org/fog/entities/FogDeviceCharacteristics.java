@@ -1,9 +1,8 @@
 /*
- * Title:        CloudSim Toolkit
- * Description:  CloudSim (Cloud Simulation) Toolkit for Modeling and Simulation of Clouds
- * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
- *
- * Copyright (c) 2009-2012, The University of Melbourne, Australia
+ * Title: CloudSim Toolkit Description: CloudSim (Cloud Simulation) Toolkit for
+ * Modeling and Simulation of Clouds Licence: GPL -
+ * http://www.gnu.org/copyleft/gpl.html Copyright (c) 2009-2012, The University
+ * of Melbourne, Australia
  */
 
 package org.fog.entities;
@@ -18,11 +17,11 @@ import org.cloudbus.cloudsim.lists.HostList;
 import org.cloudbus.cloudsim.lists.PeList;
 import org.fog.utils.GeoCoverage;
 
-public class FogDeviceCharacteristics extends DatacenterCharacteristics{
+public class FogDeviceCharacteristics extends DatacenterCharacteristics {
 
 	/** The geographical coverage of the fog device */
 	private GeoCoverage geoCoverage;
-	
+
 	/** The resource id -- setup when Resource is created. */
 	private int id;
 
@@ -54,8 +53,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	public static final int OTHER_POLICY_SAME_RATING = 2;
 
 	/**
-	 * Assuming all PEs in a Machine have the same rating. However, each Machine has different
-	 * rating to each other.
+	 * Assuming all PEs in a Machine have the same rating. However, each Machine
+	 * has different rating to each other.
 	 */
 	public static final int OTHER_POLICY_DIFFERENT_RATING = 3;
 
@@ -75,17 +74,25 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	private double costPerBw;
 
 	/**
-	 * 
-	 * @param architecture the architecture of a resource
-	 * @param os the operating system used
-	 * @param vmm the virtual machine monitor used
-	 * @param hostList list of machines in a resource
-	 * @param timeZone local time zone of a user that owns this reservation. Time zone should be of
-	 *            range [GMT-12 ... GMT+13]
-	 * @param costPerSec the cost per sec to use this resource
-	 * @param costPerMem the cost to use memory in this resource
-	 * @param costPerStorage the cost to use storage in this resource
-	 * @param costPerBw the cost per bw
+	 * @param architecture
+	 *        the architecture of a resource
+	 * @param os
+	 *        the operating system used
+	 * @param vmm
+	 *        the virtual machine monitor used
+	 * @param hostList
+	 *        list of machines in a resource
+	 * @param timeZone
+	 *        local time zone of a user that owns this reservation. Time zone
+	 *        should be of range [GMT-12 ... GMT+13]
+	 * @param costPerSec
+	 *        the cost per sec to use this resource
+	 * @param costPerMem
+	 *        the cost to use memory in this resource
+	 * @param costPerStorage
+	 *        the cost to use storage in this resource
+	 * @param costPerBw
+	 *        the cost per bw
 	 * @pre architecture != null
 	 * @pre OS != null
 	 * @pre VMM != null
@@ -98,17 +105,25 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	 */
 	@SuppressWarnings("serial")
 	public FogDeviceCharacteristics(
-			String architecture,
-			String os,
-			String vmm,
-			final Host host,
-			double timeZone,
-			double costPerSec,
-			double costPerMem,
-			double costPerStorage,
-			double costPerBw) {
-		super(architecture, os, vmm, new ArrayList<Host>(){{add(host);}} , timeZone, costPerSec, costPerMem, costPerStorage, costPerBw);
-		setHostList(new ArrayList<Host>(){{add(host);}});
+		String architecture,
+		String os,
+		String vmm,
+		final Host host,
+		double timeZone,
+		double costPerSec,
+		double costPerMem,
+		double costPerStorage,
+		double costPerBw) {
+		super(architecture, os, vmm, new ArrayList<Host>() {
+			{
+				add(host);
+			}
+		}, timeZone, costPerSec, costPerMem, costPerStorage, costPerBw);
+		setHostList(new ArrayList<Host>() {
+			{
+				add(host);
+			}
+		});
 		setId(-1);
 		setArchitecture(architecture);
 		setOs(os);
@@ -122,7 +137,7 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 		setCostPerMem(costPerMem);
 		setCostPerStorage(costPerStorage);
 		setCostPerBw(costPerBw);
-		
+
 	}
 
 	/**
@@ -150,7 +165,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Gets a Machine with at least a given number of free Pe.
 	 * 
-	 * @param peNumber the pe number
+	 * @param peNumber
+	 *        the pe number
 	 * @return a Machine object or if not found
 	 * @pre $none
 	 * @post $none
@@ -160,8 +176,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	}
 
 	/**
-	 * Gets Millions Instructions Per Second (MIPS) Rating of a Processing Element (Pe). It is
-	 * assumed all PEs' rating is same in a given machine.
+	 * Gets Millions Instructions Per Second (MIPS) Rating of a Processing
+	 * Element (Pe). It is assumed all PEs' rating is same in a given machine.
 	 * 
 	 * @return the MIPS Rating or if no PEs are exists.
 	 * @pre $none
@@ -176,11 +192,14 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	}
 
 	/**
-	 * Gets Millions Instructions Per Second (MIPS) Rating of a Processing Element (Pe). It is
-	 * essential to use this method when a resource is made up of heterogenous PEs/machines.
+	 * Gets Millions Instructions Per Second (MIPS) Rating of a Processing
+	 * Element (Pe). It is essential to use this method when a resource is made
+	 * up of heterogenous PEs/machines.
 	 * 
-	 * @param id the machine ID
-	 * @param peId the Pe ID
+	 * @param id
+	 *        the machine ID
+	 * @param peId
+	 *        the Pe ID
 	 * @return the MIPS Rating or if no PEs are exists.
 	 * @pre id >= 0
 	 * @pre peID >= 0
@@ -195,7 +214,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	}
 
 	/**
-	 * Gets the total MIPS rating, which is the sum of MIPS rating of all machines in a resource.
+	 * Gets the total MIPS rating, which is the sum of MIPS rating of all
+	 * machines in a resource.
 	 * <p>
 	 * Total MIPS rating for:
 	 * <ul>
@@ -203,7 +223,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	 * <li>Other policy same rating = same as TimeShared
 	 * <li>SpaceShared = Sum of all PEs in all Machines
 	 * <li>Other policy different rating = same as SpaceShared
-	 * <li>Advance Reservation = 0 or unknown. You need to calculate this manually.
+	 * <li>Advance Reservation = 0 or unknown. You need to calculate this
+	 * manually.
 	 * </ul>
 	 * 
 	 * @return the sum of MIPS ratings
@@ -214,33 +235,36 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 		int mips = 0;
 		switch (getAllocationPolicy()) {
 		// Assuming all PEs in all Machine have same rating.
-			case FogDeviceCharacteristics.TIME_SHARED:
-			case FogDeviceCharacteristics.OTHER_POLICY_SAME_RATING:
-				mips = getMipsOfOnePe() * HostList.getNumberOfPes(getHostList());
-				break;
+		case FogDeviceCharacteristics.TIME_SHARED:
+		case FogDeviceCharacteristics.OTHER_POLICY_SAME_RATING:
+			mips = getMipsOfOnePe() * HostList.getNumberOfPes(getHostList());
+			break;
 
-			// Assuming all PEs in a given Machine have the same rating.
-			// But different machines in a Cluster can have different rating
-			case FogDeviceCharacteristics.SPACE_SHARED:
-			case FogDeviceCharacteristics.OTHER_POLICY_DIFFERENT_RATING:
-				for (Host host : getHostList()) {
-					mips += host.getTotalMips();
-				}
-				break;
+		// Assuming all PEs in a given Machine have the same rating.
+		// But different machines in a Cluster can have different rating
+		case FogDeviceCharacteristics.SPACE_SHARED:
+		case FogDeviceCharacteristics.OTHER_POLICY_DIFFERENT_RATING:
+			for (Host host : getHostList()) {
+				mips += host.getTotalMips();
+			}
+			break;
 
-			default:
-				break;
+		default:
+			break;
 		}
 
 		return mips;
 	}
 
 	/**
-	 * Gets the CPU time given the specified parameters (only for TIME_SHARED). <tt>NOTE:</tt> The
-	 * CPU time for SPACE_SHARED and ADVANCE_RESERVATION are not yet implemented.
+	 * Gets the CPU time given the specified parameters (only for TIME_SHARED).
+	 * <tt>NOTE:</tt> The CPU time for SPACE_SHARED and ADVANCE_RESERVATION are
+	 * not yet implemented.
 	 * 
-	 * @param cloudletLength the length of a Cloudlet
-	 * @param load the load of a Cloudlet
+	 * @param cloudletLength
+	 *        the length of a Cloudlet
+	 * @param load
+	 *        the load of a Cloudlet
 	 * @return the CPU time
 	 * @pre cloudletLength >= 0.0
 	 * @pre load >= 0.0
@@ -250,12 +274,12 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 		double cpuTime = 0.0;
 
 		switch (getAllocationPolicy()) {
-			case FogDeviceCharacteristics.TIME_SHARED:
-				cpuTime = cloudletLength / (getMipsOfOnePe() * (1.0 - load));
-				break;
+		case FogDeviceCharacteristics.TIME_SHARED:
+			cpuTime = cloudletLength / (getMipsOfOnePe() * (1.0 - load));
+			break;
 
-			default:
-				break;
+		default:
+			break;
 		}
 
 		return cpuTime;
@@ -297,9 +321,12 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the particular Pe status on a Machine.
 	 * 
-	 * @param status Pe status, either <tt>Pe.FREE</tt> or <tt>Pe.BUSY</tt>
-	 * @param hostId Machine ID
-	 * @param peId Pe id
+	 * @param status
+	 *        Pe status, either <tt>Pe.FREE</tt> or <tt>Pe.BUSY</tt>
+	 * @param hostId
+	 *        Machine ID
+	 * @param peId
+	 *        Pe id
 	 * @return otherwise (Machine id or Pe id might not be exist)
 	 * @pre machineID >= 0
 	 * @pre peID >= 0
@@ -370,7 +397,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets cost to use memory.
 	 * 
-	 * @param costPerMem cost to use memory
+	 * @param costPerMem
+	 *        cost to use memory
 	 * @pre costPerMem >= 0
 	 * @post $none
 	 */
@@ -390,7 +418,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets cost to use storage.
 	 * 
-	 * @param costPerStorage cost to use storage
+	 * @param costPerStorage
+	 *        cost to use storage
 	 * @pre costPerStorage >= 0
 	 * @post $none
 	 */
@@ -410,7 +439,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets cost to use bw cost to use bw.
 	 * 
-	 * @param costPerBw the cost per bw
+	 * @param costPerBw
+	 *        the cost per bw
 	 * @pre costPerBw >= 0
 	 * @post $none
 	 */
@@ -439,7 +469,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the id.
 	 * 
-	 * @param id the new id
+	 * @param id
+	 *        the new id
 	 */
 	public void setId(int id) {
 		this.id = id;
@@ -457,7 +488,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the architecture.
 	 * 
-	 * @param architecture the new architecture
+	 * @param architecture
+	 *        the new architecture
 	 */
 	protected void setArchitecture(String architecture) {
 		this.architecture = architecture;
@@ -475,7 +507,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the os.
 	 * 
-	 * @param os the new os
+	 * @param os
+	 *        the new os
 	 */
 	protected void setOs(String os) {
 		this.os = os;
@@ -484,7 +517,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Gets the host list.
 	 * 
-	 * @param <T> the generic type
+	 * @param <T>
+	 *        the generic type
 	 * @return the host list
 	 */
 	@SuppressWarnings("unchecked")
@@ -495,8 +529,10 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the host list.
 	 * 
-	 * @param <T> the generic type
-	 * @param hostList the new host list
+	 * @param <T>
+	 *        the generic type
+	 * @param hostList
+	 *        the new host list
 	 */
 	protected <T extends Host> void setHostList(List<T> hostList) {
 		this.hostList = hostList;
@@ -514,7 +550,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the time zone.
 	 * 
-	 * @param timeZone the new time zone
+	 * @param timeZone
+	 *        the new time zone
 	 */
 	protected void setTimeZone(double timeZone) {
 		this.timeZone = timeZone;
@@ -532,7 +569,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the cost per second.
 	 * 
-	 * @param costPerSecond the new cost per second
+	 * @param costPerSecond
+	 *        the new cost per second
 	 */
 	protected void setCostPerSecond(double costPerSecond) {
 		this.costPerSecond = costPerSecond;
@@ -550,7 +588,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the allocation policy.
 	 * 
-	 * @param allocationPolicy the new allocation policy
+	 * @param allocationPolicy
+	 *        the new allocation policy
 	 */
 	protected void setAllocationPolicy(int allocationPolicy) {
 		this.allocationPolicy = allocationPolicy;
@@ -559,7 +598,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics{
 	/**
 	 * Sets the vmm.
 	 * 
-	 * @param vmm the new vmm
+	 * @param vmm
+	 *        the new vmm
 	 */
 	protected void setVmm(String vmm) {
 		this.vmm = vmm;
