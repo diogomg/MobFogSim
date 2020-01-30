@@ -4,17 +4,16 @@ public class CanBeSentResult {
 
 	private double cpuLoad;
 	private double nwLoad;
-	
+
 	private boolean canBeSent;
 
-	public CanBeSentResult(double cpuLoad, double nwLoad, boolean canBeSent){
+	public CanBeSentResult(double cpuLoad, double nwLoad, boolean canBeSent) {
 		this.cpuLoad = cpuLoad;
 		this.nwLoad = nwLoad;
 		this.canBeSent = canBeSent;
 	}
-	
+
 	public CanBeSentResult() {
-		// TODO Auto-generated constructor stub
 	}
 
 	public double getCpuLoad() {
@@ -40,7 +39,5 @@ public class CanBeSentResult {
 	public void setCanBeSent(boolean canBeSent) {
 		this.canBeSent = canBeSent;
 	}
-	
-	
-	
+
 }

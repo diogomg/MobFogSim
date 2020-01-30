@@ -10,55 +10,55 @@ import org.fog.entities.Tuple;
 public class TimeKeeper {
 
 	private static TimeKeeper instance;
-	
+
 	private long simulationStartTime;
-	private int count; 
+	private int count;
 	private Map<Integer, Double> emitTimes;
 	private Map<Integer, Double> endTimes;
 	private Map<Integer, List<Integer>> loopIdToTupleIds;
 	private Map<Integer, Double> tupleIdToCpuStartTime;
 	private Map<String, Double> tupleTypeToAverageCpuTime;
 	private Map<String, Integer> tupleTypeToExecutedTupleCount;
-	private Map<Integer,Double> maxLoopExecutionTime;
-	
-	
+	private Map<Integer, Double> maxLoopExecutionTime;
+
 	private Map<Integer, Double> loopIdToCurrentAverage;
 	private Map<Integer, Integer> loopIdToCurrentNum;
-	
-	public static TimeKeeper getInstance(){
-		if(instance == null)
+
+	public static TimeKeeper getInstance() {
+		if (instance == null)
 			instance = new TimeKeeper();
 		return instance;
 	}
-	
-	public int getUniqueId(){
+
+	public int getUniqueId() {
 		return count++;
 	}
-	
-	public void tupleStartedExecution(Tuple tuple){
+
+	public void tupleStartedExecution(Tuple tuple) {
 		tupleIdToCpuStartTime.put(tuple.getCloudletId(), CloudSim.clock());
 	}
-	
-	public void tupleEndedExecution(Tuple tuple){
-		if(!tupleIdToCpuStartTime.containsKey(tuple.getCloudletId()))
+
+	public void tupleEndedExecution(Tuple tuple) {
+		if (!tupleIdToCpuStartTime.containsKey(tuple.getCloudletId()))
 			return;
 		double executionTime = CloudSim.clock() - tupleIdToCpuStartTime.get(tuple.getCloudletId());
-		
-		if(!tupleTypeToAverageCpuTime.containsKey(tuple.getTupleType())){
+
+		if (!tupleTypeToAverageCpuTime.containsKey(tuple.getTupleType())) {
 			tupleTypeToAverageCpuTime.put(tuple.getTupleType(), executionTime);
 			tupleTypeToExecutedTupleCount.put(tuple.getTupleType(), 1);
-		} else{
+		} else {
 			double currentAverage = tupleTypeToAverageCpuTime.get(tuple.getTupleType());
 			int currentCount = tupleTypeToExecutedTupleCount.get(tuple.getTupleType());
-			tupleTypeToAverageCpuTime.put(tuple.getTupleType(), (currentAverage*currentCount+executionTime)/(currentCount+1));
+			tupleTypeToAverageCpuTime.put(tuple.getTupleType(),
+				(currentAverage * currentCount + executionTime) / (currentCount + 1));
 		}
 	}
-	
-	public Map<Integer, List<Integer>> loopIdToTupleIds(){
+
+	public Map<Integer, List<Integer>> loopIdToTupleIds() {
 		return getInstance().getLoopIdToTupleIds();
 	}
-	
-	private TimeKeeper(){
+
+	private TimeKeeper() {
 		count = 1;
 		setEmitTimes(new HashMap<Integer, Double>());
 		setEndTimes(new HashMap<Integer, Double>());
@@ -70,7 +70,7 @@ public class TimeKeeper {
 		setLoopIdToCurrentNum(new HashMap<Integer, Integer>());
 		setMaxLoopExecutionTime(new HashMap<Integer, Double>());
 	}
-	
+
 	public int getCount() {
 		return count;
 	}
@@ -108,7 +108,7 @@ public class TimeKeeper {
 	}
 
 	public void setTupleTypeToAverageCpuTime(
-			Map<String, Double> tupleTypeToAverageCpuTime) {
+		Map<String, Double> tupleTypeToAverageCpuTime) {
 		this.tupleTypeToAverageCpuTime = tupleTypeToAverageCpuTime;
 	}
 
@@ -117,7 +117,7 @@ public class TimeKeeper {
 	}
 
 	public void setTupleTypeToExecutedTupleCount(
-			Map<String, Integer> tupleTypeToExecutedTupleCount) {
+		Map<String, Integer> tupleTypeToExecutedTupleCount) {
 		this.tupleTypeToExecutedTupleCount = tupleTypeToExecutedTupleCount;
 	}
 
@@ -160,6 +160,5 @@ public class TimeKeeper {
 	public void setMaxLoopExecutionTime(Map<Integer, Double> maxLoopExecutionTime) {
 		this.maxLoopExecutionTime = maxLoopExecutionTime;
 	}
-	
-	
+
 }
