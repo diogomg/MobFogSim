@@ -13,13 +13,14 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.Sensor;
 import org.fog.entities.Tuple;
 
-public class ModulePlacementOnlyCloud extends ModulePlacement{
-	
+public class ModulePlacementOnlyCloud extends ModulePlacement {
+
 	private List<Sensor> sensors;
 	private List<Actuator> actuators;
 	private int cloudId;
-	
-	public ModulePlacementOnlyCloud(List<FogDevice> fogDevices, List<Sensor> sensors, List<Actuator> actuators, Application application){
+
+	public ModulePlacementOnlyCloud(List<FogDevice> fogDevices, List<Sensor> sensors,
+		List<Actuator> actuators, Application application) {
 		this.setFogDevices(fogDevices);
 		this.setApplication(application);
 		this.setSensors(sensors);
@@ -31,33 +32,37 @@ public class ModulePlacementOnlyCloud extends ModulePlacement{
 		mapModules();
 		computeModuleInstanceCounts();
 	}
-	
-	private void computeModuleInstanceCounts(){
+
+	private void computeModuleInstanceCounts() {
 		FogDevice cloud = getDeviceById(CloudSim.getEntityId("cloud"));
 		getModuleInstanceCountMap().put(cloud.getId(), new HashMap<String, Integer>());
-		
-		for(Sensor sensor : getSensors()){
+
+		for (Sensor sensor : getSensors()) {
 			String sensorType = sensor.getSensorName();
-			if(!getModuleInstanceCountMap().get(cloud.getId()).containsKey(sensorType))
+			if (!getModuleInstanceCountMap().get(cloud.getId()).containsKey(sensorType))
 				getModuleInstanceCountMap().get(cloud.getId()).put(sensorType, 0);
-			getModuleInstanceCountMap().get(cloud.getId()).put(sensorType, getModuleInstanceCountMap().get(cloud.getId()).get(sensorType)+1);
+			getModuleInstanceCountMap().get(cloud.getId()).put(sensorType,
+				getModuleInstanceCountMap().get(cloud.getId()).get(sensorType) + 1);
 		}
-		
-		for(Actuator actuator : getActuators()){
+
+		for (Actuator actuator : getActuators()) {
 			String actuatorType = actuator.getActuatorType();
-			if(!getModuleInstanceCountMap().get(cloud.getId()).containsKey(actuatorType))
+			if (!getModuleInstanceCountMap().get(cloud.getId()).containsKey(actuatorType))
 				getModuleInstanceCountMap().get(cloud.getId()).put(actuatorType, 0);
-			getModuleInstanceCountMap().get(cloud.getId()).put(actuatorType, getModuleInstanceCountMap().get(cloud.getId()).get(actuatorType)+1);
+			getModuleInstanceCountMap().get(cloud.getId()).put(actuatorType,
+				getModuleInstanceCountMap().get(cloud.getId()).get(actuatorType) + 1);
 		}
-		
-		while(!isModuleInstanceCalculationComplete()){
-			for(AppModule module : getApplication().getModules()){
+
+		while (!isModuleInstanceCalculationComplete()) {
+			for (AppModule module : getApplication().getModules()) {
 				int maxInstances = 0;
-				for(AppEdge edge : getApplication().getEdges()){
-					if(!getModuleInstanceCountMap().get(cloudId).containsKey(edge.getSource()))
+				for (AppEdge edge : getApplication().getEdges()) {
+					if (!getModuleInstanceCountMap().get(cloudId).containsKey(edge.getSource()))
 						continue;
-					if(edge.getDestination().equals(module.getName()) && edge.getDirection()==Tuple.UP){
-						maxInstances = Math.max(maxInstances, getModuleInstanceCountMap().get(cloudId).get(edge.getSource()));
+					if (edge.getDestination().equals(module.getName())
+						&& edge.getDirection() == Tuple.UP) {
+						maxInstances = Math.max(maxInstances,
+							getModuleInstanceCountMap().get(cloudId).get(edge.getSource()));
 					}
 				}
 				getModuleInstanceCountMap().get(cloudId).put(module.getName(), maxInstances);
@@ -67,8 +72,8 @@ public class ModulePlacementOnlyCloud extends ModulePlacement{
 	}
 
 	private boolean isModuleInstanceCalculationComplete() {
-		for(AppModule module : getApplication().getModules()){
-			if(!getModuleInstanceCountMap().get(cloudId).containsKey(module.getName()))
+		for (AppModule module : getApplication().getModules()) {
+			if (!getModuleInstanceCountMap().get(cloudId).containsKey(module.getName()))
 				return false;
 		}
 		return true;
@@ -77,7 +82,7 @@ public class ModulePlacementOnlyCloud extends ModulePlacement{
 	@Override
 	protected void mapModules() {
 		List<AppModule> modules = getApplication().getModules();
-		for(AppModule module : modules){
+		for (AppModule module : modules) {
 			FogDevice cloud = getDeviceById(cloudId);
 			createModuleInstanceOnDevice(module, cloud);
 		}

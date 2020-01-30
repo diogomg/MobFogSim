@@ -17,95 +17,79 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 
 public abstract class ModulePlacement {
-	
-	
+
 	public static int ONLY_CLOUD = 1;
 	public static int EDGEWARDS = 2;
 	public static int USER_MAPPING = 3;
-	
+
 	private List<FogDevice> fogDevices;
 	private List<MobileDevice> mobileDevices;
 	private Application application;
 	private Map<String, List<Integer>> moduleToDeviceMap;
 	private Map<Integer, List<AppModule>> deviceToModuleMap;
 	private Map<Integer, Map<String, Integer>> moduleInstanceCountMap;
-	
+
 	protected abstract void mapModules();
-	
-	protected boolean canBeCreated(FogDevice fogDevice, AppModule module){		
+
+	protected boolean canBeCreated(FogDevice fogDevice, AppModule module) {
 		return fogDevice.getVmAllocationPolicy().allocateHostForVm(module);
 	}
-	
-	protected int getParentDevice(int fogDeviceId){
-		return ((FogDevice)CloudSim.getEntity(fogDeviceId)).getParentId();
+
+	protected int getParentDevice(int fogDeviceId) {
+		return ((FogDevice) CloudSim.getEntity(fogDeviceId)).getParentId();
 	}
-	
-	protected FogDevice getFogDeviceById(int fogDeviceId){
-		return (FogDevice)CloudSim.getEntity(fogDeviceId);
+
+	protected FogDevice getFogDeviceById(int fogDeviceId) {
+		return (FogDevice) CloudSim.getEntity(fogDeviceId);
 	}
-	
-	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device, int instanceCount){
+
+	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device,
+		int instanceCount) {
 		return false;
 	}
-	
-	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device){
+
+	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device) {
 		AppModule module = null;
-		if(getModuleToDeviceMap().containsKey(_module.getName()))
+		if (getModuleToDeviceMap().containsKey(_module.getName()))
 			module = new AppModule(_module);
 		else
 			module = _module;
-		try(FileWriter fw1 = new FileWriter("creating_modules.txt", true);
-			    BufferedWriter bw1 = new BufferedWriter(fw1);
-			    PrintWriter out1 = new PrintWriter(bw1))
-		{
-			out1.println (CloudSim.clock()+ " Creating "+module.getName()+" on device "+device.getName());
-		}
-		catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		if(canBeCreated(device, module)){
-			System.out.println("Creating "+module.getName()+" on device "+device.getName());
-			if(!getDeviceToModuleMap().containsKey(device.getId()))
+		if (canBeCreated(device, module)) {
+			System.out.println("Creating " + module.getName() + " on device " + device.getName());
+			if (!getDeviceToModuleMap().containsKey(device.getId()))
 				getDeviceToModuleMap().put(device.getId(), new ArrayList<AppModule>());
 			getDeviceToModuleMap().get(device.getId()).add(module);
 
-			if(!getModuleToDeviceMap().containsKey(module.getName()))
+			if (!getModuleToDeviceMap().containsKey(module.getName()))
 				getModuleToDeviceMap().put(module.getName(), new ArrayList<Integer>());
 			getModuleToDeviceMap().get(module.getName()).add(device.getId());
 			return true;
 		} else {
-			System.out.println("Creating "+module.getName()+" on device "+device.getName()+ " was not possible");
-			System.err.println("Module "+module.getName()+" cannot be created on device "+device.getName());
+			System.out.println("Creating " + module.getName() + " on device " + device.getName()
+				+ " was not possible");
+			System.err.println("Module " + module.getName() + " cannot be created on device "
+				+ device.getName());
 			System.err.println("Terminating");
 			return false;
 		}
 	}
-	
+
 	protected FogDevice getDeviceByName(String deviceName) {
-		for(FogDevice dev : getFogDevices()){
-			if(dev.getName().equals(deviceName))
+		for (FogDevice dev : getFogDevices()) {
+			if (dev.getName().equals(deviceName))
 				return dev;
 		}
 		return null;
 	}
-	
-	protected FogDevice getDeviceById(int id){
-		for(FogDevice dev : getFogDevices()){
-			if(dev.getId() == id)
+
+	protected FogDevice getDeviceById(int id) {
+		for (FogDevice dev : getFogDevices()) {
+			if (dev.getId() == id)
 				return dev;
 		}
 		return null;
 	}
-	
+
 	public List<FogDevice> getFogDevices() {
 		return fogDevices;
 	}
