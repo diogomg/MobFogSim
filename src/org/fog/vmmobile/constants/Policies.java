@@ -17,7 +17,4 @@ public class Policies {
 	public static final int FIXED_SC_LOCATION = 0;
 	public static final int RANDOM_SC_LOCATION = 1;
 
-
-	
-
 }

@@ -5,8 +5,8 @@ public final class MaxAndMin {
 	public static final int AP_COVERAGE = 1000; //Max Ap coverage distance - It should modify
 	public static final int CLOUDLET_COVERAGE = 1000; //Max Ap coverage distance - It should modify
 	public static final int MAX_DISTANCE_TO_HANDOFF = 40; //It cannot be less than Max_SPEED
-	public static final int MIG_POINT = (int) (MAX_DISTANCE_TO_HANDOFF*1.3);//		0; //Distance from boundary - it should modify
-	public static final int LIVE_MIG_POINT = 200;//(int) (MAX_DISTANCE_TO_HANDOFF*20.0);//It can be based on the Network's Bandwidth
+	public static final int MIG_POINT = (int) (MAX_DISTANCE_TO_HANDOFF*1.3);// 0; //Distance from boundary - it should modify
+	public static final int LIVE_MIG_POINT = 200;//It can be based on the Network's Bandwidth
 	public static final int MAX_HANDOFF_TIME = 1200;
 	public static final int MIN_HANDOFF_TIME = 700;
 	public static final int MAX_AP_DEVICE = 15;
