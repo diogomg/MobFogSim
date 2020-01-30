@@ -1,8 +1,8 @@
 package org.fog.vmmigration;
 
 public class DuringMigration {
-	
-	public boolean managermentBetweeServerCloudlets(){
+
+	public boolean managermentBetweeServerCloudlets() {
 		return true;
 	}
 

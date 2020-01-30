@@ -5,7 +5,6 @@ public class Service {
 	private float value;
 
 	public Service() {
-		// TODO Auto-generated constructor stub
 	}
 
 	public int getType() {
@@ -23,9 +22,5 @@ public class Service {
 	public void setValue(float value) {
 		this.value = value;
 	}
-	
-	
-
-	
 
 }
