@@ -8,15 +8,15 @@ import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.VmAllocationPolicy;
 
-public class AppModuleAllocationPolicy extends VmAllocationPolicy{
+public class AppModuleAllocationPolicy extends VmAllocationPolicy {
 
 	private Host fogHost;
-	
+
 	private List<Integer> appModuleIds;
-	
+
 	public AppModuleAllocationPolicy(List<? extends Host> list) {
 		super(list);
-		if(list.size()==1)
+		if (list.size() == 1)
 			fogHost = list.get(0);
 		appModuleIds = new ArrayList<Integer>();
 	}
@@ -28,7 +28,7 @@ public class AppModuleAllocationPolicy extends VmAllocationPolicy{
 		if (result) { // if vm were succesfully created in the host
 			getAppModuleIdsIds().add(vm.getId());
 		}
-		
+
 		return result;
 	}
 
@@ -38,14 +38,13 @@ public class AppModuleAllocationPolicy extends VmAllocationPolicy{
 		if (result) { // if vm were succesfully created in the host
 			getAppModuleIdsIds().add(vm.getId());
 		}
-		
+
 		return result;
 	}
 
 	@Override
 	public List<Map<String, Object>> optimizeAllocation(
-			List<? extends Vm> vmList) {
-		// TODO Auto-generated method stub
+		List<? extends Vm> vmList) {
 		return null;
 	}
 
@@ -63,7 +62,7 @@ public class AppModuleAllocationPolicy extends VmAllocationPolicy{
 
 	@Override
 	public Host getHost(int vmId, int userId) {
-			return fogHost;
+		return fogHost;
 	}
 
 	public Host getFogHost() {
