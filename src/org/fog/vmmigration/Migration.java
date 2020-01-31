@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
@@ -16,7 +15,7 @@ import org.fog.entities.*;
 import org.fog.localization.Coordinate;
 import org.fog.localization.DiscoverLocalization;
 import org.fog.localization.Distances;
-import org.fog.vmmobile.AppExemplo2;
+import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.constants.*;
 
 public class Migration {
@@ -33,7 +32,6 @@ public class Migration {
 	private static List<ApDevice> apsAvailable;
 	private static List<FogDevice> serverCloudletsAvailable;
 	private static int policyReplicaVM;
-	private static Random rand;
 
 	/**
 	 * @param args
@@ -41,7 +39,8 @@ public class Migration {
 	 */
 
 	public static List<ApDevice> apAvailableList(List<ApDevice> oldApList
-		, MobileDevice smartThing) {// It looks to cone and return the Aps available list
+		, MobileDevice smartThing) {// It looks to cone and return the Aps
+									// available list
 		List<ApDevice> newApList = new ArrayList<>();
 		for (ApDevice ap : oldApList) {
 			if (!smartThing.getSourceAp().equals(ap))
@@ -83,12 +82,12 @@ public class Migration {
 		}
 
 		/*
-		 * Define Migration Zone -> it looks for 135
-		 * degree = 45 way + 45 way1 +45 way2
+		 * Define Migration Zone -> it looks for 135 degree = 45 way + 45 way1
+		 * +45 way2
 		 */
 		if (zoneDirection == smartThingDirection ||
 			zoneDirection == ajust1 ||
-			zoneDirection == ajust2) 
+			zoneDirection == ajust2)
 			return true;
 		else
 			return false;
@@ -135,7 +134,7 @@ public class Migration {
 		coord_prev.setCoordX(x);
 		coord_prev.setCoordY(y);
 
-		int directionMPError = AppExemplo2.getRand().nextInt(8) + 1;
+		int directionMPError = AppExample.getRand().nextInt(8) + 1;
 
 		Coordinate coord_erro = Coordinate.newCoordinateWithError(coord_prev,
 			smartThing.getMobilityPrecitionError(), directionMPError);
@@ -153,7 +152,8 @@ public class Migration {
 		int localServerCloudlet;
 		boolean cone;
 		for (FogDevice sc : oldServerCloudlets) {
-			// return the relative position between Server Cloudlet and smart thing -> set this value
+			// return the relative position between Server Cloudlet and smart
+			// thing -> set this value
 			localServerCloudlet = DiscoverLocalization.discoverLocal(
 				smartThing.getFutureCoord(), sc.getCoord());
 			cone = insideCone(localServerCloudlet, directionMPError);
@@ -412,9 +412,5 @@ public class Migration {
 
 	public static void setPolicyReplicaVM(int policyReplicaVM) {
 		Migration.policyReplicaVM = policyReplicaVM;
-	}
-
-	public static Random getRand() {
-		return rand;
 	}
 }
