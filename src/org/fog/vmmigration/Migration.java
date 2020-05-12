@@ -118,9 +118,10 @@ public class Migration {
 	public static List<FogDevice> serverClouletsAvailableList(List<FogDevice> oldServerCloudlets,
 		MobileDevice smartThing) {
 
-		Coordinate coord_atual = smartThing.getCoord();
+		Coordinate coord_real = smartThing.getCoord();
 
 		ArrayList<String[]> path = smartThing.getPath();
+		// related to the eighth parameter - User Mobility prediction, in seconds
 		int travelTimeId = smartThing.getTravelTimeId() + smartThing.getTravelPredicTime();
 		if (travelTimeId >= path.size()) {
 			travelTimeId = path.size() - 1;
@@ -136,16 +137,17 @@ public class Migration {
 
 		int directionMPError = AppExample.getRand().nextInt(8) + 1;
 
-		Coordinate coord_erro = Coordinate.newCoordinateWithError(coord_prev,
+		// related to the ninth parameter: User Mobility prediction inaccuracy, in meters
+		Coordinate coord_inaccurated = Coordinate.newCoordinateWithError(coord_prev,
 			smartThing.getMobilityPrecitionError(), directionMPError);
 
-		saveDistance(smartThing.getTravelTimeId(), coord_atual, coord_prev, coord_erro,
-			Distances.checkDistance(coord_atual, coord_prev),
-			Distances.checkDistance(coord_atual, coord_erro),
-			Distances.checkDistance(coord_prev, coord_erro), smartThing.getSpeed(),
-			"distancias_migracao.txt");
+		saveDistance(smartThing.getTravelTimeId(), coord_real, coord_prev, coord_inaccurated,
+			Distances.checkDistance(coord_real, coord_prev),
+			Distances.checkDistance(coord_real, coord_inaccurated),
+			Distances.checkDistance(coord_prev, coord_inaccurated), smartThing.getSpeed(),
+			"distance_between_user_cloudlet.txt");
 
-		smartThing.setFutureCoord(coord_erro.getCoordX(), coord_erro.getCoordY());
+		smartThing.setFutureCoord(coord_inaccurated.getCoordX(), coord_inaccurated.getCoordY());
 
 		List<FogDevice> newServerCloudlets = new ArrayList<>();
 

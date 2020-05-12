@@ -104,36 +104,6 @@ public class NextStep {
 			e.printStackTrace();
 		}
 
-		try (FileWriter fw = new FileWriter(st.getMyId() + "sourceAp.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			if (st.getSourceAp() == null)
-				out.println(st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
-					"\t" + CloudSim.clock());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		try (FileWriter fw = new FileWriter(st.getMyId() + "sourceServerCloudlet.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			if (st.getSourceServerCloudlet() == null)
-				out.println(st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
-					"\t" + CloudSim.clock());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
 		if (MyStatistics.getInstance().getInitialWithoutVmTime().get(st.getMyId()) != null) {
 			try (FileWriter fw = new FileWriter(st.getMyId() + "withoutVmTime.txt", true);
 				BufferedWriter bw = new BufferedWriter(fw);

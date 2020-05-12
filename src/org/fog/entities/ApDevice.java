@@ -91,22 +91,6 @@ public class ApDevice extends FogDevice {
 
 	}
 
-	private static void saveConnectionAPSmartThing(MobileDevice st, String conType) {
-
-		try (FileWriter fw = new FileWriter(st.getMyId() + "ConClSmTh.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			out.println(CloudSim.clock() + "\t" + st.getMyId() + "\t" + conType);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
 	public void desconnectApSmartThing(MobileDevice st) {
 		setSmartThings(st, Policies.REMOVE);
 		st.setSourceAp(null);
@@ -114,7 +98,6 @@ public class ApDevice extends FogDevice {
 		LogMobile.debug("ApDevice.java", st.getName() + " was desconnected to " + getName());
 		// remove link
 		NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
-		saveConnectionAPSmartThing(st, "desconnectApSmartThing");
 	}
 
 	public static boolean connectApSmartThing(List<ApDevice> apDevices, MobileDevice st,
@@ -132,16 +115,13 @@ public class ApDevice extends FogDevice {
 					+ st.getSourceAp().getName());
 				apDevices.get(index).setUplinkLatency(
 					apDevices.get(index).getUplinkLatency() + delay);
-				saveConnectionAPSmartThing(st, "connectApSmartThing T");
 				return true;
 			}
 			else {// Ap is full
-				saveConnectionAPSmartThing(st, "connectApSmartThing F");
 				return false;
 			}
 		}
 		else {// The next Ap is far way
-			saveConnectionAPSmartThing(st, "connectApSmartThing F");
 			return false;
 		}
 

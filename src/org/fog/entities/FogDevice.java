@@ -692,34 +692,16 @@ public class FogDevice extends PowerDatacenter {
 		LogMobile.debug("FogDevice.java", smartThing.getName() + " had the migration unlocked");
 	}
 
-	private void saveConnectionCloudletSmartThing(MobileDevice st, String conType) {
-
-		try (FileWriter fw = new FileWriter(st.getMyId() + "ConClSmTh.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			out.println(CloudSim.clock() + "\t" + st.getMyId() + "\t" + conType);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
 	private void desconnectServerCloudletSmartThing(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
 		desconnectServerCloudletSmartThing(smartThing);
 		MyStatistics.getInstance().startWithoutConnetion(smartThing.getMyId(), CloudSim.clock());
-		saveConnectionCloudletSmartThing(smartThing, "desconnectServerCloudletSmartThing");
 	}
 
 	private void connectServerCloudletSmartThing(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
 		connectServerCloudletSmartThing(smartThing);
 		MyStatistics.getInstance().finalWithoutConnection(smartThing.getMyId(), CloudSim.clock());
-		saveConnectionCloudletSmartThing(smartThing, "connectServerCloudletSmartThing");
 
 		if (smartThing.getTimeFinishDeliveryVm() == -1) {
 			MyStatistics.getInstance().startDelayAfterNewConnection(smartThing.getMyId(),
@@ -731,13 +713,12 @@ public class FogDevice extends PowerDatacenter {
 			smartThing.setMigStatusLive(false);
 			if (MyStatistics.getInstance().getInitialWithoutVmTime().get(smartThing.getMyId()) != null) {
 				MyStatistics.getInstance().finalWithoutVmTime(smartThing.getMyId(), CloudSim.clock());
-				System.out.println("finalWithoutVmTime2: " + CloudSim.clock());
 				MyStatistics.getInstance().getInitialWithoutVmTime().remove(smartThing.getMyId());
 			}
 			LogMobile.debug("FogDevice.java", smartThing.getName()
 				+ " had migStatus to false - connectServerCloudlet");
 			MyStatistics.getInstance().startDelayAfterNewConnection(smartThing.getMyId(), 0.0);
-			MyStatistics.getInstance().finalDelayAfterNewConnection( smartThing.getMyId(),
+			MyStatistics.getInstance().finalDelayAfterNewConnection(smartThing.getMyId(),
 				getCharacteristics().getCpuTime( smartThing.getVmMobileDevice().getSize() * 1024 * 1024 * 8, 0.0));
 		}
 		if (!smartThing.getSourceServerCloudlet().equals(smartThing.getVmLocalServerCloudlet())) {
