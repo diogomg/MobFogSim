@@ -60,6 +60,8 @@ public class MobileDevice extends FogDevice {
 	private boolean status;
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
+	/* Index of the fixed network slice used by this mobile user's VM migration. */
+	private int networkSliceId;
 
 	@Override
 	public int hashCode() {
@@ -607,6 +609,14 @@ public class MobileDevice extends FogDevice {
 
 	public void setMigrationTechnique(VmMigrationTechnique migrationTechnique) {
 		this.migrationTechnique = migrationTechnique;
+	}
+
+	public int getNetworkSliceId() {
+		return networkSliceId;
+	}
+
+	public void setNetworkSliceId(int networkSliceId) {
+		this.networkSliceId = networkSliceId;
 	}
 
 	public boolean isMigPoint() {

@@ -56,6 +56,8 @@ import org.fog.scheduler.StreamOperatorScheduler;
 import org.fog.scheduler.TupleScheduler;
 import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.FogUtils;
+
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.fog.vmmigration.BeforeMigration;
@@ -142,7 +144,9 @@ public class AppExample {
 		 *  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (3)
 		 *  Eighth parameter: Non Negative Integer -> User Mobility prediction, in seconds
 		 *  Ninth parameter: Non Negative Integer -> User Mobility prediction inaccuracy, in meters
-		 *  Tenth parameter: Positive negative Integer -> Base Network Latency between cloudlets
+		 *  Tenth parameter: Positive Integer -> Base Network Latency between cloudlets
+		 *  Eleventh parameter (optional): Comma-separated fixed network-slice percentages.
+		 *  Two or three values are accepted and must sum to 100 (for example, 50,50 or 50,30,20).
 		 */
 
 		Log.disable();
@@ -183,6 +187,7 @@ public class AppExample {
 		setTravelPredicTimeForST(Integer.parseInt(args[7]));
 		setMobilityPredictionError(Integer.parseInt(args[8]));
 		setLatencyBetweenCloudlets(Double.parseDouble(args[9]));
+		NetworkSlicing.configure(args.length > 10 ? args[10] : null);
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
@@ -225,6 +230,9 @@ public class AppExample {
 		/* It is creating Smart Things. */
 		for (int i = 0; i < getMaxSmartThings(); i++) {// it creates the SmartThings
 			addSmartThing(smartThings, coordDevices, i);
+			// Users are distributed evenly across the configured groups. Change this
+			// assignment here (or call setNetworkSliceId) for custom memberships.
+			smartThings.get(i).setNetworkSliceId(i % NetworkSlicing.getSliceCount());
 		}
 
 		readMoblityData();

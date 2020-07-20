@@ -3,6 +3,7 @@ package org.fog.vmmigration;
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
+import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.Policies;
@@ -36,7 +37,9 @@ public class CompleteVM implements VmMigrationTechnique {
 
 		double distance = Distances.checkDistance(smartThing.getSourceAp().getCoord(),
 			smartThing.getCoord());
-		double bandwidth = smartThing.getVmLocalServerCloudlet().getUplinkBandwidth();
+		double bandwidth = NetworkSlicing.getSliceBandwidth(
+			smartThing.getVmLocalServerCloudlet(), smartThing.getDestinationServerCloudlet(),
+			smartThing.getNetworkSliceId());
 
 		smartThing
 			.setMigTime(migrationTimeFunction(smartThing.getVmMobileDevice().getSize()// vmSize
