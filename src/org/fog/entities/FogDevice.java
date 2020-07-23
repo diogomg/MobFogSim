@@ -47,6 +47,7 @@ import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.NetworkUsageMonitor;
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.BeforeMigration;
 import org.fog.vmmigration.CompleteVM;
@@ -736,6 +737,7 @@ public class FogDevice extends PowerDatacenter {
 
 	private void invokeAbortMigration(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
+		NetworkSlicing.releaseBandwidth(smartThing);
 		System.out.println("*_*_*_*_*_*_*_*_*_*_*_*_*_ABORT MIGRATION -> beforeMigration*_*_*_*_*_*_*_*_*_*_*_*: "
 				+ smartThing.getName());
 		MyStatistics.getInstance().getInitialWithoutVmTime().remove(smartThing.getMyId());
@@ -779,6 +781,7 @@ public class FogDevice extends PowerDatacenter {
 
 	private void invokeStartMigration(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
+		NetworkSlicing.releaseBandwidth(smartThing);
 
 		// the smartThing is outside of the map
 		if (MobileController.getSmartThings().contains(smartThing)) {
@@ -947,6 +950,17 @@ public class FogDevice extends PowerDatacenter {
 						smartThing.setTimeStartLiveMigration(CloudSim.clock());
 					}
 					else {
+						double reservedBandwidth = NetworkSlicing.reserveBandwidth(
+							smartThing.getVmLocalServerCloudlet(),
+							smartThing.getDestinationServerCloudlet(), smartThing);
+						double reservedSliceBandwidth = NetworkSlicing.getSliceBandwidth(
+							smartThing.getVmLocalServerCloudlet(),
+							smartThing.getDestinationServerCloudlet(),
+							smartThing.getNetworkSliceId());
+						// migTime was calculated using the reserved baseline slice.
+						// Rescale it with the work-conserving bandwidth granted now.
+						smartThing.setMigTime(smartThing.getMigTime()
+							* reservedSliceBandwidth / reservedBandwidth);
 						smartThing.setMigStatus(true);
 						MyStatistics.getInstance().startWithoutVmTime(smartThing.getMyId(),
 							CloudSim.clock());

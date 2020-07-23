@@ -40,6 +40,7 @@ import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.NetworkUsageMonitor;
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
 import org.fog.vmmigration.MyStatistics;
@@ -410,11 +411,18 @@ public class MobileController extends SimEntity {
 									if (!st.isMigStatusLive()) {
 										st.setMigStatusLive(true);
 										double newMigTime = migrationTimeToLiveMigration(st);
+										double baselineBandwidth = NetworkSlicing.getSliceBandwidth(
+											st.getVmLocalServerCloudlet(),
+											st.getDestinationServerCloudlet(), st.getNetworkSliceId());
 										if (newMigTime == 0) {
 											newMigTime = ((st.getVmMobileDevice().getHost()
-												.getRamProvisioner().getUsedRam() * 8 * 1024 * 1024) / st
-												.getVmLocalServerCloudlet().getUplinkBandwidth()) * 1000.0;
+												.getRamProvisioner().getUsedRam() * 8 * 1024 * 1024)
+												/ baselineBandwidth) * 1000.0;
 										}
+										double reservedBandwidth = NetworkSlicing.reserveBandwidth(
+											st.getVmLocalServerCloudlet(),
+											st.getDestinationServerCloudlet(), st);
+										newMigTime = newMigTime * baselineBandwidth / reservedBandwidth;
 										double delayProcess = st.getVmLocalServerCloudlet()
 											.getCharacteristics().getCpuTime((st.getVmMobileDevice()
 												.getSize() * 1024 * 1024 * 8) * 0.7, 0.0);// the connection already opened

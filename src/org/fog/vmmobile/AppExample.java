@@ -147,6 +147,7 @@ public class AppExample {
 		 *  Tenth parameter: Positive Integer -> Base Network Latency between cloudlets
 		 *  Eleventh parameter (optional): Comma-separated fixed network-slice percentages.
 		 *  Two or three values are accepted and must sum to 100 (for example, 50,50 or 50,30,20).
+		 *  Twelfth parameter (optional): 0 for fixed slices or 1 to borrow idle slice capacity.
 		 */
 
 		Log.disable();
@@ -188,6 +189,14 @@ public class AppExample {
 		setMobilityPredictionError(Integer.parseInt(args[8]));
 		setLatencyBetweenCloudlets(Double.parseDouble(args[9]));
 		NetworkSlicing.configure(args.length > 10 ? args[10] : null);
+		if (args.length > 11) {
+			int dynamicSlicing = Integer.parseInt(args[11]);
+			if (dynamicSlicing != 0 && dynamicSlicing != 1) {
+				throw new IllegalArgumentException(
+					"Dynamic slicing must be 0 (fixed) or 1 (borrow idle capacity)");
+			}
+			NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
+		}
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java

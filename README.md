@@ -54,9 +54,21 @@ Optional:
 *  Eighth parameter: Non-Negative Integer -> User Mobility prediction, in seconds
 *  Ninth parameter: Non-Negative Integer -> User Mobility prediction inaccuracy, in meters
 *  Tenth parameter: Positive negative Integer -> Base Network Latency between cloudlets
+*  Eleventh parameter (optional): comma-separated bandwidth percentages for two or three user groups. Values must be greater than zero and sum to 100. Users are assigned round-robin by their index (user 0 to group 0, user 1 to group 1, and so on).
+*  Twelfth parameter (optional): `0` keeps the configured slice bandwidth fixed; `1` lets active slices borrow idle capacity. It defaults to `1` when omitted.
 
 Example
 1 290538 0 0 1 11 0 0 0 61
+
+With a 70/30 split between two groups:
+
+1 290538 0 0 10 11 0 0 0 61 70,30
+
+To keep the same 70/30 slices fixed, append `0`:
+
+1 290538 0 0 10 11 0 0 0 61 70,30 0
+
+Each group initially receives its fixed share on every server-cloudlet link. For example, a physical link of 11 Mbps gives group 0 7.7 Mbps and group 1 3.3 Mbps. During VM migration, an active group may borrow capacity reserved for groups with no active migration on that same directed link. Borrowed capacity is returned automatically when the migration finishes or aborts; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
 
 
 ## Input
