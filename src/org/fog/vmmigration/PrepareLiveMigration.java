@@ -9,7 +9,7 @@ public class PrepareLiveMigration implements BeforeMigration {
 	@Override
 	public double dataprepare(MobileDevice smartThing) {
 
-		FogDevice scSource = smartThing.getSourceAp().getServerCloudlet();
+		FogDevice scSource = smartThing.getVmLocalServerCloudlet();
 		if (openConnection(scSource, smartThing.getDestinationServerCloudlet())) {
 			double delayProcess = scSource.getCharacteristics().
 				getCpuTime((smartThing.getVmMobileDevice().getSize() * 1024 * 1024), 0.0)

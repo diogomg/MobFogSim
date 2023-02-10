@@ -73,6 +73,7 @@ import org.fog.vmmigration.PrepareCompleteVM;
 import org.fog.vmmigration.PrepareContainerVM;
 import org.fog.vmmigration.PrepareLiveMigration;
 import org.fog.vmmigration.Service;
+import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.Policies;
@@ -148,6 +149,7 @@ public class AppExample {
 		 *  Eleventh parameter (optional): Comma-separated fixed network-slice percentages.
 		 *  Two or three values are accepted and must sum to 100 (for example, 50,50 or 50,30,20).
 		 *  Twelfth parameter (optional): 0 for fixed slices or 1 to borrow idle slice capacity.
+		 *  Thirteenth parameter (optional): 0 edge servers only, 1 end devices only, 2 hybrid.
 		 */
 
 		Log.disable();
@@ -197,6 +199,8 @@ public class AppExample {
 			}
 			NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
 		}
+		VmDestinationPolicy.configure(args.length > 12 ? Integer.parseInt(args[12])
+			: VmDestinationPolicy.HYBRID);
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java

@@ -879,14 +879,17 @@ public class FogDevice extends PowerDatacenter {
 				// handoff has been occurred first than delivery
 				MyStatistics.getInstance().finalDelayAfterNewConnection(smartThing.getMyId(), CloudSim.clock()
 						+ getCharacteristics().getCpuTime(smartThing.getVmMobileDevice().getSize() * 1024 * 1024 * 8, 0.0));
-				if (smartThing.getSourceServerCloudlet() == null) {
+				if (smartThing.getSourceServerCloudlet() == null
+					&& !(smartThing.getVmLocalServerCloudlet() instanceof MobileDevice)) {
 					smartThing.setSourceServerCloudlet(smartThing.getVmLocalServerCloudlet());
 					System.out.println("CRASH " + smartThing.getMyId() + "\t source c "
 						+ smartThing.getSourceServerCloudlet()
 						+ "\t local server " + smartThing.getVmLocalServerCloudlet());
 				}
-				if (!smartThing.getSourceServerCloudlet().equals(
-					smartThing.getVmLocalServerCloudlet())) {
+				if (smartThing.getSourceServerCloudlet() != null
+					&& !(smartThing.getVmLocalServerCloudlet() instanceof MobileDevice)
+					&& !smartThing.getSourceServerCloudlet().equals(
+						smartThing.getVmLocalServerCloudlet())) {
 					smartThing.getSourceServerCloudlet().desconnectServerCloudletSmartThing(
 						smartThing);
 					smartThing.getVmLocalServerCloudlet().connectServerCloudletSmartThing(
@@ -1467,6 +1470,12 @@ public class FogDevice extends PowerDatacenter {
 			+ CloudSim.getEntityName(ev.getDestination()));
 		send(ev.getSource(), CloudSim.getMinTimeBetweenEvents(), FogEvents.TUPLE_ACK);
 
+		FogDevice vmHost = getVmHostForTuple(tuple);
+		if (vmHost != null && vmHost != this) {
+			send(vmHost.getId(), 0.0, FogEvents.TUPLE_ARRIVAL, tuple);
+			return;
+		}
+
 		if (FogUtils.appIdToGeoCoverageMap.containsKey(tuple.getAppId())) {
 		}
 
@@ -1541,6 +1550,23 @@ public class FogDevice extends PowerDatacenter {
 
 			}
 		}
+	}
+
+	/** Routes tuples addressed to a migrated VM to its current compute host. */
+	private FogDevice getVmHostForTuple(Tuple tuple) {
+		if (tuple.getDestModuleName() == null) {
+			return null;
+		}
+		for (MobileDevice smartThing : MobileController.getSmartThings()) {
+			if (smartThing.getVmMobileDevice() == null
+				|| !tuple.getAppId().equals(((AppModule) smartThing.getVmMobileDevice()).getAppId())
+				|| !tuple.getDestModuleName().equals(
+					((AppModule) smartThing.getVmMobileDevice()).getName())) {
+				continue;
+			}
+			return smartThing.getVmLocalServerCloudlet();
+		}
+		return null;
 	}
 
 	public void printResults(String a, String filename) {

@@ -53,7 +53,8 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 			// ServerCloudlet linked with nextap
 			setNextServerClouletId(apDevices.get(getNextApId()).getServerCloudlet().getMyId());
 		}
-		return ServiceAgreement.serviceAgreement(serverCloudlets.get(getNextServerClouletId()), smartThing);
+		return MobileEdgeHostSelector.selectDestination(smartThing,
+			serverCloudlets.get(getNextServerClouletId()));
 	}
 
 	public List<FogDevice> getServerCloudlets() {

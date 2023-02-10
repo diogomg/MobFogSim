@@ -66,8 +66,8 @@ public class LowestDistBwSmartThingServerCloudlet implements DecisionMigration {
 				return false;// no migration
 			}
 		}
-		return ServiceAgreement.serviceAgreement(serverCloudlets.get(getNextServerClouletId()),
-			smartThing);
+		return MobileEdgeHostSelector.selectDestination(smartThing,
+			serverCloudlets.get(getNextServerClouletId()));
 	}
 
 	public List<FogDevice> getServerCloudlets() {

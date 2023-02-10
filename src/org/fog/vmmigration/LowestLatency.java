@@ -59,8 +59,8 @@ public class LowestLatency implements DecisionMigration {
 				}
 			}
 		}
-		return ServiceAgreement.serviceAgreement(serverCloudlets.get(getNextServerClouletId()),
-			smartThing);
+		return MobileEdgeHostSelector.selectDestination(smartThing,
+			serverCloudlets.get(getNextServerClouletId()));
 	}
 
 	public ApDevice getCorrentAP() {

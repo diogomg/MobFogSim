@@ -11,7 +11,7 @@ public class PrepareContainerVM implements BeforeMigration {
 	@Override
 	public double dataprepare(MobileDevice smartThing) {
 
-		FogDevice scSource = smartThing.getSourceAp().getServerCloudlet();
+		FogDevice scSource = smartThing.getVmLocalServerCloudlet();
 		if (openConnection(scSource, smartThing.getDestinationServerCloudlet())) {
 			double delayProcess = scSource.getCharacteristics().
 				getCpuTime(

@@ -48,6 +48,11 @@ public class ServiceAgreement {
 
 	public static boolean checkLinkStatus(FogDevice sourceServerCloudlet,
 		FogDevice destinationServerCloudlet) {
+		// Mobile devices use their existing wireless topology path rather than
+		// the cloudlet-to-cloudlet adjacency map.
+		if (sourceServerCloudlet instanceof MobileDevice) {
+			return true;
+		}
 
 		if (sourceServerCloudlet.getNetServerCloudlets().get(destinationServerCloudlet) != null) {
 			return true;
