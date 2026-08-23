@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.predicates.Predicate;
@@ -340,6 +341,12 @@ public class CloudSim {
 	/** The deferred event queue. */
 	protected static DeferredQueue deferred;
 
+	/** Compact schedules for periodic events that have not yet entered the future queue. */
+	private static PriorityQueue<PeriodicEventSchedule> periodicEvents;
+
+	/** Preserves registration order between periodic series at an equal time. */
+	private static long periodicRegistrationOrder;
+
 	/** The simulation clock. */
 	private static double clock;
 
@@ -374,6 +381,8 @@ public class CloudSim {
 		entitiesByName = new LinkedHashMap<String, SimEntity>();
 		future = new FutureQueue();
 		deferred = new DeferredQueue();
+		periodicEvents = new PriorityQueue<PeriodicEventSchedule>();
+		periodicRegistrationOrder = 0;
 		waitPredicates = new HashMap<Integer, Predicate>();
 		clock = 0;
 		running = false;
@@ -554,31 +563,36 @@ public class CloudSim {
 				ent.run();
 			}
 		}
-		// If there are more future events then deal with them
-		if (future.size() > 0) {
+		// Periodic schedules registered during initialization have priority over
+		// normal events at the same simulation time, matching their former serial
+		// order when every occurrence was preloaded into the future queue.
+		double nextEventTime = getNextEventTime();
+
+		if (nextEventTime < Double.POSITIVE_INFINITY) {
 			List<SimEvent> toRemove = new ArrayList<SimEvent>();
-			Iterator<SimEvent> fit = future.iterator();
 			queue_empty = false;
-			SimEvent first = fit.next();
-			processEvent(first);
-			future.remove(first);
 
-			fit = future.iterator();
-
-			// Check if next events are at same time...
-			boolean trymore = fit.hasNext();
-			while (trymore) {
-				SimEvent next = fit.next();
-				if (next.eventTime() == first.eventTime()) {
-					processEvent(next);
-					toRemove.add(next);
-					trymore = fit.hasNext();
-				} else {
-					trymore = false;
+			while (periodicEvents.size() > 0
+				&& periodicEvents.peek().getNextTime() == nextEventTime) {
+				PeriodicEventSchedule schedule = periodicEvents.poll();
+				processEvent(schedule.createNextEvent());
+				if (schedule.advance()) {
+					periodicEvents.add(schedule);
 				}
 			}
 
-			future.removeAll(toRemove);
+			if (future.size() > 0 && future.iterator().next().eventTime() == nextEventTime) {
+				Iterator<SimEvent> fit = future.iterator();
+				while (fit.hasNext()) {
+					SimEvent next = fit.next();
+					if (next.eventTime() != nextEventTime) {
+						break;
+					}
+					processEvent(next);
+					toRemove.add(next);
+				}
+				future.removeAll(toRemove);
+			}
 
 		} else {
 			queue_empty = true;
@@ -587,6 +601,15 @@ public class CloudSim {
 		}
 
 		return queue_empty;
+	}
+
+	/** Returns the next time represented by either event queue. */
+	private static double getNextEventTime() {
+		double nextFutureTime = future.size() > 0
+			? future.iterator().next().eventTime() : Double.POSITIVE_INFINITY;
+		double nextPeriodicTime = periodicEvents.size() > 0
+			? periodicEvents.peek().getNextTime() : Double.POSITIVE_INFINITY;
+		return Math.min(nextFutureTime, nextPeriodicTime);
 	}
 
 	/**
@@ -648,6 +671,30 @@ public class CloudSim {
 
 		SimEvent e = new SimEvent(SimEvent.SEND, clock + delay, src, dest, tag, data);
 		future.addEvent(e);
+	}
+
+	/**
+	 * Registers a periodic event series without preloading all occurrences into
+	 * the future event queue.
+	 *
+	 * @param src source entity
+	 * @param dest destination entity
+	 * @param firstDelay delay from the current clock to the first occurrence
+	 * @param period interval between occurrences
+	 * @param durationExclusive occurrences are generated before this duration
+	 * @param tag event tag
+	 * @param data event payload
+	 */
+	public static void sendPeriodic(int src, int dest, double firstDelay, double period,
+		double durationExclusive, int tag, Object data) {
+		if (firstDelay < 0 || period <= 0 || durationExclusive <= firstDelay) {
+			throw new IllegalArgumentException("Invalid periodic event interval.");
+		}
+
+		double firstTime = clock + firstDelay;
+		double endTimeExclusive = clock + durationExclusive;
+		periodicEvents.add(new PeriodicEventSchedule(src, dest, tag, data, firstTime,
+			period, endTimeExclusive, periodicRegistrationOrder++));
 	}
 
 	/**
@@ -1002,9 +1049,10 @@ public class CloudSim {
 				break;
 			}
 
-			if (pauseAt != -1
-				&& ((future.size() > 0 && clock <= pauseAt && pauseAt <= future.iterator().next()
-					.eventTime()) || future.size() == 0 && pauseAt <= clock)) {
+				if (pauseAt != -1
+					&& ((getNextEventTime() < Double.POSITIVE_INFINITY && clock <= pauseAt
+						&& pauseAt <= getNextEventTime())
+						|| getNextEventTime() == Double.POSITIVE_INFINITY && pauseAt <= clock)) {
 				pauseSimulation();
 				clock = pauseAt;
 			}
@@ -1050,6 +1098,7 @@ public class CloudSim {
 		entitiesByName = null;
 		future = null;
 		deferred = null;
+		periodicEvents = null;
 		clock = 0L;
 		running = false;
 

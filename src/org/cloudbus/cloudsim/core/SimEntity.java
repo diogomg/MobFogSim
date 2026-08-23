@@ -194,6 +194,24 @@ public abstract class SimEntity implements Cloneable {
 	}
 
 	/**
+	 * Registers a compact periodic event series. Occurrences are dispatched with
+	 * priority over normal events at the same simulation time.
+	 */
+	protected void schedulePeriodic(int dest, double firstDelay, double period,
+		double durationExclusive, int tag, Object data) {
+		if (!CloudSim.running()) {
+			return;
+		}
+		CloudSim.sendPeriodic(id, dest, firstDelay, period, durationExclusive, tag, data);
+	}
+
+	/** Registers a periodic event series with no payload. */
+	protected void schedulePeriodic(int dest, double firstDelay, double period,
+		double durationExclusive, int tag) {
+		schedulePeriodic(dest, firstDelay, period, durationExclusive, tag, null);
+	}
+
+	/**
 	 * Send an event to another entity through a port with a given name, with
 	 * data. Note that the tag <code>9999</code> is reserved.
 	 * 

@@ -48,6 +48,8 @@ public class NetworkTopology {
 
 	protected static Map<Integer, Integer> map = null;
 
+	private static boolean matricesDirty = false;
+
 	/**
 	 * Creates the network topology if file exists and if file can be
 	 * succesfully parsed. File is written in the BRITE format and contains
@@ -88,6 +90,13 @@ public class NetworkTopology {
 		bwMatrix = createBwMatrix(graph, false);
 
 		networkEnabled = true;
+		matricesDirty = false;
+	}
+
+	private static void ensureMatrices() {
+		if (matricesDirty && graph != null) {
+			generateMatrices();
+		}
 	}
 
 	/**
@@ -131,7 +140,8 @@ public class NetworkTopology {
 		// generate a new link
 		graph.addLink(new TopologicalLink(map.get(srcId), map.get(destId), (float) lat, (float) bw));
 
-		generateMatrices();
+		matricesDirty = true;
+		networkEnabled = true;
 
 	}
 
@@ -236,6 +246,7 @@ public class NetworkTopology {
 	 * @post $none
 	 */
 	public static double getDelay(int srcID, int destID) {
+		ensureMatrices();
 		if (networkEnabled) {
 			try {
 				// add the network latency

@@ -167,23 +167,15 @@ public class MobileController extends SimEntity {
 			processAppSubmit(applications.get(appId));
 		}
 
-		for (int i = 0; i < MaxAndMin.MAX_SIMULATION_TIME; i += 1000) {
-			send(getId()// Application
-				, i // delay -> When the event will occur
-				, MobileEvents.NEXT_STEP);
-			send(getId()
-				, i
-				, MobileEvents.CHECK_NEW_STEP);
-		}
+		schedulePeriodic(getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
+			MobileEvents.NEXT_STEP);
+		schedulePeriodic(getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
+			MobileEvents.CHECK_NEW_STEP);
 
 		if (isMigrationAble()) {
 			for (FogDevice sc : getServerCloudlets()) {
-				for (int i = 0; i < MaxAndMin.MAX_SIMULATION_TIME; i += 1000) {
-					send(sc.getId()// serverCloudlet
-						, i // delay -> When the event will occur
-						, MobileEvents.MAKE_DECISION_MIGRATION
-						, sc.getSmartThings());
-				}
+				schedulePeriodic(sc.getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
+					MobileEvents.MAKE_DECISION_MIGRATION, sc.getSmartThings());
 			}
 		}
 
