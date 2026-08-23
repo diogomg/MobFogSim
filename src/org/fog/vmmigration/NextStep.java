@@ -9,6 +9,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
+import org.fog.placement.MobileController;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.Policies;
@@ -114,7 +115,7 @@ public class NextStep {
 
 				}
 				if (st.getSourceAp() == null) {
-					smartThings.remove(st);
+					MobileController.removeSmartThing(st);
 					LogMobile.debug("NextStep.java", st.getName() + " was removed!");
 				}
 				else {
@@ -125,7 +126,7 @@ public class NextStep {
 					// it'll remove the smartThing from ap-smartThing's set
 					st.getSourceAp().setSmartThings(st, Policies.REMOVE);
 					LogMobile.debug("NextStep.java", st.getName() + " was removed!");
-					smartThings.remove(st);
+					MobileController.removeSmartThing(st);
 				}
 			}
 			else {

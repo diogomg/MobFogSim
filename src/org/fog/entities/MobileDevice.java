@@ -264,20 +264,11 @@ public class MobileDevice extends FogDevice {
 		Tuple tuple = (Tuple) ev.getData();
 		MyStatistics.getInstance().setMyCountTotalTuple(1);
 
-		boolean flagContinue = false;
 		if (!MobileController.getSmartThings().contains(this)) {
 			return;
 		}
 
-		for (MobileDevice st : MobileController.getSmartThings()) {
-			for (Sensor s : st.getSensors()) {
-				if (tuple.getAppId().equals(s.getAppId())) {
-					flagContinue = true;
-					break;
-				}
-			}
-		}
-		if (!flagContinue) {
+		if (!MobileController.isApplicationActive(tuple.getAppId())) {
 			return;
 		}
 

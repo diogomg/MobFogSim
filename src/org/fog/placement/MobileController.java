@@ -61,6 +61,8 @@ public class MobileController extends SimEntity {
 
 	private static List<FogDevice> serverCloudlets;
 	private static List<MobileDevice> smartThings;
+	private static final Map<String, Integer> activeSensorApplications =
+		new HashMap<String, Integer>();
 	private static List<ApDevice> apDevices;
 	private static List<FogBroker> brokerList;
 
@@ -981,6 +983,41 @@ public class MobileController extends SimEntity {
 
 	public static void setSmartThings(List<MobileDevice> smartThings) {
 		MobileController.smartThings = smartThings;
+		rebuildActiveSensorApplications();
+	}
+
+	private static void rebuildActiveSensorApplications() {
+		activeSensorApplications.clear();
+		if (smartThings == null) {
+			return;
+		}
+		for (MobileDevice smartThing : smartThings) {
+			for (Sensor sensor : smartThing.getSensors()) {
+				String appId = sensor.getAppId();
+				Integer count = activeSensorApplications.get(appId);
+				activeSensorApplications.put(appId, count == null ? 1 : count + 1);
+			}
+		}
+	}
+
+	public static boolean isApplicationActive(String appId) {
+		return activeSensorApplications.containsKey(appId);
+	}
+
+	public static boolean removeSmartThing(MobileDevice smartThing) {
+		if (!smartThings.remove(smartThing)) {
+			return false;
+		}
+		for (Sensor sensor : smartThing.getSensors()) {
+			String appId = sensor.getAppId();
+			Integer count = activeSensorApplications.get(appId);
+			if (count == null || count <= 1) {
+				activeSensorApplications.remove(appId);
+			} else {
+				activeSensorApplications.put(appId, count - 1);
+			}
+		}
+		return true;
 	}
 
 	public static List<ApDevice> getApDevices() {

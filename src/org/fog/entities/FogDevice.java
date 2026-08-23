@@ -1410,16 +1410,7 @@ public class FogDevice extends PowerDatacenter {
 		Tuple tuple = (Tuple) ev.getData();
 		MyStatistics.getInstance().setMyCountTotalTuple(1);
 
-		boolean flagContinue = false;
-		for (MobileDevice st : MobileController.getSmartThings()) {
-			for (Sensor s : st.getSensors()) {
-				if (tuple.getAppId().equals(s.getAppId())) {
-					flagContinue = true;
-					break;
-				}
-			}
-		}
-		if (!flagContinue) {
+		if (!MobileController.isApplicationActive(tuple.getAppId())) {
 			return;
 		}
 
@@ -1620,16 +1611,7 @@ public class FogDevice extends PowerDatacenter {
 		// TODO Power funda
 		Tuple tuple = (Tuple) ev.getData();
 
-		boolean flagContinue = false;
-		for (MobileDevice st : MobileController.getSmartThings()) {
-			for (Sensor s : st.getSensors()) {
-				if (tuple.getAppId().equals(s.getAppId())) {
-					flagContinue = true;
-					break;
-				}
-			}
-		}
-		if (!flagContinue) {
+		if (!MobileController.isApplicationActive(tuple.getAppId())) {
 			return;
 		}
 
