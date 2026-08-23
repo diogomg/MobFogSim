@@ -35,6 +35,9 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	/** The pes in use. */
 	private int pesInUse;
 
+	/** Migration state used to build the current allocation (0 normal, 1 in, 2 out). */
+	private Map<String, Integer> allocationMigrationStates;
+
 	/**
 	 * Instantiates a new vm scheduler time shared.
 	 * 
@@ -44,6 +47,7 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	public VmSchedulerTimeShared(List<? extends Pe> pelist) {
 		super(pelist);
 		setMipsMapRequested(new HashMap<String, List<Double>>());
+		allocationMigrationStates = new HashMap<String, Integer>();
 	}
 
 	/*
@@ -67,9 +71,42 @@ public class VmSchedulerTimeShared extends VmScheduler {
 		}
 
 		boolean result = allocatePesForVm(vm.getUid(), mipsShareRequested);
+		if (result) {
+			allocationMigrationStates.put(vm.getUid(), getMigrationState(vm));
+		} else {
+			allocationMigrationStates.remove(vm.getUid());
+		}
 
 		updatePeProvisioning();
 		return result;
+	}
+
+	/**
+	 * Checks whether the existing PE allocation already represents every VM's
+	 * current request and migration state.
+	 */
+	public boolean isAllocationCurrent(List<? extends Vm> vms) {
+		if (getMipsMapRequested().size() != vms.size()) {
+			return false;
+		}
+		for (Vm vm : vms) {
+			List<Double> allocatedRequest = getMipsMapRequested().get(vm.getUid());
+			if (allocatedRequest == null || !allocatedRequest.equals(vm.getCurrentRequestedMips())) {
+				return false;
+			}
+			Integer migrationState = allocationMigrationStates.get(vm.getUid());
+			if (migrationState == null || migrationState.intValue() != getMigrationState(vm)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private int getMigrationState(Vm vm) {
+		if (getVmsMigratingIn().contains(vm.getUid())) {
+			return 1;
+		}
+		return vm.isInMigration() ? 2 : 0;
 	}
 
 	/**
@@ -181,6 +218,7 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	@Override
 	public void deallocatePesForVm(Vm vm) {
 		getMipsMapRequested().remove(vm.getUid());
+		allocationMigrationStates.remove(vm.getUid());
 		setPesInUse(0);
 		getMipsMap().clear();
 		setAvailableMips(PeList.getTotalMips(getPeList()));
@@ -206,6 +244,7 @@ public class VmSchedulerTimeShared extends VmScheduler {
 	public void deallocatePesForAllVms() {
 		super.deallocatePesForAllVms();
 		getMipsMapRequested().clear();
+		allocationMigrationStates.clear();
 		setPesInUse(0);
 	}
 

@@ -1318,19 +1318,11 @@ public class FogDevice extends PowerDatacenter {
 		for (final Vm vm : getHost().getVmList()) {
 			if (vm.getCloudletScheduler().runningCloudlets() > 0
 				|| ((AppModule) vm).getName().equals(incomingOperator)) {
-				getHost().getVmScheduler().allocatePesForVm(vm, new ArrayList<Double>() {
-					protected static final long serialVersionUID = 1L;
-					{
-						add((double) getHost().getTotalMips());
-					}
-				});
+				getHost().getVmScheduler().allocatePesForVm(vm,
+					java.util.Collections.singletonList((double) getHost().getTotalMips()));
 			} else {
-				getHost().getVmScheduler().allocatePesForVm(vm, new ArrayList<Double>() {
-					protected static final long serialVersionUID = 1L;
-					{
-						add(0.0);
-					}
-				});
+				getHost().getVmScheduler().allocatePesForVm(vm,
+					java.util.Collections.singletonList(0.0));
 			}
 			// }
 		}
@@ -1488,12 +1480,8 @@ public class FogDevice extends PowerDatacenter {
 				final AppModule operator = (AppModule) vm;
 				if (CloudSim.clock() > 0) {
 					getHost().getVmScheduler().deallocatePesForVm(operator);
-					getHost().getVmScheduler().allocatePesForVm(operator, new ArrayList<Double>() {
-						protected static final long serialVersionUID = 1L;
-						{
-							add((double) getHost().getTotalMips());
-						}
-					});
+					getHost().getVmScheduler().allocatePesForVm(operator,
+						java.util.Collections.singletonList((double) getHost().getTotalMips()));
 				}
 
 				break;
