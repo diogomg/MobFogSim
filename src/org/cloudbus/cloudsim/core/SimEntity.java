@@ -445,10 +445,7 @@ public abstract class SimEntity implements Cloneable {
 		if (!CloudSim.running()) {
 			return null;
 		}
-		if (numEventsWaiting(p) > 0) {
-			return selectEvent(p);
-		}
-		return null;
+		return selectEvent(p);
 	}
 
 	/**

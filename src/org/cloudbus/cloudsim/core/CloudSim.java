@@ -776,16 +776,7 @@ public class CloudSim {
 	 * @return the int
 	 */
 	public static int waiting(int d, Predicate p) {
-		int count = 0;
-		SimEvent event;
-		Iterator<SimEvent> iterator = deferred.iterator();
-		while (iterator.hasNext()) {
-			event = iterator.next();
-			if ((event.getDestination() == d) && (p.match(event))) {
-				count++;
-			}
-		}
-		return count;
+		return deferred.count(d, p);
 	}
 
 	/**
@@ -798,16 +789,7 @@ public class CloudSim {
 	 * @return the sim event
 	 */
 	public static SimEvent select(int src, Predicate p) {
-		SimEvent ev = null;
-		Iterator<SimEvent> iterator = deferred.iterator();
-		while (iterator.hasNext()) {
-			ev = iterator.next();
-			if (ev.getDestination() == src && p.match(ev)) {
-				iterator.remove();
-				break;
-			}
-		}
-		return ev;
+		return deferred.poll(src, p);
 	}
 
 	/**
@@ -820,15 +802,7 @@ public class CloudSim {
 	 * @return the sim event
 	 */
 	public static SimEvent findFirstDeferred(int src, Predicate p) {
-		SimEvent ev = null;
-		Iterator<SimEvent> iterator = deferred.iterator();
-		while (iterator.hasNext()) {
-			ev = iterator.next();
-			if (ev.getDestination() == src && p.match(ev)) {
-				break;
-			}
-		}
-		return ev;
+		return deferred.find(src, p);
 	}
 
 	/**
