@@ -124,7 +124,8 @@ public class HostDynamicWorkload extends Host {
 					totalRequestedMips,
 					(vm.isInMigration() && !getVmsMigratingIn().contains(vm)));
 
-				if (vm.isInMigration()) {
+				if (vm.isInMigration()
+					&& getVmScheduler().getVmsMigratingOut().contains(vm.getUid())) {
 					Log.formatLine(
 						"%.2f: [Host #" + getId() + "] VM #" + vm.getId() + " is in migration",
 						CloudSim.clock());
@@ -208,13 +209,7 @@ public class HostDynamicWorkload extends Host {
 	 */
 	public double getUtilizationOfCpu() {
 		double utilization = getUtilizationMips() / getTotalMips();
-		if (utilization > 1 && utilization < 1.01) {
-			utilization = 1;
-		}
-		else if (utilization > 1.01)
-			System.out.println(this.getId() + " getUtilizationMips: " + getUtilizationMips()
-				+ " getTotalMips: " + getTotalMips());
-		return utilization;
+		return Math.max(0, Math.min(1, utilization));
 	}
 
 	/**
@@ -224,10 +219,7 @@ public class HostDynamicWorkload extends Host {
 	 */
 	public double getPreviousUtilizationOfCpu() {
 		double utilization = getPreviousUtilizationMips() / getTotalMips();
-		if (utilization > 1 && utilization < 1.01) {
-			utilization = 1;
-		}
-		return utilization;
+		return Math.max(0, Math.min(1, utilization));
 	}
 
 	/**
