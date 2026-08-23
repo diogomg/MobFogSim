@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.fog.vmmobile.LogMobile;
+import org.cloudbus.cloudsim.util.BufferedFileManager;
 
 public class MyStatistics {
 	private static MyStatistics instance;
@@ -118,36 +119,16 @@ public class MyStatistics {
 
 	public void putLatencyFileValue(double latency, double time, String appId, int smartThingMyId,
 		String serverCloudletName, String tupleType) {
-		try {
-			setFileLatency(new FileWriter(getFileMap().get(smartThingMyId), true));
-			setPrintFile(new BufferedWriter(getFileLatency()));
-			int i = getMyCount().get(smartThingMyId);
-			i++;
-			getMyCount().put(smartThingMyId, i);
-			getPrintFile().write(Integer.toString(i) + " - " + Double.toString(time) + " - "
+		int i = getMyCount().get(smartThingMyId) + 1;
+		getMyCount().put(smartThingMyId, i);
+		BufferedFileManager.writeLine(getFileMap().get(smartThingMyId),
+			Integer.toString(i) + " - " + Double.toString(time) + " - "
 				+ Double.toString(latency) + " - " + appId + " - smartThingMyId: "
 				+ smartThingMyId + " - " + serverCloudletName + " - TupleType: - " + tupleType);
-			getPrintFile().newLine();
-			getPrintFile().close();
-			getFileLatency().close();
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void putLantencyFileName(String name, int smartThingMyId) {
-		try {
-			setFileLatency(new FileWriter(getFileMap().get(smartThingMyId), true));
-			setPrintFile(new BufferedWriter(getFileLatency()));
-			getPrintFile().write(name);
-			getPrintFile().newLine();
-			getPrintFile().close();
-			getFileLatency().close();
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		BufferedFileManager.writeLine(getFileMap().get(smartThingMyId), name);
 	}
 
 	public void startWithoutConnetion(int id, double clock) {

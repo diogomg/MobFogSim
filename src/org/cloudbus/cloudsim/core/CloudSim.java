@@ -19,6 +19,7 @@ import java.util.PriorityQueue;
 import java.util.TreeSet;
 
 import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.util.BufferedFileManager;
 import org.cloudbus.cloudsim.core.predicates.Predicate;
 import org.cloudbus.cloudsim.core.predicates.PredicateAny;
 import org.cloudbus.cloudsim.core.predicates.PredicateNone;
@@ -1084,6 +1085,7 @@ public class CloudSim {
 		for (SimEntity ent : entities) {
 			ent.shutdownEntity();
 		}
+		BufferedFileManager.closeAll();
 
 		// reset all static variables
 		// Private data members

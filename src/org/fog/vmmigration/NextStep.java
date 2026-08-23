@@ -1,15 +1,10 @@
 package org.fog.vmmigration;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
 import java.util.List;
 
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.util.BufferedFileManager;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
@@ -21,103 +16,54 @@ import org.fog.vmmobile.constants.Policies;
 public class NextStep {
 
 	private static void saveMobility(MobileDevice st) {
+		String sourceServer = st.getSourceServerCloudlet() == null
+			? "Source server: null Apps: null Map: null"
+			: "Source server: " + st.getSourceServerCloudlet().getName() + " Apps: "
+				+ st.getSourceServerCloudlet().getActiveApplications() + " Map "
+				+ st.getSourceServerCloudlet().getApplicationMap();
+		String destinationServer = st.getDestinationServerCloudlet() == null
+			? "Dest server: null Apps: null Map: null"
+			: "Dest server: " + st.getDestinationServerCloudlet().getName()
+				+ " Apps: " + st.getDestinationServerCloudlet().getActiveApplications()
+				+ " Map " + st.getDestinationServerCloudlet().getApplicationMap();
 
-		try (FileWriter fw1 = new FileWriter(st.getMyId() + "out.txt", true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
-		{
-			out1.println(CloudSim.clock() + " " + st.getMyId() + " Position: "
+		BufferedFileManager.writeLines(st.getMyId() + "out.txt",
+			CloudSim.clock() + " " + st.getMyId() + " Position: "
 				+ st.getCoord().getCoordX() + ", " + st.getCoord().getCoordY() + " Direction: "
-				+ st.getDirection() + " Speed: " + st.getSpeed());
-			out1.println("Source AP: " + st.getSourceAp() + " Dest AP: " + st.getDestinationAp()
-				+ " Host: " + st.getHost().getId());
-			out1.println("Local server: " + st.getVmLocalServerCloudlet().getName() + " Apps "
+				+ st.getDirection() + " Speed: " + st.getSpeed(),
+			"Source AP: " + st.getSourceAp() + " Dest AP: " + st.getDestinationAp()
+				+ " Host: " + st.getHost().getId(),
+			"Local server: " + st.getVmLocalServerCloudlet().getName() + " Apps "
 				+ st.getVmLocalServerCloudlet().getActiveApplications() + " Map "
-				+ st.getVmLocalServerCloudlet().getApplicationMap());
-			if (st.getSourceServerCloudlet() == null) {
-				out1.println("Source server: null Apps: null Map: null");
-			}
-			else {
-				out1.println("Source server: " + st.getSourceServerCloudlet().getName() + " Apps: "
-					+ st.getSourceServerCloudlet().getActiveApplications() + " Map "
-					+ st.getSourceServerCloudlet().getApplicationMap());
-			}
-			if (st.getDestinationServerCloudlet() == null) {
-				out1.println("Dest server: null Apps: null Map: null");
-			}
-			else {
-				out1.println("Dest server: " + st.getDestinationServerCloudlet().getName()
-					+ " Apps: " + st.getDestinationServerCloudlet().getActiveApplications()
-					+ " Map " + st.getDestinationServerCloudlet().getApplicationMap());
-			}
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+				+ st.getVmLocalServerCloudlet().getApplicationMap(),
+			sourceServer, destinationServer);
 
-		try (FileWriter fw = new FileWriter(st.getMyId() + "route.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			out.println(st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t"
+		BufferedFileManager.writeLine(st.getMyId() + "route.txt",
+			st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t"
 				+ st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t" + st.getSpeed()
 				+ "\t" + CloudSim.clock());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
-		try (FileWriter fw = new FileWriter(st.getMyId() + "migrationPos.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			if (st.getSourceServerCloudlet() == null)
-				out.println(st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
+		BufferedFileManager.open(st.getMyId() + "migrationPos.txt");
+		if (st.getSourceServerCloudlet() == null) {
+			BufferedFileManager.writeLine(st.getMyId() + "migrationPos.txt",
+				st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
 					"\t" + CloudSim.clock() + "\t" + st.getMigTime() + "\t"
 					+ (CloudSim.clock() + st.getMigTime()));
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 
-		try (FileWriter fw = new FileWriter(st.getMyId() + "handoffPos.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
-		{
-			if (st.isLockedToHandoff())
-				out.println(st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
-					"\t" + CloudSim.clock());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		BufferedFileManager.open(st.getMyId() + "handoffPos.txt");
+		if (st.isLockedToHandoff()) {
+			BufferedFileManager.writeLine(st.getMyId() + "handoffPos.txt",
+				st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY()
+					+ "\t" + CloudSim.clock());
 		}
 
 		if (MyStatistics.getInstance().getInitialWithoutVmTime().get(st.getMyId()) != null) {
-			try (FileWriter fw = new FileWriter(st.getMyId() + "withoutVmTime.txt", true);
-				BufferedWriter bw = new BufferedWriter(fw);
-				PrintWriter out = new PrintWriter(bw))
-			{
-				if (st.getSourceServerCloudlet() == null)
-					out.println(st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY() +
-						"\t" + CloudSim.clock());
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
+			BufferedFileManager.open(st.getMyId() + "withoutVmTime.txt");
+			if (st.getSourceServerCloudlet() == null) {
+				BufferedFileManager.writeLine(st.getMyId() + "withoutVmTime.txt",
+					st.getCoord().getCoordX() + "\t" + st.getCoord().getCoordY()
+						+ "\t" + CloudSim.clock());
 			}
 		}
 	}
