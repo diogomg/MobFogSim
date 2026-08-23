@@ -39,9 +39,10 @@ public class TimeKeeper {
 	}
 
 	public void tupleEndedExecution(Tuple tuple) {
-		if (!tupleIdToCpuStartTime.containsKey(tuple.getCloudletId()))
+		Double startTime = tupleIdToCpuStartTime.remove(tuple.getCloudletId());
+		if (startTime == null)
 			return;
-		double executionTime = CloudSim.clock() - tupleIdToCpuStartTime.get(tuple.getCloudletId());
+		double executionTime = CloudSim.clock() - startTime;
 
 		if (!tupleTypeToAverageCpuTime.containsKey(tuple.getTupleType())) {
 			tupleTypeToAverageCpuTime.put(tuple.getTupleType(), executionTime);
@@ -51,6 +52,16 @@ public class TimeKeeper {
 			int currentCount = tupleTypeToExecutedTupleCount.get(tuple.getTupleType());
 			tupleTypeToAverageCpuTime.put(tuple.getTupleType(),
 				(currentAverage * currentCount + executionTime) / (currentCount + 1));
+		}
+	}
+
+	/**
+	 * Registers a loop for final reporting without retaining every tuple ID
+	 * generated for that loop.
+	 */
+	public void registerLoop(int loopId) {
+		if (!loopIdToTupleIds.containsKey(loopId)) {
+			loopIdToTupleIds.put(loopId, java.util.Collections.<Integer>emptyList());
 		}
 	}
 

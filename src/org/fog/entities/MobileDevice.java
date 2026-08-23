@@ -282,8 +282,6 @@ public class MobileDevice extends FogDevice {
 		}
 
 		if (tuple.getInitialTime() == -1) {
-			MyStatistics.getInstance().getTupleLatency()
-				.put(tuple.getMyTupleId(), CloudSim.clock() - getUplinkLatency());
 			tuple.setInitialTime(CloudSim.clock() - getUplinkLatency());
 		}
 

@@ -1,6 +1,5 @@
 package org.fog.entities;
 
-import java.util.ArrayList;
 
 import org.cloudbus.cloudsim.UtilizationModelFull;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -117,10 +116,7 @@ public class Sensor extends SimEntity {
 			if (loop.hasEdge(src, dest)) {
 
 				int tupleId = TimeKeeper.getInstance().getUniqueId();
-				if (!TimeKeeper.getInstance().getLoopIdToTupleIds().containsKey(loop.getLoopId()))
-					TimeKeeper.getInstance().getLoopIdToTupleIds()
-						.put(loop.getLoopId(), new ArrayList<Integer>());
-				TimeKeeper.getInstance().getLoopIdToTupleIds().get(loop.getLoopId()).add(tupleId);
+				TimeKeeper.getInstance().registerLoop(loop.getLoopId());
 				TimeKeeper.getInstance().getEmitTimes().put(tupleId, CloudSim.clock());
 				return tupleId;
 			}

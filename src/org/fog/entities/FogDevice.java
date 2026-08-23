@@ -1285,10 +1285,7 @@ public class FogDevice extends PowerDatacenter {
 			if (loop.hasEdge(srcModule, destModule) && loop.isStartModule(srcModule)) {
 				int tupleId = TimeKeeper.getInstance().getUniqueId();
 				resTuple.setActualTupleId(tupleId);
-				if (!TimeKeeper.getInstance().getLoopIdToTupleIds().containsKey(loop.getLoopId()))
-					TimeKeeper.getInstance().getLoopIdToTupleIds()
-						.put(loop.getLoopId(), new ArrayList<Integer>());
-				TimeKeeper.getInstance().getLoopIdToTupleIds().get(loop.getLoopId()).add(tupleId);
+				TimeKeeper.getInstance().registerLoop(loop.getLoopId());
 				TimeKeeper.getInstance().getEmitTimes().put(tupleId, CloudSim.clock());
 			}
 		}
@@ -1427,8 +1424,6 @@ public class FogDevice extends PowerDatacenter {
 		}
 
 		if (tuple.getInitialTime() == -1) {
-			MyStatistics.getInstance().getTupleLatency()
-				.put(tuple.getMyTupleId(), CloudSim.clock() - getUplinkLatency());
 			tuple.setInitialTime(CloudSim.clock() - getUplinkLatency());
 		}
 
@@ -1641,7 +1636,7 @@ public class FogDevice extends PowerDatacenter {
 		Logger.debug(getName(), "Executing tuple " + tuple.getCloudletId() + " on module "
 			+ operatorId);
 
-		if (MyStatistics.getInstance().getTupleLatency().get(tuple.getMyTupleId()) != null) {
+		if (tuple.getInitialTime() != -1) {
 			tuple.setFinalTime(CloudSim.clock() + getUplinkLatency());
 		}
 
