@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.TreeSet;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.predicates.Predicate;
@@ -347,6 +348,9 @@ public class CloudSim {
 	/** Preserves registration order between periodic series at an equal time. */
 	private static long periodicRegistrationOrder;
 
+	/** Entity IDs that have work to process, ordered like the former full scan. */
+	private static TreeSet<Integer> runnableEntities;
+
 	/** The simulation clock. */
 	private static double clock;
 
@@ -383,6 +387,7 @@ public class CloudSim {
 		deferred = new DeferredQueue();
 		periodicEvents = new PriorityQueue<PeriodicEventSchedule>();
 		periodicRegistrationOrder = 0;
+		runnableEntities = new TreeSet<Integer>();
 		waitPredicates = new HashMap<Integer, Predicate>();
 		clock = 0;
 		running = false;
@@ -552,13 +557,11 @@ public class CloudSim {
 	 * @return true, if successful otherwise
 	 */
 	public static boolean runClockTick() {
-		SimEntity ent;
 		boolean queue_empty;
 
-		int entities_size = entities.size();
-
-		for (int i = 0; i < entities_size; i++) {
-			ent = entities.get(i);
+		while (!runnableEntities.isEmpty()) {
+			int entityId = runnableEntities.pollFirst();
+			SimEntity ent = entities.get(entityId);
 			if (ent.getState() == SimEntity.RUNNABLE) {
 				ent.run();
 			}
@@ -610,6 +613,11 @@ public class CloudSim {
 		double nextPeriodicTime = periodicEvents.size() > 0
 			? periodicEvents.peek().getNextTime() : Double.POSITIVE_INFINITY;
 		return Math.min(nextFutureTime, nextPeriodicTime);
+	}
+
+	/** Marks an entity to run on the next clock tick. */
+	private static void markRunnable(int entityId) {
+		runnableEntities.add(entityId);
 	}
 
 	/**
@@ -893,6 +901,9 @@ public class CloudSim {
 		case SimEvent.CREATE:
 			SimEntity newe = (SimEntity) e.getData();
 			addEntityDynamically(newe);
+			if (newe.getState() == SimEntity.RUNNABLE) {
+				markRunnable(newe.getId());
+			}
 			break;
 
 		case SimEvent.SEND:
@@ -910,11 +921,15 @@ public class CloudSim {
 						dest_ent.setEventBuffer((SimEvent) e.clone());
 						dest_ent.setState(SimEntity.RUNNABLE);
 						waitPredicates.remove(destObj);
+						markRunnable(dest);
 					} else {
 						deferred.addEvent(e);
 					}
 				} else {
 					deferred.addEvent(e);
+					if (dest_ent.getState() == SimEntity.RUNNABLE) {
+						markRunnable(dest);
+					}
 				}
 			}
 			break;
@@ -925,6 +940,7 @@ public class CloudSim {
 				throw new IllegalArgumentException("Null entity holding.");
 			} else {
 				entities.get(src).setState(SimEntity.RUNNABLE);
+				markRunnable(src);
 			}
 			break;
 
@@ -942,6 +958,9 @@ public class CloudSim {
 		// Start all the entities
 		for (SimEntity ent : entities) {
 			ent.startEntity();
+			if (ent.getState() == SimEntity.RUNNABLE) {
+				markRunnable(ent.getId());
+			}
 		}
 
 		printMessage("Entities started.");
@@ -1073,6 +1092,7 @@ public class CloudSim {
 		future = null;
 		deferred = null;
 		periodicEvents = null;
+		runnableEntities = null;
 		clock = 0L;
 		running = false;
 
