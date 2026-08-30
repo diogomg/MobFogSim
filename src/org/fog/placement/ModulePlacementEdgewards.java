@@ -1,9 +1,13 @@
 package org.fog.placement;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.math3.util.Pair;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -213,7 +217,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 						if (totalCpuLoad + getCurrentCpuLoad().get(deviceId) > device.getHost()
 							.getTotalMips()) {
 							List<String> _placedOperators = shiftModuleNorth(operatorName,
-								totalCpuLoad, deviceId, operatorsToPlace);
+								totalCpuLoad, deviceId);
+							operatorsToPlace.removeAll(_placedOperators);
 							for (String placedOperator : _placedOperators) {
 								if (!placedOperators.contains(placedOperator))
 									placedOperators.add(placedOperator);
@@ -291,122 +296,313 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 	 *        cpuLoad of the module
 	 * @param deviceId
 	 */
-	private List<String> shiftModuleNorth(String moduleName, double cpuLoad, Integer deviceId,
-		List<String> operatorsToPlace) {
-		// TODO Auto-generated method stub
-
+	protected List<String> shiftModuleNorth(String moduleName, double cpuLoad,
+		Integer deviceId) {
 		System.out.println("------------------------------------------------");
 		System.out.println("Shifting module " + moduleName + " northwards.");
 
-		List<String> modulesToShift = findModulesToShift(moduleName, deviceId);
-
-		System.out.println("Modules to shift northwards : " + modulesToShift);
-
-		Map<String, Integer> moduleToNumInstances = new HashMap<String, Integer>();
-		double totalCpuLoad = 0;
-		Map<String, Double> loadMap = new HashMap<String, Double>();
-		for (String module : modulesToShift) {
-			loadMap.put(module, getCurrentModuleLoadMap().get(deviceId).get(module));
-			moduleToNumInstances.put(module, getCurrentModuleInstanceNum().get(deviceId).get(module) + 1);
-			totalCpuLoad += getCurrentModuleLoadMap().get(deviceId).get(module);
-			getCurrentModuleLoadMap().get(deviceId).remove(module);
-			getCurrentModuleMap().get(deviceId).remove(module);
-			getCurrentModuleInstanceNum().get(deviceId).remove(module);
+		PlacementPlan plan = createPlacementPlan(moduleName, cpuLoad, deviceId);
+		if (plan == null) {
+			System.out.println("Could not place module " + moduleName + " northwards.");
+			return Collections.emptyList();
 		}
 
-		getCurrentCpuLoad().put(deviceId, getCurrentCpuLoad().get(deviceId) - totalCpuLoad);
-		loadMap.put(moduleName, loadMap.get(moduleName) + cpuLoad);
-		totalCpuLoad += cpuLoad;
-
-		System.out.println("Module instances to shift northwards : " + moduleToNumInstances);
-
-		int id = getParentDevice(deviceId);
-		while (true) {
-			if (id == -1) {
-				System.out.println("Could not place modules " + modulesToShift + " northwards.");
-				break;
-			}
-			System.out.println("Now on device " + CloudSim.getEntityName(id));
-			FogDevice fogDevice = getFogDeviceById(id);
-			if (getCurrentCpuLoad().get(id) + totalCpuLoad > fogDevice.getHost().getTotalMips()) {
-				// keep shifting upwards
-				// All modules in _modulesToShift are currently placed on device id
-				List<String> _modulesToShift = findModulesToShift(modulesToShift, id);
-				// the total cpu load shifted from device id to its parent
-				double cpuLoadShifted = 0;
-				for (String module : _modulesToShift) {
-					if (!modulesToShift.contains(module)) {
-						moduleToNumInstances.put(module, getCurrentModuleInstanceNum().get(id).get(module)
-							+ moduleToNumInstances.get(module));
-						loadMap.put(module, getCurrentModuleLoadMap().get(id).get(module));
-						cpuLoadShifted += getCurrentModuleLoadMap().get(id).get(module);
-						totalCpuLoad += getCurrentModuleLoadMap().get(id).get(module);
-						getCurrentModuleLoadMap().get(id).remove(module);
-						getCurrentModuleMap().get(id).remove(module);
-						getCurrentModuleInstanceNum().get(id).remove(module);
-					}
-				}
-				getCurrentCpuLoad().put(id, getCurrentCpuLoad().get(id) - cpuLoadShifted);
-
-				System.out.println("CPU load after operator removal on device "
-					+ CloudSim.getEntityName(id) + " = " + getCurrentCpuLoad().get(id));
-				modulesToShift = _modulesToShift;
-				id = getParentDevice(id);
-			} else {
-				// can place the modules here (@ id)
-				System.out.println("Can place modules " + modulesToShift + "on device "
-					+ CloudSim.getEntityName(id));
-				double totalLoad = 0;
-				for (String module : loadMap.keySet()) {
-					totalLoad += loadMap.get(module);
-					getCurrentModuleLoadMap().get(id).put(module, loadMap.get(module));
-					getCurrentModuleMap().get(id).add(module);
-					System.out.println("Final module to num instances : " + moduleToNumInstances);
-					String module_ = module;
-					int initialNumInstances = 0;
-					if (getCurrentModuleInstanceNum().get(id).containsKey(module_))
-						initialNumInstances = getCurrentModuleInstanceNum().get(id).get(module_);
-					int finalNumInstances = initialNumInstances + moduleToNumInstances.get(module_);
-					System.out.println("Placing " + finalNumInstances + " on "
-						+ CloudSim.getEntityName(id));
-					getCurrentModuleInstanceNum().get(id).put(module_, finalNumInstances);
-				}
-				getCurrentCpuLoad().put(id, totalLoad);
-				System.out.println("FINALLY placed " + loadMap.keySet() + " at device "
-					+ CloudSim.getEntityName(id));
-				operatorsToPlace.removeAll(loadMap.keySet());
-				System.out.println("CPU load on device " + CloudSim.getEntityName(id) + " = "
-					+ getCurrentCpuLoad().get(id));
-				List<String> placedOperators = new ArrayList<String>();
-				for (String op : loadMap.keySet())
-					placedOperators.add(op);
-				return placedOperators;
-			}
-		}
-		return new ArrayList<String>();
-
+		commitPlacementPlan(plan);
+		System.out.println("FINALLY placed " + plan.getPlacedModules() + " at device "
+			+ CloudSim.getEntityName(plan.getDestinationDeviceId()));
+		return plan.getPlacedModules();
 	}
 
-	private List<String> findModulesToShift(String module, Integer deviceId) {
+	private PlacementPlan createPlacementPlan(String moduleName, double cpuLoad,
+		Integer sourceDeviceId) {
+		if (moduleName == null || moduleName.trim().isEmpty()) {
+			throw new IllegalArgumentException("Module name cannot be empty");
+		}
+		validateNonNegativeFinite(cpuLoad, "Additional CPU load");
+		if (sourceDeviceId == null) {
+			throw new IllegalArgumentException("Source device ID cannot be null");
+		}
+
+		PlacementState state = copyCurrentPlacementState();
+		validateDeviceState(state, sourceDeviceId);
+		validateApplicationModule(moduleName);
+
+		List<String> modulesToShift = findModulesToShift(moduleName, sourceDeviceId,
+			state.moduleMap);
+		Map<String, Double> movingLoads = new LinkedHashMap<String, Double>();
+		Map<String, Integer> movingInstances = new LinkedHashMap<String, Integer>();
+		double totalCpuLoad = 0.0;
+
+		for (String module : modulesToShift) {
+			validateApplicationModule(module);
+			double moduleLoad = requireModuleLoad(state, sourceDeviceId, module);
+			int instanceCount = requireModuleInstanceCount(state, sourceDeviceId, module);
+			movingLoads.put(module, moduleLoad);
+			movingInstances.put(module, incrementInstanceCount(instanceCount, module));
+			totalCpuLoad = addFinite(totalCpuLoad, moduleLoad, "Shifted CPU load");
+			removeModule(state, sourceDeviceId, module, moduleLoad);
+		}
+
+		double expandedModuleLoad = addFinite(movingLoads.get(moduleName), cpuLoad,
+			"CPU load for module " + moduleName);
+		movingLoads.put(moduleName, expandedModuleLoad);
+		totalCpuLoad = addFinite(totalCpuLoad, cpuLoad, "Shifted CPU load");
+
+		Set<Integer> visitedDevices = new HashSet<Integer>();
+		visitedDevices.add(sourceDeviceId);
+		int candidateId = getValidatedParentId(sourceDeviceId);
+		while (candidateId != -1) {
+			if (!visitedDevices.add(candidateId)) {
+				throw new IllegalStateException(
+					"Cycle detected in fog-device parent hierarchy at device " + candidateId);
+			}
+
+			validateDeviceState(state, candidateId);
+			FogDevice candidate = requireFogDevice(candidateId);
+			double capacity = candidate.getHost().getTotalMips();
+			validateNonNegativeFinite(capacity,
+				"CPU capacity for device " + candidate.getName());
+			double candidateLoad = state.cpuLoad.get(candidateId);
+			double combinedLoad = addFinite(candidateLoad, totalCpuLoad,
+				"CPU load for device " + candidate.getName());
+
+			if (combinedLoad <= capacity) {
+				addModules(state, candidateId, movingLoads, movingInstances,
+					totalCpuLoad);
+				return new PlacementPlan(state, candidateId,
+					new ArrayList<String>(movingLoads.keySet()));
+			}
+
+			List<String> expandedModules = findModulesToShift(modulesToShift,
+				candidateId, state.moduleMap);
+			for (String module : expandedModules) {
+				if (modulesToShift.contains(module)) {
+					continue;
+				}
+				validateApplicationModule(module);
+				double moduleLoad = requireModuleLoad(state, candidateId, module);
+				int instanceCount = requireModuleInstanceCount(state, candidateId, module);
+				movingLoads.put(module, moduleLoad);
+				movingInstances.put(module, instanceCount);
+				totalCpuLoad = addFinite(totalCpuLoad, moduleLoad, "Shifted CPU load");
+				removeModule(state, candidateId, module, moduleLoad);
+			}
+			modulesToShift = expandedModules;
+			candidateId = getValidatedParentId(candidateId);
+		}
+
+		return null;
+	}
+
+	private void commitPlacementPlan(PlacementPlan plan) {
+		PlacementState committedState = plan.toMutableState();
+		setCurrentCpuLoad(committedState.cpuLoad);
+		setCurrentModuleMap(committedState.moduleMap);
+		setCurrentModuleLoadMap(committedState.moduleLoadMap);
+		setCurrentModuleInstanceNum(committedState.moduleInstanceCount);
+		setModuleInstanceCountMap(committedState.moduleInstanceCount);
+	}
+
+	private PlacementState copyCurrentPlacementState() {
+		if (getCurrentCpuLoad() == null || getCurrentModuleMap() == null
+			|| getCurrentModuleLoadMap() == null || getCurrentModuleInstanceNum() == null) {
+			throw new IllegalStateException("Placement state has not been initialized");
+		}
+
+		Map<Integer, Double> cpuLoad = new HashMap<Integer, Double>(getCurrentCpuLoad());
+		Map<Integer, List<String>> moduleMap = new HashMap<Integer, List<String>>();
+		for (Map.Entry<Integer, List<String>> entry : getCurrentModuleMap().entrySet()) {
+			if (entry.getValue() == null) {
+				throw new IllegalStateException(
+					"Module list is missing for device " + entry.getKey());
+			}
+			moduleMap.put(entry.getKey(), new ArrayList<String>(entry.getValue()));
+		}
+
+		Map<Integer, Map<String, Double>> moduleLoadMap =
+			new HashMap<Integer, Map<String, Double>>();
+		for (Map.Entry<Integer, Map<String, Double>> entry
+			: getCurrentModuleLoadMap().entrySet()) {
+			if (entry.getValue() == null) {
+				throw new IllegalStateException(
+					"Module-load map is missing for device " + entry.getKey());
+			}
+			moduleLoadMap.put(entry.getKey(),
+				new HashMap<String, Double>(entry.getValue()));
+		}
+
+		Map<Integer, Map<String, Integer>> moduleInstanceCount =
+			new HashMap<Integer, Map<String, Integer>>();
+		for (Map.Entry<Integer, Map<String, Integer>> entry
+			: getCurrentModuleInstanceNum().entrySet()) {
+			if (entry.getValue() == null) {
+				throw new IllegalStateException(
+					"Module-instance map is missing for device " + entry.getKey());
+			}
+			moduleInstanceCount.put(entry.getKey(),
+				new HashMap<String, Integer>(entry.getValue()));
+		}
+		return new PlacementState(cpuLoad, moduleMap, moduleLoadMap,
+			moduleInstanceCount);
+	}
+
+	private void validateDeviceState(PlacementState state, int deviceId) {
+		if (!state.cpuLoad.containsKey(deviceId) || state.cpuLoad.get(deviceId) == null
+			|| !state.moduleMap.containsKey(deviceId)
+			|| !state.moduleLoadMap.containsKey(deviceId)
+			|| !state.moduleInstanceCount.containsKey(deviceId)) {
+			throw new IllegalStateException(
+				"Incomplete placement state for device " + deviceId);
+		}
+		validateNonNegativeFinite(state.cpuLoad.get(deviceId),
+			"Current CPU load for device " + deviceId);
+	}
+
+	private double requireModuleLoad(PlacementState state, int deviceId, String module) {
+		validateModuleState(state, deviceId, module);
+		double load = state.moduleLoadMap.get(deviceId).get(module);
+		validateNonNegativeFinite(load,
+			"CPU load for module " + module + " on device " + deviceId);
+		return load;
+	}
+
+	private int requireModuleInstanceCount(PlacementState state, int deviceId,
+		String module) {
+		validateModuleState(state, deviceId, module);
+		int count = state.moduleInstanceCount.get(deviceId).get(module);
+		if (count < 0) {
+			throw new IllegalStateException("Negative instance count for module " + module
+				+ " on device " + deviceId);
+		}
+		return count;
+	}
+
+	private void validateModuleState(PlacementState state, int deviceId, String module) {
+		validateDeviceState(state, deviceId);
+		int occurrences = 0;
+		for (String placedModule : state.moduleMap.get(deviceId)) {
+			if (module.equals(placedModule)) {
+				occurrences++;
+			}
+		}
+		if (occurrences != 1
+			|| !state.moduleLoadMap.get(deviceId).containsKey(module)
+			|| state.moduleLoadMap.get(deviceId).get(module) == null
+			|| !state.moduleInstanceCount.get(deviceId).containsKey(module)
+			|| state.moduleInstanceCount.get(deviceId).get(module) == null) {
+			throw new IllegalStateException("Inconsistent placement state for module "
+				+ module + " on device " + deviceId);
+		}
+	}
+
+	private void removeModule(PlacementState state, int deviceId, String module,
+		double moduleLoad) {
+		double remainingLoad = state.cpuLoad.get(deviceId) - moduleLoad;
+		if (remainingLoad < -0.0000001) {
+			throw new IllegalStateException("Module loads exceed current CPU load on device "
+				+ deviceId);
+		}
+		state.cpuLoad.put(deviceId, Math.max(0.0, remainingLoad));
+		state.moduleMap.get(deviceId).remove(module);
+		state.moduleLoadMap.get(deviceId).remove(module);
+		state.moduleInstanceCount.get(deviceId).remove(module);
+	}
+
+	private void addModules(PlacementState state, int deviceId,
+		Map<String, Double> movingLoads, Map<String, Integer> movingInstances,
+		double totalCpuLoad) {
+		for (String module : movingLoads.keySet()) {
+			boolean modulePresent = state.moduleMap.get(deviceId).contains(module);
+			boolean loadPresent = state.moduleLoadMap.get(deviceId).containsKey(module);
+			boolean countPresent = state.moduleInstanceCount.get(deviceId).containsKey(module);
+			if (modulePresent != loadPresent || modulePresent != countPresent) {
+				throw new IllegalStateException("Inconsistent destination state for module "
+					+ module + " on device " + deviceId);
+			}
+
+			double finalLoad = movingLoads.get(module);
+			int finalInstances = movingInstances.get(module);
+			if (modulePresent) {
+				finalLoad = addFinite(requireModuleLoad(state, deviceId, module), finalLoad,
+					"CPU load for module " + module);
+				finalInstances = addInstanceCounts(
+					requireModuleInstanceCount(state, deviceId, module), finalInstances,
+					module);
+			} else {
+				state.moduleMap.get(deviceId).add(module);
+			}
+			state.moduleLoadMap.get(deviceId).put(module, finalLoad);
+			state.moduleInstanceCount.get(deviceId).put(module, finalInstances);
+		}
+		state.cpuLoad.put(deviceId, addFinite(state.cpuLoad.get(deviceId), totalCpuLoad,
+			"CPU load for device " + deviceId));
+	}
+
+	private int incrementInstanceCount(int count, String module) {
+		return addInstanceCounts(count, 1, module);
+	}
+
+	private int addInstanceCounts(int first, int second, String module) {
+		long result = (long) first + second;
+		if (result > Integer.MAX_VALUE) {
+			throw new IllegalStateException(
+				"Instance count overflow for module " + module);
+		}
+		return (int) result;
+	}
+
+	private double addFinite(double first, double second, String description) {
+		double result = first + second;
+		if (Double.isNaN(result) || Double.isInfinite(result)) {
+			throw new IllegalStateException(description + " is not finite");
+		}
+		return result;
+	}
+
+	private void validateNonNegativeFinite(double value, String description) {
+		if (Double.isNaN(value) || Double.isInfinite(value) || value < 0.0) {
+			throw new IllegalArgumentException(description
+				+ " must be a non-negative finite value");
+		}
+	}
+
+	private void validateApplicationModule(String module) {
+		if (getApplication() == null || getApplication().getModuleByName(module) == null) {
+			throw new IllegalStateException(
+				"Application does not define placed module " + module);
+		}
+	}
+
+	private FogDevice requireFogDevice(int deviceId) {
+		FogDevice device = getDeviceById(deviceId);
+		if (device == null) {
+			throw new IllegalStateException(
+				"Placement references unavailable fog device " + deviceId);
+		}
+		if (device.getHost() == null) {
+			throw new IllegalStateException(
+				"Fog device " + device.getName() + " has no host");
+		}
+		return device;
+	}
+
+	private int getValidatedParentId(int deviceId) {
+		return requireFogDevice(deviceId).getParentId();
+	}
+
+	private List<String> findModulesToShift(String module, Integer deviceId,
+		Map<Integer, List<String>> moduleMap) {
 		List<String> upstreamModules = new ArrayList<String>();
 		upstreamModules.add(module);
-		boolean changed = true;
-		while (changed) {
-			changed = false;
-			for (AppEdge edge : getApplication().getEdges()) {
-				if (upstreamModules.contains(edge.getSource()) && edge.getDirection() == Tuple.UP
-					&& getCurrentModuleMap().get(deviceId).contains(edge.getDestination())
-					&& !upstreamModules.contains(edge.getDestination())) {
-					upstreamModules.add(edge.getDestination());
-					changed = true;
-				}
-			}
-		}
-		return upstreamModules;
-
+		return findModulesToShift(upstreamModules, deviceId, moduleMap);
 	}
 
-	private List<String> findModulesToShift(List<String> modules, Integer deviceId) {
+	private List<String> findModulesToShift(List<String> modules, Integer deviceId,
+		Map<Integer, List<String>> moduleMap) {
+		if (!moduleMap.containsKey(deviceId) || moduleMap.get(deviceId) == null) {
+			throw new IllegalStateException(
+				"Module list is missing for device " + deviceId);
+		}
 		List<String> upstreamModules = new ArrayList<String>();
 		upstreamModules.addAll(modules);
 		boolean changed = true;
@@ -414,7 +610,7 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 			changed = false;
 			for (AppEdge edge : getApplication().getEdges()) {
 				if (upstreamModules.contains(edge.getSource()) && edge.getDirection() == Tuple.UP
-					&& getCurrentModuleMap().get(deviceId).contains(edge.getDestination())
+					&& moduleMap.get(deviceId).contains(edge.getDestination())
 					&& !upstreamModules.contains(edge.getDestination())) {
 					upstreamModules.add(edge.getDestination());
 					changed = true;
@@ -423,6 +619,99 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 		}
 		return upstreamModules;
 
+	}
+
+	private static final class PlacementState {
+		private final Map<Integer, Double> cpuLoad;
+		private final Map<Integer, List<String>> moduleMap;
+		private final Map<Integer, Map<String, Double>> moduleLoadMap;
+		private final Map<Integer, Map<String, Integer>> moduleInstanceCount;
+
+		private PlacementState(Map<Integer, Double> cpuLoad,
+			Map<Integer, List<String>> moduleMap,
+			Map<Integer, Map<String, Double>> moduleLoadMap,
+			Map<Integer, Map<String, Integer>> moduleInstanceCount) {
+			this.cpuLoad = cpuLoad;
+			this.moduleMap = moduleMap;
+			this.moduleLoadMap = moduleLoadMap;
+			this.moduleInstanceCount = moduleInstanceCount;
+		}
+	}
+
+	private static final class PlacementPlan {
+		private final Map<Integer, Double> cpuLoad;
+		private final Map<Integer, List<String>> moduleMap;
+		private final Map<Integer, Map<String, Double>> moduleLoadMap;
+		private final Map<Integer, Map<String, Integer>> moduleInstanceCount;
+		private final int destinationDeviceId;
+		private final List<String> placedModules;
+
+		private PlacementPlan(PlacementState state, int destinationDeviceId,
+			List<String> placedModules) {
+			this.cpuLoad = Collections.unmodifiableMap(
+				new HashMap<Integer, Double>(state.cpuLoad));
+			this.moduleMap = immutableLists(state.moduleMap);
+			this.moduleLoadMap = immutableNestedMaps(state.moduleLoadMap);
+			this.moduleInstanceCount = immutableNestedMaps(state.moduleInstanceCount);
+			this.destinationDeviceId = destinationDeviceId;
+			this.placedModules = Collections.unmodifiableList(
+				new ArrayList<String>(placedModules));
+		}
+
+		private PlacementState toMutableState() {
+			Map<Integer, List<String>> mutableModuleMap =
+				new HashMap<Integer, List<String>>();
+			for (Map.Entry<Integer, List<String>> entry : moduleMap.entrySet()) {
+				mutableModuleMap.put(entry.getKey(),
+					new ArrayList<String>(entry.getValue()));
+			}
+
+			Map<Integer, Map<String, Double>> mutableLoadMap =
+				copyNestedMaps(moduleLoadMap);
+			Map<Integer, Map<String, Integer>> mutableInstanceCount =
+				copyNestedMaps(moduleInstanceCount);
+			return new PlacementState(new HashMap<Integer, Double>(cpuLoad),
+				mutableModuleMap, mutableLoadMap, mutableInstanceCount);
+		}
+
+		private static Map<Integer, List<String>> immutableLists(
+			Map<Integer, List<String>> source) {
+			Map<Integer, List<String>> copy = new HashMap<Integer, List<String>>();
+			for (Map.Entry<Integer, List<String>> entry : source.entrySet()) {
+				copy.put(entry.getKey(), Collections.unmodifiableList(
+					new ArrayList<String>(entry.getValue())));
+			}
+			return Collections.unmodifiableMap(copy);
+		}
+
+		private static <T> Map<Integer, Map<String, T>> immutableNestedMaps(
+			Map<Integer, Map<String, T>> source) {
+			Map<Integer, Map<String, T>> copy =
+				new HashMap<Integer, Map<String, T>>();
+			for (Map.Entry<Integer, Map<String, T>> entry : source.entrySet()) {
+				copy.put(entry.getKey(), Collections.unmodifiableMap(
+					new HashMap<String, T>(entry.getValue())));
+			}
+			return Collections.unmodifiableMap(copy);
+		}
+
+		private static <T> Map<Integer, Map<String, T>> copyNestedMaps(
+			Map<Integer, Map<String, T>> source) {
+			Map<Integer, Map<String, T>> copy =
+				new HashMap<Integer, Map<String, T>>();
+			for (Map.Entry<Integer, Map<String, T>> entry : source.entrySet()) {
+				copy.put(entry.getKey(), new HashMap<String, T>(entry.getValue()));
+			}
+			return copy;
+		}
+
+		private int getDestinationDeviceId() {
+			return destinationDeviceId;
+		}
+
+		private List<String> getPlacedModules() {
+			return new ArrayList<String>(placedModules);
+		}
 	}
 
 	private int isPlacedUpstream(String operatorName, List<Integer> path) {
