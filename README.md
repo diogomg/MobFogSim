@@ -50,32 +50,43 @@ Optional:
 *  Fourth parameter: 0/1/2 -> Migration strategy approach to select the destination cloudlet. It can be based on the lowest latency (0), the lowest distance between the user and cloudlet (1), or the lowest distance between the user and Access Point (2)
 *  Fifth parameter: Positive Integer -> Number of users
 *  Sixth parameter: Positive Integer -> Base Network Bandwidth between cloudlets
-*  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (3)
-*  Eighth parameter: Non-Negative Integer -> User Mobility prediction, in seconds
-*  Ninth parameter: Non-Negative Integer -> User Mobility prediction inaccuracy, in meters
-*  Tenth parameter: Positive negative Integer -> Base Network Latency between cloudlets
-*  Eleventh parameter (optional): comma-separated bandwidth percentages for two or three user groups. Values must be greater than zero and sum to 100. Users are assigned round-robin by their index (user 0 to group 0, user 1 to group 1, and so on).
-*  Twelfth parameter (optional): `0` keeps the configured slice bandwidth fixed; `1` lets active slices borrow idle capacity. It defaults to `1` when omitted.
-*  Thirteenth parameter (optional): VM destination type — `0` edge servers only, `1` end devices only, or `2` hybrid. It defaults to `2` when omitted.
+*  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (2)
+*  Eighth parameter: Positive number -> Base Network Latency between cloudlets.
+*  Ninth parameter: Non-Negative Integer -> User Mobility prediction, in seconds.
+*  Tenth parameter: Non-Negative Integer -> User Mobility prediction inaccuracy, in meters.
+*  Eleventh  parameter: network-slice scope: 0 transport network only (physical links between servers), 1 wireless network only (access-point uplink and downlink), or 2 end-to-end (transport and wireless). It defaults to 2 when omitted.
+*  Twelfth parameter: comma-separated percentages of users assigned to each slice. There must be one value per slice, and the values must be greater than zero and sum to 100.
+*  Thirteenth parameter: comma-separated bandwidth percentages for the slices. Values must be greater than zero and sum to 100.
+*  Fourteenth parameter: 0 keeps the configured slice bandwidth fixed (static slicing); 1 lets active slices borrow idle capacity (dynamic slicing).
+*  Fifteenth parameter: VM destination type: 0 edge servers only, 1 end devices only, or 2 hybrid.
 
-Example
-1 290538 0 0 1 11 0 0 0 61
+### Example
 
-With a 70/30 split between two groups:
+text
+1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2
 
-1 290538 0 0 10 11 0 0 0 61 70,30
 
-To keep the same 70/30 slices fixed, append `0`:
+This example configures the simulation as follows:
 
-1 290538 0 0 10 11 0 0 0 61 70,30 0
+| Parameter | Value | Meaning |
+| --- | ---: | --- |
+| Migration | 1 | Enables service migration. |
+| Random seed | 290538 | Makes random decisions reproducible. |
+| Migration point | 0 | Uses the fixed migration-point policy. |
+| Migration strategy | 0 | Selects the destination with the lowest latency. |
+| Users | 10 | Simulates ten mobile users. |
+| Cloudlet bandwidth | 11 | Sets the base bandwidth between server cloudlets to 11 Mbps. |
+| Migration policy | 0 | Uses complete-VM cold migration. |
+| Cloudlet latency | 61 | Sets the base latency between server cloudlets to 61. |
+| Mobility prediction | 0 | Disables look-ahead mobility prediction. |
+| Prediction error | 0 | Uses no additional mobility-prediction error. |
+| Slice scope | 0 | Applies slicing only to the transport network between servers. |
+| User allocation | 60,40 | Assigns 60% of users to slice 0 and 40% to slice 1: six and four users in this ten-user example. |
+| Slice shares | 70,30 | Gives slice 0 70% and slice 1 30% of bandwidth in the selected scope. |
+| Slice mode | 1 | Enables dynamic borrowing of idle slice capacity. |
+| VM destinations | 2 | Allows both edge servers and eligible end devices as migration destinations. |
 
-To allow both edge-server and end-device VM destinations, append `2`:
-
-1 290538 0 0 10 11 0 0 0 61 70,30 1 2
-
-Each group initially receives its fixed share on every server-cloudlet link. For example, a physical link of 11 Mbps gives group 0 7.7 Mbps and group 1 3.3 Mbps. During VM migration, an active group may borrow capacity reserved for groups with no active migration on that same directed link. Borrowed capacity is returned automatically when the migration finishes or aborts; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
-
-### Mobile devices as edge hosts
+When a user-allocation percentage produces a fractional number of users, the simulator assigns the remaining users to the slices with the largest fractional remainders. Within the selected scope, each group receives its configured bandwidth share. For example, a physical link or AP direction with 11 Mbps and a 70/30 configuration gives group 0 7.7 Mbps and group 1 3.3 Mbps. Users connected to the same AP and assigned to the same slice share that slice's wireless capacity equally; their effective rate is also capped by the individual mobile device's link rate. A network outside the selected scope is not divided into slices; AP capacity is shared equally among connected users in that case. During VM migration, an active group may borrow transport capacity reserved for groups with no active migration on that same directed link. On an AP, connected groups may borrow the capacity of groups that have no connected users there. Borrowed capacity is returned automatically when a migration finishes, or when AP membership changes; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
 
 Every connected mobile device can host another user's application VM. During a migration, the simulator keeps the selected server-cloudlet destination unless a different connected mobile device is closer to the application owner and has sufficient host resources. The owner device and the current VM host are excluded. VM traffic is then routed to the VM's current host using the existing network topology, and a later migration may move that VM back to a server cloudlet or to another eligible mobile device.
 
@@ -117,7 +128,7 @@ Example input/1702log.csv
 ## How to cite MobFogSim
 
 Puliafito, C. et. al. MobFogSim: Simulation of mobility and migration for fog computing. Simulation Modelling Practice and Theory. 2020.
-```bibtex
+bibtex
 @article{puliafito2020mobfogsim,
   title={MobFogSim: Simulation of mobility and migration for fog computing},
   author={Puliafito, Carlo and Gon{\c{c}}alves, Diogo M and Lopes, M{\'a}rcio M and Martins, Leonardo L and Madeira, Edmundo and Mingozzi, Enzo and Rana, Omer and Bittencourt, Luiz F},
@@ -127,13 +138,13 @@ Puliafito, C. et. al. MobFogSim: Simulation of mobility and migration for fog co
   year={2020},
   publisher={Elsevier}
 }
-```
+
 DOI https://doi.org/10.1016/j.simpat.2019.102062
 
 ### Additional papers regarding MobFogSim features
 
 Goncalves, D. et. al. Dynamic network slicing in fog computing for mobile users in MobFogSim. IEEE/ACM 13th International Conference on Utility and Cloud Computing. 2020.
-``` bibtex
+ bibtex
 @inproceedings{gonccalves2020dynamic,
   title={Dynamic network slicing in fog computing for mobile users in MobFogSim},
   author={Gon{\c{c}}alves, Diogo and Puliafito, Carlo and Mingozzi, Enzo and Rana, Omer and Bittencourt, Luiz and Madeira, Edmundo},
@@ -142,11 +153,11 @@ Goncalves, D. et. al. Dynamic network slicing in fog computing for mobile users 
   year={2020},
   organization={IEEE}
 }
-```
+
 DOI https://doi.org/10.1109/UCC48980.2020.00042
 
 Goncalves, D. et. al. End-to-end network slicing in vehicular clouds using the MobFogSim simulator. Ad Hoc Networks. 2023.
-``` bibtex
+ bibtex
 @article{gonccalves2023end,
   title={End-to-end network slicing in vehicular clouds using the MobFogSim simulator},
   author={Gon{\c{c}}alves, Diogo M and Puliafito, Carlo and Mingozzi, Enzo and Bittencourt, Luiz F and Madeira, Edmundo RM},
@@ -156,5 +167,5 @@ Goncalves, D. et. al. End-to-end network slicing in vehicular clouds using the M
   year={2023},
   publisher={Elsevier}
 }
-```
+
 DOI https://doi.org/10.1016/j.adhoc.2023.103096

@@ -14,6 +14,7 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.fog.localization.*;
 import org.fog.placement.MobileController;
+import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -61,7 +62,8 @@ public class ApDevice extends FogDevice {
 			smartThing.getSourceAp().setSmartThings(smartThing, Policies.ADD);
 			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() + delay);
 			NetworkTopology.addLink(smartThing.getSourceAp().getId(), smartThing.getId(),
-				smartThing.getUplinkBandwidth(), delay);
+				NetworkSlicing.getAccessPointUplinkBandwidth(
+					smartThing.getSourceAp(), smartThing), delay);
 
 			smartThing.setDestinationAp(null);
 			smartThing.setHandoffStatus(false);
@@ -110,7 +112,8 @@ public class ApDevice extends FogDevice {
 				st.setSourceAp(apDevices.get(index));
 				apDevices.get(index).setSmartThings(st, Policies.ADD);
 				NetworkTopology.addLink(apDevices.get(index).getId(), st.getId(),
-					st.getUplinkBandwidth(), delay);
+					NetworkSlicing.getAccessPointUplinkBandwidth(
+						apDevices.get(index), st), delay);
 				LogMobile.debug("ApDevice.java", st.getName() + " was connected to "
 					+ st.getSourceAp().getName());
 				apDevices.get(index).setUplinkLatency(

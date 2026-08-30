@@ -1675,11 +1675,17 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	protected void sendUpFreeLink(Tuple tuple) {
-		double networkDelay = tuple.getCloudletFileSize() / getUplinkBandwidth();
+		double networkDelay = tuple.getCloudletFileSize()
+			/ getUplinkBandwidthForTuple(tuple);
 		setNorthLinkBusy(true);
 		send(getId(), networkDelay, FogEvents.UPDATE_NORTH_TUPLE_QUEUE);
 		send(parentId, networkDelay + getUplinkLatency(), FogEvents.TUPLE_ARRIVAL, tuple);
 		NetworkUsageMonitor.sendingTuple(getUplinkLatency(), tuple.getCloudletFileSize());
+	}
+
+	/** Returns the effective uplink bandwidth for this tuple. */
+	protected double getUplinkBandwidthForTuple(Tuple tuple) {
+		return getUplinkBandwidth();
 	}
 
 	protected void sendUp(Tuple tuple) {
@@ -1702,12 +1708,30 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	protected void sendDownFreeLink(Tuple tuple, int childId) {
-		double networkDelay = tuple.getCloudletFileSize() / getDownlinkBandwidth();
+		double networkDelay = tuple.getCloudletFileSize()
+			/ getDownlinkBandwidthForTuple(tuple, childId);
 		setSouthLinkBusy(true);
 		double latency = getChildToLatencyMap().get(childId);
 		send(getId(), networkDelay, FogEvents.UPDATE_SOUTH_TUPLE_QUEUE);
 		send(childId, networkDelay + latency, FogEvents.TUPLE_ARRIVAL, tuple);
 		NetworkUsageMonitor.sendingTuple(latency, tuple.getCloudletFileSize());
+	}
+
+	/**
+	 * Returns the effective downlink bandwidth for this tuple. Mobile children
+	 * are additionally limited by their wireless access-point slice.
+	 */
+	protected double getDownlinkBandwidthForTuple(Tuple tuple, int childId) {
+		Object childDevice = CloudSim.getEntity(childId);
+		if (childDevice instanceof MobileDevice) {
+			MobileDevice mobileDevice = (MobileDevice) childDevice;
+			if (mobileDevice.getSourceAp() != null) {
+				return Math.min(getDownlinkBandwidth(),
+					NetworkSlicing.getAccessPointDownlinkBandwidth(
+						mobileDevice.getSourceAp(), mobileDevice));
+			}
+		}
+		return getDownlinkBandwidth();
 	}
 
 	protected void sendDown(Tuple tuple, int childId) {

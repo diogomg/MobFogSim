@@ -22,6 +22,7 @@ import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
 import org.fog.utils.ModuleLaunchConfig;
+import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.cloudbus.cloudsim.Storage;
@@ -60,8 +61,15 @@ public class MobileDevice extends FogDevice {
 	private boolean status;
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
-	/* Index of the fixed network slice used by this mobile user's VM migration. */
 	private int networkSliceId;
+
+	@Override
+	protected double getUplinkBandwidthForTuple(Tuple tuple) {
+		if (getSourceAp() == null) {
+			return super.getUplinkBandwidthForTuple(tuple);
+		}
+		return NetworkSlicing.getAccessPointUplinkBandwidth(getSourceAp(), this);
+	}
 
 	@Override
 	public int hashCode() {

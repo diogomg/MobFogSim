@@ -134,7 +134,7 @@ public class AppExample {
 		 *  
 		 *  Example parameters
 		 *  
-		 *  1 290538 0 0 1 11 0 0 0 61
+		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2
 		 *  
 		 *  First parameter: 0/1 -> migrations are denied or allowed
 		 *  Second parameter: Positive Integer -> seed to be used in the random numbers generation
@@ -142,14 +142,16 @@ public class AppExample {
 		 *  Fourth parameter: 0/1/2 -> Migration strategy approach is based on the lowest latency (0), lowest distance between the user and cloudlet (1), or lowest distance between user and Access Point (2)
 		 *  Fifth parameter: Positive Integer -> Number of users
 		 *  Sixth parameter: Positive Integer -> Base Network Bandwidth between cloudlets
-		 *  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (3)
-		 *  Eighth parameter: Non Negative Integer -> User Mobility prediction, in seconds
-		 *  Ninth parameter: Non Negative Integer -> User Mobility prediction inaccuracy, in meters
-		 *  Tenth parameter: Positive Integer -> Base Network Latency between cloudlets
-		 *  Eleventh parameter (optional): Comma-separated fixed network-slice percentages.
-		 *  Two or three values are accepted and must sum to 100 (for example, 50,50 or 50,30,20).
-		 *  Twelfth parameter (optional): 0 for fixed slices or 1 to borrow idle slice capacity.
-		 *  Thirteenth parameter (optional): 0 edge servers only, 1 end devices only, 2 hybrid.
+		 *  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (2)
+		 *  Eighth parameter: Positive number -> Base Network Latency between cloudlets
+		 *  Ninth parameter: Non Negative Integer -> User Mobility prediction, in seconds
+		 *  Tenth parameter: Non Negative Integer -> User Mobility prediction inaccuracy, in meters
+		 *  Eleventh parameter: Slice scope: 0 transport network only,
+		 *  1 wireless network only, or 2 end-to-end. The default is 2 when omitted.
+		 *  Twelfth parameter: Comma-separated percentages of users assigned to each slice.
+		 *  Thirteenth parameter: Comma-separated network-slice bandwidth percentages.
+		 *  Fourteenth parameter: 0 for fixed slices or 1 to borrow idle slice capacity.
+		 *  Fifteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
 		 */
 
 		Log.disable();
@@ -161,46 +163,8 @@ public class AppExample {
 
 		setPositionApPolicy(Policies.FIXED_AP_LOCATION);
 		setPositionScPolicy(Policies.FIXED_SC_LOCATION);
-		setSeed(Integer.parseInt(args[1]));
-
 		setStepPolicy(1);
-		if (Integer.parseInt(args[0]) == 0) {
-			setMigrationAble(false);
-		} else {
-			setMigrationAble(true);
-		}
-		if (getSeed() < 1) {
-			System.out.println("Seed cannot be less than 1");
-			System.exit(0);
-		}
-		setRand(new Random(getSeed() * Integer.MAX_VALUE));
-		// FIXED_MIGRATION_POINT = 0;
-		// SPEED_MIGRATION_POINT = 1;
-		setMigPointPolicy(Integer.parseInt(args[2]));
-		// LOWEST_LATENCY = 0;
-		// LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET = 1;
-		// LOWEST_DIST_BW_SMARTTING_AP = 2;
-		setMigStrategyPolicy(Integer.parseInt(args[3]));
-		setMaxSmartThings(Integer.parseInt(args[4]));
-		setMaxBandwidth(Integer.parseInt(args[5]));
-		// MIGRATION_COMPLETE_VM = 0;
-		// MIGRATION_CONTAINER_VM = 1;
-		// LIVE_MIGRATION = 2;
-		setPolicyReplicaVM(Integer.parseInt(args[6]));
-		setTravelPredicTimeForST(Integer.parseInt(args[7]));
-		setMobilityPredictionError(Integer.parseInt(args[8]));
-		setLatencyBetweenCloudlets(Double.parseDouble(args[9]));
-		NetworkSlicing.configure(args.length > 10 ? args[10] : null);
-		if (args.length > 11) {
-			int dynamicSlicing = Integer.parseInt(args[11]);
-			if (dynamicSlicing != 0 && dynamicSlicing != 1) {
-				throw new IllegalArgumentException(
-					"Dynamic slicing must be 0 (fixed) or 1 (borrow idle capacity)");
-			}
-			NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
-		}
-		VmDestinationPolicy.configure(args.length > 12 ? Integer.parseInt(args[12])
-			: VmDestinationPolicy.HYBRID);
+		configureSimulationParameters(args);
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
@@ -241,11 +205,11 @@ public class AppExample {
 		}
 
 		/* It is creating Smart Things. */
+		int[] userSliceAssignments = NetworkSlicing.getUserSliceAssignments(
+			getMaxSmartThings());
 		for (int i = 0; i < getMaxSmartThings(); i++) {// it creates the SmartThings
 			addSmartThing(smartThings, coordDevices, i);
-			// Users are distributed evenly across the configured groups. Change this
-			// assignment here (or call setNetworkSliceId) for custom memberships.
-			smartThings.get(i).setNetworkSliceId(i % NetworkSlicing.getSliceCount());
+			smartThings.get(i).setNetworkSliceId(userSliceAssignments[i]);
 		}
 
 		readMoblityData();
@@ -523,6 +487,43 @@ public class AppExample {
 		CloudSim.startSimulation();
 		System.out.println("Simulation over");
 		CloudSim.stopSimulation();
+	}
+
+	static void configureSimulationParameters(String[] args) {
+		if (args == null || args.length < 10) {
+			throw new IllegalArgumentException(
+				"AppExample requires at least the first ten simulation parameters");
+		}
+
+		setMigrationAble(Integer.parseInt(args[0]) != 0);
+		setSeed(Integer.parseInt(args[1]));
+		if (getSeed() < 1) {
+			throw new IllegalArgumentException("Seed cannot be less than 1");
+		}
+		setRand(new Random(getSeed() * Integer.MAX_VALUE));
+		setMigPointPolicy(Integer.parseInt(args[2]));
+		setMigStrategyPolicy(Integer.parseInt(args[3]));
+		setMaxSmartThings(Integer.parseInt(args[4]));
+		setMaxBandwidth(Integer.parseInt(args[5]));
+		setPolicyReplicaVM(Integer.parseInt(args[6]));
+		setLatencyBetweenCloudlets(Double.parseDouble(args[7]));
+		setTravelPredicTimeForST(Integer.parseInt(args[8]));
+		setMobilityPredictionError(Integer.parseInt(args[9]));
+
+		NetworkSlicing.setScope(args.length > 10 ? Integer.parseInt(args[10])
+			: NetworkSlicing.END_TO_END_NETWORK);
+		String userAllocation = args.length > 11 ? args[11] : null;
+		NetworkSlicing.configure(args.length > 12 ? args[12] : null);
+		NetworkSlicing.configureUserAllocation(userAllocation);
+
+		int dynamicSlicing = args.length > 13 ? Integer.parseInt(args[13]) : 1;
+		if (dynamicSlicing != 0 && dynamicSlicing != 1) {
+			throw new IllegalArgumentException(
+				"Dynamic slicing must be 0 (fixed) or 1 (borrow idle capacity)");
+		}
+		NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
+		VmDestinationPolicy.configure(args.length > 14 ? Integer.parseInt(args[14])
+			: VmDestinationPolicy.HYBRID);
 	}
 
 	private static void readMoblityData() {
