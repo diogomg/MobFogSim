@@ -997,37 +997,62 @@ public class AppExample {
 	}
 
 	private static void createServerCloudletsNetwork(List<FogDevice> serverCloudlets) {
-		// for no full graph, use -1 to link
-		HashMap<FogDevice, Double> net = new HashMap<>();
-		int i = 0, j = 0, linha, coluna;
-		for (FogDevice sc : serverCloudlets) {// It makes a full graph
-			j = 0;
-			for (FogDevice sc1 : serverCloudlets) {
-				if (sc.equals(sc1)) {
-					break;
-				}
+		createServerCloudletAdjacency(serverCloudlets);
 
-				linha = ((int) (j / 12) - (int) (i / 12));
-				if (linha < 0)
-					linha *= -1;
-				coluna = ((int) (j % 12) - (int) (i % 12));
-				if (coluna < 0)
-					coluna *= -1;
-				if (sc.getUplinkBandwidth() < sc1.getDownlinkBandwidth()) {
-					net.put(sc1, sc.getUplinkBandwidth());
-					NetworkTopology.addLink(sc.getId(), sc1.getId(),
-						sc.getUplinkBandwidth(), (Math.max(linha, coluna))
-							* getLatencyBetweenCloudlets() + getRand().nextDouble());
-				} else {
-					net.put(sc1, sc1.getDownlinkBandwidth());
-					NetworkTopology.addLink(sc.getId(), sc1.getId(),
-						sc1.getDownlinkBandwidth(), (Math.max(linha, coluna))
-							* getLatencyBetweenCloudlets() + getRand().nextDouble());
-				}
-				j++;
+		// CloudSim models these links as undirected. Register each pair once,
+		// retaining the original lower-triangle order so seeded latency values
+		// remain reproducible.
+		for (int sourceIndex = 0; sourceIndex < serverCloudlets.size(); sourceIndex++) {
+			FogDevice source = serverCloudlets.get(sourceIndex);
+			for (int destinationIndex = 0; destinationIndex < sourceIndex;
+				destinationIndex++) {
+				FogDevice destination = serverCloudlets.get(destinationIndex);
+				int rowDistance = Math.abs(destinationIndex / 12 - sourceIndex / 12);
+				int columnDistance = Math.abs(destinationIndex % 12 - sourceIndex % 12);
+				double bandwidth = Math.min(source.getUplinkBandwidth(),
+					destination.getDownlinkBandwidth());
+				double latency = Math.max(rowDistance, columnDistance)
+					* getLatencyBetweenCloudlets() + getRand().nextDouble();
+				NetworkTopology.addLink(source.getId(), destination.getId(), bandwidth,
+					latency);
 			}
-			i++;
-			sc.setNetServerCloudlets(net);
+		}
+	}
+
+	/**
+	 * Creates a complete directed adjacency map for every server cloudlet.
+	 * Every source owns a different map and contains every other cloudlet once.
+	 */
+	static void createServerCloudletAdjacency(List<FogDevice> serverCloudlets) {
+		validateServerCloudlets(serverCloudlets);
+		for (FogDevice source : serverCloudlets) {
+			HashMap<FogDevice, Double> adjacency =
+				new HashMap<FogDevice, Double>();
+			for (FogDevice destination : serverCloudlets) {
+				if (source == destination) {
+					continue;
+				}
+				adjacency.put(destination, Math.min(source.getUplinkBandwidth(),
+					destination.getDownlinkBandwidth()));
+			}
+			source.setNetServerCloudlets(adjacency);
+		}
+	}
+
+	private static void validateServerCloudlets(List<FogDevice> serverCloudlets) {
+		if (serverCloudlets == null) {
+			throw new IllegalArgumentException("Server cloudlet list cannot be null");
+		}
+		Set<FogDevice> uniqueCloudlets = new HashSet<FogDevice>();
+		for (FogDevice serverCloudlet : serverCloudlets) {
+			if (serverCloudlet == null) {
+				throw new IllegalArgumentException(
+					"Server cloudlet list cannot contain null entries");
+			}
+			if (!uniqueCloudlets.add(serverCloudlet)) {
+				throw new IllegalArgumentException(
+					"Server cloudlet list cannot contain duplicate devices");
+			}
 		}
 	}
 

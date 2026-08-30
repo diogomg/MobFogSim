@@ -155,12 +155,9 @@ public class DecisionMigration_OLD {
 	public static boolean checkLinkStatus(FogDevice sourceServerCloudlet,
 		FogDevice destinationServerCloudlet) {
 
-		if (sourceServerCloudlet.getNetServerCloudlets().get(destinationServerCloudlet) != null) {
-			return true;
-		}
-		else {
-			return false;
-		}
+		return sourceServerCloudlet.getNetServerCloudlets() != null
+			&& sourceServerCloudlet.getNetServerCloudlets()
+				.containsKey(destinationServerCloudlet);
 	}
 
 	public static ApDevice getCorrentAP() {

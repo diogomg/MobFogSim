@@ -150,7 +150,12 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void setNetServerCloudlets(HashMap<FogDevice, Double> netServerCloudlets) {
-		this.netServerCloudlets = netServerCloudlets;
+		if (netServerCloudlets == null) {
+			throw new IllegalArgumentException(
+				"Server cloudlet adjacency map cannot be null");
+		}
+		this.netServerCloudlets =
+			new HashMap<FogDevice, Double>(netServerCloudlets);
 	}
 
 	public Service getService() {

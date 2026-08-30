@@ -54,12 +54,9 @@ public class ServiceAgreement {
 			return true;
 		}
 
-		if (sourceServerCloudlet.getNetServerCloudlets().get(destinationServerCloudlet) != null) {
-			return true;
-		}
-		else {
-			return false;
-		}
+		return sourceServerCloudlet.getNetServerCloudlets() != null
+			&& sourceServerCloudlet.getNetServerCloudlets()
+				.containsKey(destinationServerCloudlet);
 	}
 
 	public static int getServiceType() {
