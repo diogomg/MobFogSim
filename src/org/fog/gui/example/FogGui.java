@@ -63,7 +63,7 @@ public class FogGui extends JFrame {
 	private String mode;  // 'm':manual; 'i':import
 
 	public FogGui() {
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setPreferredSize(new Dimension(1280, 800));
 		setLocationRelativeTo(null);
 
@@ -276,7 +276,7 @@ public class FogGui extends JFrame {
 		});
 		btnExit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				System.exit(0);
+				FogGui.this.dispose();
 			}
 
 		});
@@ -414,7 +414,7 @@ public class FogGui extends JFrame {
 
 		fileExit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				System.exit(0);
+				FogGui.this.dispose();
 			}
 
 		});

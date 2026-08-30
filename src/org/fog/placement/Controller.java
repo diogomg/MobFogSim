@@ -34,6 +34,7 @@ public class Controller extends SimEntity {
 	private Map<String, Integer> appLaunchDelays;
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
+	private boolean shutdownRequested;
 
 	public Controller(String name, List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, ModuleMapping moduleMapping) {
@@ -103,15 +104,22 @@ public class Controller extends SimEntity {
 			manageResources();
 			break;
 		case FogEvents.STOP_SIMULATION:
-			CloudSim.stopSimulation();
-			printTimeDetails();
-			printPowerDetails();
-			printCostDetails();
-			printNetworkUsageDetails();
-			System.exit(0);
+			requestSimulationStop();
 			break;
 
 		}
+	}
+
+	private void requestSimulationStop() {
+		if (shutdownRequested) {
+			return;
+		}
+		shutdownRequested = true;
+		printTimeDetails();
+		printPowerDetails();
+		printCostDetails();
+		printNetworkUsageDetails();
+		CloudSim.terminateSimulation();
 	}
 
 	private void printNetworkUsageDetails() {

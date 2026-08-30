@@ -119,8 +119,6 @@ public class VRGameFog {
 
 			CloudSim.startSimulation();
 
-			CloudSim.stopSimulation();
-
 			Log.printLine("VRGame finished!");
 		} catch (Exception e) {
 			e.printStackTrace();

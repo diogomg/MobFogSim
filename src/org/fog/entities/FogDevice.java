@@ -665,14 +665,19 @@ public class FogDevice extends PowerDatacenter {
 		Application app = smartThing.getVmLocalServerCloudlet().applicationMap.get("MyApp_vr_game"
 			+ smartThing.getMyId());
 		if (app == null) {
-			System.out.println("Clock: " + CloudSim.clock() + " - FogDevice.java - App == Null");
-			System.exit(0);
+			scheduleMigrationAbort(smartThing,
+				"application MyApp_vr_game" + smartThing.getMyId()
+					+ " is missing from the current VM host");
+			return;
 		}
 		getApplicationMap().put(app.getAppId(), app);
 
 		if (smartThing.getVmLocalServerCloudlet().getApplicationMap().remove(app.getAppId()) == null) {
-			System.out.println("FogDevice.java - applicationMap did not remove. return == null");
-			System.exit(0);
+			getApplicationMap().remove(app.getAppId());
+			scheduleMigrationAbort(smartThing,
+				"application " + app.getAppId() + " could not be removed from "
+					+ smartThing.getVmLocalServerCloudlet().getName());
+			return;
 		}
 
 		MobileController mobileController = (MobileController) CloudSim
@@ -798,6 +803,14 @@ public class FogDevice extends PowerDatacenter {
 			if (!smartThing.isAbortMigration()) {
 				// the smartThing isn't connected in any ap right now
 				if (smartThing.getSourceAp() != null) {
+					if (smartThing.getVmLocalServerCloudlet() == null
+						|| smartThing.getDestinationServerCloudlet() == null
+						|| smartThing.getVmMobileDevice() == null
+						|| smartThing.getDestinationServerCloudlet().getHost() == null) {
+						scheduleMigrationAbort(smartThing,
+							"migration requires current and destination hosts plus a VM");
+						return;
+					}
 					int srcId = getId();
 					int entityId = smartThing.getDestinationServerCloudlet().getId();
 					Double delay = 1.0;
@@ -818,31 +831,19 @@ public class FogDevice extends PowerDatacenter {
 
 					sendNow(smartThing.getDestinationServerCloudlet().getId(),
 						MobileEvents.VM_MIGRATE, smartThing);
-					Map<String, Object> ma;
-					ma = new HashMap<String, Object>();
-
-					if (smartThing.getVmMobileDevice() == null) {
-						System.out.println(smartThing.getName() + " has a null VM");
-					}
+					Map<String, Object> ma = new HashMap<String, Object>();
 					ma.put("vm", smartThing.getVmMobileDevice());
 					ma.put("host", smartThing.getDestinationServerCloudlet().getHost());
-					if (ma.size() < 2) {
-						sendNow(getId(), MobileEvents.ABORT_MIGRATION, smartThing);
-						System.out.println("FogDevice.java ma.size()<2");
-						System.exit(0);
-					}
-					else {
-						sendNow(smartThing.getVmLocalServerCloudlet().getId(),
-							CloudSimTags.VM_MIGRATE, ma);
-						LogMobile.debug("FogDevice.java",
-							"CloudSim.VM_MIGRATE was scheduled  to VM#: "
-								+ smartThing.getVmMobileDevice().getId() + " HOST#: " +
-								smartThing.getDestinationServerCloudlet().getHost().getId());
-						System.out.println("FogDevice.java"
-							+ " CloudSim.VM_MIGRATE was scheduled  to VM#: "
+					sendNow(smartThing.getVmLocalServerCloudlet().getId(),
+						CloudSimTags.VM_MIGRATE, ma);
+					LogMobile.debug("FogDevice.java",
+						"CloudSim.VM_MIGRATE was scheduled  to VM#: "
 							+ smartThing.getVmMobileDevice().getId() + " HOST#: " +
 							smartThing.getDestinationServerCloudlet().getHost().getId());
-					}
+					System.out.println("FogDevice.java"
+						+ " CloudSim.VM_MIGRATE was scheduled  to VM#: "
+						+ smartThing.getVmMobileDevice().getId() + " HOST#: " +
+						smartThing.getDestinationServerCloudlet().getHost().getId());
 				}
 				else {
 					sendNow(smartThing.getVmLocalServerCloudlet().getId(),
@@ -857,6 +858,14 @@ public class FogDevice extends PowerDatacenter {
 			LogMobile.debug("FogDevice.java", smartThing.getName()
 				+ " was excluded from List of SmartThings!");
 		}
+	}
+
+	private void scheduleMigrationAbort(MobileDevice smartThing, String reason) {
+		System.err.println("Clock " + CloudSim.clock() + ": aborting migration for "
+			+ smartThing.getName() + " because " + reason);
+		FogDevice currentHost = smartThing.getVmLocalServerCloudlet();
+		int abortHandlerId = currentHost == null ? getId() : currentHost.getId();
+		sendNow(abortHandlerId, MobileEvents.ABORT_MIGRATION, smartThing);
 	}
 
 	private void deliveryVM(SimEvent ev) {

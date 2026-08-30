@@ -140,11 +140,9 @@ public class DecisionMigration_OLD {
 			}
 		}
 
-		// ABORT SIMULATION
-		System.out.println("*******ERROR******");
-		System.out.println("DecisionMigration");
-		System.exit(0);
-		return false;
+		throw new IllegalStateException("Unsupported service type " + serviceType
+			+ " for migration destination "
+			+ serverCloudlets.get(getNextServerClouletId()).getName());
 
 	}// end class
 

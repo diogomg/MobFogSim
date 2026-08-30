@@ -70,6 +70,7 @@ public class MobileController extends SimEntity {
 	private Map<String, Integer> appLaunchDelays;
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
+	private boolean shutdownRequested;
 
 	static final int numOfDepts = 1;
 	static final int numOfMobilesPerDept = 4;
@@ -312,20 +313,27 @@ public class MobileController extends SimEntity {
 				sendNow(getId(), MobileEvents.STOP_SIMULATION);
 			break;
 		case MobileEvents.STOP_SIMULATION:
-			System.out
-				.println("*********************Stoping simulation********************");
-			System.out.println("CloudSim.clock(): " + CloudSim.clock());
-			System.out.println("Size SmartThings: " + getSmartThings().size());
-			CloudSim.stopSimulation();
-			printTimeDetails();
-			printPowerDetails();
-			printCostDetails();
-			printNetworkUsageDetails();
-			printMigrationsDetalis();
-			System.exit(0);
+			requestSimulationStop();
 			break;
 
 		}
+	}
+
+	private void requestSimulationStop() {
+		if (shutdownRequested) {
+			return;
+		}
+		shutdownRequested = true;
+		System.out
+			.println("*********************Stopping simulation********************");
+		System.out.println("CloudSim.clock(): " + CloudSim.clock());
+		System.out.println("Size SmartThings: " + getSmartThings().size());
+		printTimeDetails();
+		printPowerDetails();
+		printCostDetails();
+		printNetworkUsageDetails();
+		printMigrationsDetalis();
+		CloudSim.terminateSimulation();
 	}
 
 	private void createNewSmartThing(SimEvent ev) {

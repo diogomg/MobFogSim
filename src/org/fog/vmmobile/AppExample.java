@@ -486,7 +486,6 @@ public class AppExample {
 		System.out.println("Inicio: " + Calendar.getInstance().getTime());
 		CloudSim.startSimulation();
 		System.out.println("Simulation over");
-		CloudSim.stopSimulation();
 	}
 
 	static void configureSimulationParameters(String[] args) {

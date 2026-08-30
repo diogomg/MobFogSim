@@ -40,9 +40,9 @@ public class ServiceAgreement {
 			}
 		}
 		else {
-			System.out.println("ServiceAgreement.java - Nao pode passar aqui!");
-			System.exit(0);
-			return false;
+			throw new IllegalStateException("Unsupported service type "
+				+ getServiceType() + " for server cloudlet "
+				+ serverCloudlet.getName());
 		}
 	}
 

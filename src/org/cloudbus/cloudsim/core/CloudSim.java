@@ -207,21 +207,14 @@ public class CloudSim {
 	public static double startSimulation() throws NullPointerException {
 		Log.printLine("Starting CloudSim version " + CLOUDSIM_VERSION_STRING);
 		try {
-
-			double clock = run();
-
-			// reset all static variables
+			return run();
+		} finally {
+			// Reset top-level references even when a simulation entity fails.
 			cisId = -1;
 			shutdownId = -1;
 			cis = null;
 			calendar = null;
 			traceFlag = false;
-
-			return clock;
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			throw new NullPointerException("CloudSim.startCloudSimulation() :"
-				+ " Error - you haven't initialized CloudSim.");
 		}
 	}
 
@@ -392,6 +385,7 @@ public class CloudSim {
 		waitPredicates = new HashMap<Integer, Predicate>();
 		clock = 0;
 		running = false;
+		terminateAt = -1;
 		countador = 0;
 	}
 
@@ -560,11 +554,17 @@ public class CloudSim {
 	public static boolean runClockTick() {
 		boolean queue_empty;
 
+		if (!running) {
+			return false;
+		}
 		while (!runnableEntities.isEmpty()) {
 			int entityId = runnableEntities.pollFirst();
 			SimEntity ent = entities.get(entityId);
 			if (ent.getState() == SimEntity.RUNNABLE) {
 				ent.run();
+				if (!running) {
+					return false;
+				}
 			}
 		}
 		// Periodic schedules registered during initialization have priority over
@@ -1027,45 +1027,55 @@ public class CloudSim {
 	 * @return the double last clock value
 	 */
 	public static double run() {
-		if (!running) {
-			runStart();
-		}
-
-		while (true) {
-			if (runClockTick() || abruptTerminate) {
-				break;
+		try {
+			if (!running) {
+				runStart();
 			}
 
-			// this block allows termination of simulation at a specific time
-			if (terminateAt > 0.0 && clock >= terminateAt) {
-				terminateSimulation();
-				clock = terminateAt;
-				break;
-			}
+			while (true) {
+				if (runClockTick() || abruptTerminate || !running) {
+					break;
+				}
+
+				// this block allows termination of simulation at a specific time
+				if (terminateAt > 0.0 && clock >= terminateAt) {
+					terminateSimulation();
+					clock = terminateAt;
+					break;
+				}
 
 				if (pauseAt != -1
 					&& ((getNextEventTime() < Double.POSITIVE_INFINITY && clock <= pauseAt
 						&& pauseAt <= getNextEventTime())
 						|| getNextEventTime() == Double.POSITIVE_INFINITY && pauseAt <= clock)) {
-				pauseSimulation();
-				clock = pauseAt;
-			}
+					pauseSimulation();
+					clock = pauseAt;
+				}
 
-			while (paused) {
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+				while (paused) {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException(
+							"CloudSim was interrupted while paused", e);
+					}
 				}
 			}
+
+			return clock();
+		} catch (RuntimeException e) {
+			abruptTerminate = true;
+			throw e;
+		} catch (Error e) {
+			abruptTerminate = true;
+			throw e;
+		} finally {
+			if (entities != null) {
+				finishSimulation();
+				runStop();
+			}
 		}
-
-		double clock = clock();
-
-		finishSimulation();
-		runStop();
-
-		return clock;
 	}
 
 	/**
@@ -1073,35 +1083,38 @@ public class CloudSim {
 	 * <b>not</b> be used in user simulations.
 	 */
 	public static void finishSimulation() {
-		// Allow all entities to exit their body method
-		if (!abruptTerminate) {
-			for (SimEntity ent : entities) {
-				if (ent.getState() != SimEntity.FINISHED) {
-					ent.run();
+		try {
+			// Allow all entities to exit their body method
+			if (!abruptTerminate) {
+				for (SimEntity ent : entities) {
+					if (ent.getState() != SimEntity.FINISHED) {
+						ent.run();
+					}
 				}
 			}
+
+			for (SimEntity ent : entities) {
+				ent.shutdownEntity();
+			}
+		} finally {
+			BufferedFileManager.closeAll();
+
+			// reset all static variables
+			entities = null;
+			entitiesByName = null;
+			future = null;
+			deferred = null;
+			periodicEvents = null;
+			runnableEntities = null;
+			clock = 0L;
+			running = false;
+			terminateAt = -1;
+
+			waitPredicates = null;
+			paused = false;
+			pauseAt = -1;
+			abruptTerminate = false;
 		}
-
-		for (SimEntity ent : entities) {
-			ent.shutdownEntity();
-		}
-		BufferedFileManager.closeAll();
-
-		// reset all static variables
-		// Private data members
-		entities = null;
-		entitiesByName = null;
-		future = null;
-		deferred = null;
-		periodicEvents = null;
-		runnableEntities = null;
-		clock = 0L;
-		running = false;
-
-		waitPredicates = null;
-		paused = false;
-		pauseAt = -1;
-		abruptTerminate = false;
 	}
 
 	/**
