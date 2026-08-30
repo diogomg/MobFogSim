@@ -8,9 +8,13 @@ public class NormalDistribution extends Distribution {
 	private double stdDev;
 
 	public NormalDistribution(double mean, double stdDev) {
+		this(mean, stdDev, new Random());
+	}
+
+	public NormalDistribution(double mean, double stdDev, Random random) {
 		setMean(mean);
 		setStdDev(stdDev);
-		setRandom(new Random());
+		setRandom(random);
 	}
 
 	@Override

@@ -33,7 +33,7 @@ public class Sensor extends SimEntity {
 	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, Distribution transmitDistribution, int cpuLength, int nwLength,
 		String tupleType, String destModuleName) {
-		super(name);
+		super(validateRequiredFields(name, appId, tupleType, transmitDistribution));
 		this.setAppId(appId);
 		this.gatewayDeviceId = gatewayDeviceId;
 		this.geoLocation = geoLocation;
@@ -42,14 +42,14 @@ public class Sensor extends SimEntity {
 		setUserId(userId);
 		setDestModuleName(destModuleName);
 		setTupleType(tupleType);
-		setSensorName(sensorName);
+		setSensorName(tupleType);
 		setLatency(latency);
 
 	}
 
 	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, Distribution transmitDistribution, String tupleType) {
-		super(name);
+		super(validateRequiredFields(name, appId, tupleType, transmitDistribution));
 		this.setAppId(appId);
 		this.gatewayDeviceId = gatewayDeviceId;
 		this.geoLocation = geoLocation;
@@ -57,7 +57,7 @@ public class Sensor extends SimEntity {
 		this.setTransmitDistribution(transmitDistribution);
 		setUserId(userId);
 		setTupleType(tupleType);
-		setSensorName(sensorName);
+		setSensorName(tupleType);
 		setLatency(latency);
 	}
 
@@ -74,7 +74,7 @@ public class Sensor extends SimEntity {
 	 */
 	public Sensor(String name, String tupleType, int userId, String appId,
 		Distribution transmitDistribution) {
-		super(name);
+		super(validateRequiredFields(name, appId, tupleType, transmitDistribution));
 		this.setAppId(appId);
 		this.setTransmitDistribution(transmitDistribution);
 		setTupleType(tupleType);
@@ -83,15 +83,10 @@ public class Sensor extends SimEntity {
 	}
 
 	public void transmit() {
-		AppEdge _edge = null;
-		for (AppEdge edge : getApp().getEdges()) {
-			if (edge.getSource().equals(getTupleType())) {
-				_edge = edge;
-			}
-		}
+		AppEdge edge = findApplicationEdge(getApp());
 
-		long cpuLength = (long) _edge.getTupleCpuLength();
-		long nwLength = (long) _edge.getTupleNwLength();
+		long cpuLength = (long) edge.getTupleCpuLength();
+		long nwLength = (long) edge.getTupleNwLength();
 
 		Tuple tuple = new Tuple(getAppId(), FogUtils.generateTupleId(), Tuple.UP, cpuLength, 1,
 			nwLength, outputSize, new UtilizationModelFull(), new UtilizationModelFull(),
@@ -99,7 +94,7 @@ public class Sensor extends SimEntity {
 		tuple.setUserId(getUserId());
 		tuple.setTupleType(getTupleType());
 
-		tuple.setDestModuleName(_edge.getDestination());
+		tuple.setDestModuleName(edge.getDestination());
 		tuple.setSrcModuleName(getSensorName());
 		Logger.debug(getName(), "Sending tuple with tupleId = " + tuple.getCloudletId() + " to "
 			+ CloudSim.getEntityName(gatewayDeviceId));
@@ -122,6 +117,53 @@ public class Sensor extends SimEntity {
 			}
 		}
 		return -1;
+	}
+
+	private static String validateRequiredFields(String name, String appId, String tupleType,
+		Distribution transmitDistribution) {
+		if (appId == null || appId.trim().isEmpty()) {
+			throw new IllegalArgumentException("Sensor application ID cannot be empty");
+		}
+		if (tupleType == null || tupleType.trim().isEmpty()) {
+			throw new IllegalArgumentException("Sensor tuple type cannot be empty");
+		}
+		if (transmitDistribution == null) {
+			throw new IllegalArgumentException(
+				"Sensor transmit distribution cannot be null");
+		}
+		return name;
+	}
+
+	private AppEdge findApplicationEdge(Application application) {
+		if (application == null) {
+			throw new IllegalStateException(
+				"Sensor " + getName() + " has no submitted application");
+		}
+
+		AppEdge matchingEdge = null;
+		for (AppEdge edge : application.getEdges()) {
+			if (!getTupleType().equals(edge.getSource())) {
+				continue;
+			}
+			if (getDestModuleName() != null
+				&& !getDestModuleName().equals(edge.getDestination())) {
+				continue;
+			}
+			if (matchingEdge != null) {
+				throw new IllegalArgumentException("Application " + application.getAppId()
+					+ " defines multiple edges for sensor tuple type " + getTupleType());
+			}
+			matchingEdge = edge;
+		}
+
+		if (matchingEdge == null) {
+			String destination = getDestModuleName() == null ? ""
+				: " to " + getDestModuleName();
+			throw new IllegalArgumentException("Application " + application.getAppId()
+				+ " does not define an edge from sensor tuple type " + getTupleType()
+				+ destination);
+		}
+		return matchingEdge;
 	}
 
 	@Override
@@ -225,6 +267,7 @@ public class Sensor extends SimEntity {
 	}
 
 	public void setApp(Application app) {
+		findApplicationEdge(app);
 		this.app = app;
 	}
 

@@ -214,9 +214,9 @@ public class Coordinate { // extends Map {
 		if (y < 0)
 			y = 0;
 		if (x >= MaxAndMin.MAX_X)
-			x = MaxAndMin.MAX_X;
+			x = MaxAndMin.MAX_X - 1;
 		if (y >= MaxAndMin.MAX_Y)
-			y = MaxAndMin.MAX_Y;
+			y = MaxAndMin.MAX_Y - 1;
 
 		Coordinate coord_result = new Coordinate();
 		coord_result.setCoordX(x);

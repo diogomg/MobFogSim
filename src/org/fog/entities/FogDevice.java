@@ -1407,8 +1407,9 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	protected void removeChild(int childId) {
-		getChildrenIds().remove(CloudSim.getEntity(childId));
+		getChildrenIds().remove(Integer.valueOf(childId));
 		getChildToOperatorsMap().remove(childId);
+		getChildToLatencyMap().remove(childId);
 	}
 
 	protected void updateCloudTraffic() {

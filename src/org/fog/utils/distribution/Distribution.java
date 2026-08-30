@@ -17,6 +17,9 @@ public abstract class Distribution {
 	}
 
 	public void setRandom(Random random) {
+		if (random == null) {
+			throw new IllegalArgumentException("Random generator cannot be null");
+		}
 		this.random = random;
 	}
 

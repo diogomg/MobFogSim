@@ -75,7 +75,7 @@ public class NextStep {
 		MobileDevice st = null;
 		Coordinate coordinate = new Coordinate();
 		// It makes the new position according direction and speed
-		for (int i = 0; i < smartThings.size(); i++) {
+		for (int i = smartThings.size() - 1; i >= 0; i--) {
 			st = smartThings.get(i);
 			if (st.getTravelTimeId() == -1) {
 				continue;

@@ -200,10 +200,14 @@ public class Controller extends SimEntity {
 		getApplications().put(application.getAppId(), application);
 		getAppLaunchDelays().put(application.getAppId(), delay);
 		for (Sensor sensor : sensors) {
-			sensor.setApp(application);
+			if (application.getAppId().equals(sensor.getAppId())) {
+				sensor.setApp(application);
+			}
 		}
 		for (Actuator ac : actuators) {
-			ac.setApp(application);
+			if (application.getAppId().equals(ac.getAppId())) {
+				ac.setApp(application);
+			}
 		}
 
 		for (AppEdge edge : application.getEdges()) {

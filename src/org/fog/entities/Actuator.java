@@ -88,6 +88,10 @@ public class Actuator extends SimEntity {
 		String srcModule = tuple.getSrcModuleName();
 		String destModule = tuple.getDestModuleName();
 		Application app = getApp();
+		if (app == null) {
+			throw new IllegalStateException(
+				"Actuator " + getName() + " has no submitted application");
+		}
 
 		for (AppLoop loop : app.getLoops()) {
 			if (loop.hasEdge(srcModule, destModule) && loop.isEndModule(destModule)) {
@@ -107,77 +111,84 @@ public class Actuator extends SimEntity {
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopId.txt");
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopMaxId.txt");
 				}
-				MobileDevice st = (MobileDevice) CloudSim.getEntity(getGatewayDeviceId());
 				double currentAverage = TimeKeeper.getInstance().getLoopIdToCurrentAverage()
 					.get(loop.getLoopId());
 				int currentCount = TimeKeeper.getInstance().getLoopIdToCurrentNum()
 					.get(loop.getLoopId());
-				double delay = CloudSim.clock()
-					- TimeKeeper.getInstance().getEmitTimes().get(tuple.getActualTupleId());
-				if (MobileController.getSmartThings().contains(st)) {
-					if (st != null) {
-						if (st.getSourceAp() != null) {
-							if (st.getSourceAp().getServerCloudletToVmMigrate() != null) {
-								if (st.getVmLocalServerCloudlet() != null) {
-									System.out.println("Nao NULO");
-									if (st.getSourceAp().getServerCloudlet()
-										.equals(st.getVmLocalServerCloudlet())) {
-										System.out.println("Primeiro IF");
-										delay += NetworkTopology.getDelay(st.getId(), st
-											.getSourceAp().getId())
-											+ NetworkTopology.getDelay(st.getSourceAp().getId(), st
-												.getVmLocalServerCloudlet().getId())
-											+ LatencyByDistance.latencyConnection(
-												st.getVmLocalServerCloudlet(), st);
-									}
-									else {
-										double sum = NetworkTopology.getDelay(st.getId(), st
-											.getSourceAp().getId())
-											+ NetworkTopology.getDelay(st.getSourceAp().getId(), st
-												.getSourceAp().getServerCloudlet().getId())
-											+ 1.0 // router
-											+ NetworkTopology.getDelay(st.getSourceAp()
-												.getServerCloudlet().getId(), st
-												.getVmLocalServerCloudlet().getId())
-											+ LatencyByDistance.latencyConnection(
-												st.getVmLocalServerCloudlet(), st);
-										delay += sum;
-									}
-								}
-								else {
-									st.getVmLocalServerCloudlet();
-								}
-							}
-							else {
-								st.getSourceAp().getServerCloudletToVmMigrate();
-							}
-						}
-						else {
-							st.getSourceAp();
-						}
-					}
-
-					MyStatistics.getInstance().putLatencyFileValue(delay, CloudSim.clock(),
-						app.getAppId(), getMyId(), st.getVmLocalServerCloudlet().getName(),
-						tuple.getTupleType());
-					if (delay > TimeKeeper.getInstance().getMaxLoopExecutionTime()
-						.get(loop.getLoopId())) {
-						TimeKeeper.getInstance().getMaxLoopExecutionTime()
-							.put(loop.getLoopId(), delay);
-						printResults(String.valueOf(delay), loop.getLoopId() + "LoopMaxId.txt");
-					}
-					TimeKeeper.getInstance().getEmitTimes().remove(tuple.getActualTupleId());
-					double newAverage = (currentAverage * currentCount + delay)
-						/ (currentCount + 1);
-					TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-						.put(loop.getLoopId(), newAverage);
-					TimeKeeper.getInstance().getLoopIdToCurrentNum()
-						.put(loop.getLoopId(), currentCount + 1);
-					printResults(String.valueOf(delay), loop.getLoopId() + "LoopId.txt");
-					break;
+				double delay = CloudSim.clock() - startTime;
+				MobileDevice mobileGateway = getMobileGateway();
+				if (isActiveMobileDevice(mobileGateway)) {
+					delay = addMobilePathLatency(delay, mobileGateway);
+					recordMobileLatency(delay, app, tuple, mobileGateway);
 				}
+
+				if (delay > TimeKeeper.getInstance().getMaxLoopExecutionTime()
+					.get(loop.getLoopId())) {
+					TimeKeeper.getInstance().getMaxLoopExecutionTime()
+						.put(loop.getLoopId(), delay);
+					printResults(String.valueOf(delay), loop.getLoopId() + "LoopMaxId.txt");
+				}
+				TimeKeeper.getInstance().getEmitTimes().remove(tuple.getActualTupleId());
+				double newAverage = (currentAverage * currentCount + delay)
+					/ (currentCount + 1);
+				TimeKeeper.getInstance().getLoopIdToCurrentAverage()
+					.put(loop.getLoopId(), newAverage);
+				TimeKeeper.getInstance().getLoopIdToCurrentNum()
+					.put(loop.getLoopId(), currentCount + 1);
+				printResults(String.valueOf(delay), loop.getLoopId() + "LoopId.txt");
+				break;
 			}
 		}
+	}
+
+	private MobileDevice getMobileGateway() {
+		SimEntity gateway = CloudSim.getEntity(getGatewayDeviceId());
+		return gateway instanceof MobileDevice ? (MobileDevice) gateway : null;
+	}
+
+	private boolean isActiveMobileDevice(MobileDevice mobileDevice) {
+		return mobileDevice != null && MobileController.getSmartThings() != null
+			&& MobileController.getSmartThings().contains(mobileDevice);
+	}
+
+	private double addMobilePathLatency(double delay, MobileDevice mobileDevice) {
+		if (mobileDevice.getSourceAp() == null
+			|| mobileDevice.getSourceAp().getServerCloudletToVmMigrate() == null
+			|| mobileDevice.getSourceAp().getServerCloudlet() == null
+			|| mobileDevice.getVmLocalServerCloudlet() == null) {
+			return delay;
+		}
+
+		if (mobileDevice.getSourceAp().getServerCloudlet()
+			.equals(mobileDevice.getVmLocalServerCloudlet())) {
+			return delay + NetworkTopology.getDelay(mobileDevice.getId(),
+				mobileDevice.getSourceAp().getId())
+				+ NetworkTopology.getDelay(mobileDevice.getSourceAp().getId(),
+					mobileDevice.getVmLocalServerCloudlet().getId())
+				+ LatencyByDistance.latencyConnection(
+					mobileDevice.getVmLocalServerCloudlet(), mobileDevice);
+		}
+
+		return delay + NetworkTopology.getDelay(mobileDevice.getId(),
+			mobileDevice.getSourceAp().getId())
+			+ NetworkTopology.getDelay(mobileDevice.getSourceAp().getId(),
+				mobileDevice.getSourceAp().getServerCloudlet().getId())
+			+ 1.0 // router
+			+ NetworkTopology.getDelay(
+				mobileDevice.getSourceAp().getServerCloudlet().getId(),
+				mobileDevice.getVmLocalServerCloudlet().getId())
+			+ LatencyByDistance.latencyConnection(
+				mobileDevice.getVmLocalServerCloudlet(), mobileDevice);
+	}
+
+	private void recordMobileLatency(double delay, Application application, Tuple tuple,
+		MobileDevice mobileDevice) {
+		if (mobileDevice.getVmLocalServerCloudlet() == null) {
+			return;
+		}
+		MyStatistics.getInstance().putLatencyFileValue(delay, CloudSim.clock(),
+			application.getAppId(), getMyId(),
+			mobileDevice.getVmLocalServerCloudlet().getName(), tuple.getTupleType());
 	}
 
 	@Override

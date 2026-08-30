@@ -5,14 +5,21 @@ TEST_CLASSES := build/test-classes
 TEST_CLASSPATH := $(TEST_CLASSES):jars/*:jars/commons-math3-3.5/*
 TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
+	org.fog.entities.ActuatorTest \
+	org.fog.entities.FogDeviceChildStateTest \
+	org.fog.entities.SensorTest \
+	org.fog.localization.CoordinateTest \
 	org.fog.vmmigration.MigrationTechniqueTest \
 	org.fog.vmmigration.MigrationPreparationTest \
 	org.fog.vmmigration.MigrationUtilityTest \
 	org.fog.vmmigration.ServiceAgreementTest \
 	org.fog.vmmigration.VmDestinationPolicyTest \
 	org.fog.vmmigration.MobileEdgeHostSelectorTest \
+	org.fog.vmmigration.NextStepTest \
 	org.fog.vmmobile.AppExampleParametersTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
+	org.fog.utils.TimeKeeperTest \
+	org.fog.utils.distribution.RandomizedDistributionTest \
 	org.fog.utils.NetworkSlicingConfigurationTest \
 	org.fog.utils.UserAllocationNetworkSlicingTest \
 	org.fog.utils.NetworkSlicingScopeTest \
