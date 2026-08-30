@@ -21,5 +21,6 @@ public class MobileEvents {
 	public static final int VM_MIGRATE = 5017;
 	public static final int APP_SUBMIT_MIGRATE = 5018;
 	public static final int SET_MIG_STATUS_TRUE = 5019;
+	public static final int START_MIGRATION_TRANSFER = 5020;
 
 }

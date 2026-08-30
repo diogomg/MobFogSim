@@ -1,8 +1,12 @@
 package org.fog.utils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.core.SimEvent;
+import org.cloudbus.cloudsim.core.predicates.Predicate;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
@@ -31,6 +35,75 @@ public final class NetworkSlicing {
 	/* Active migration counts, indexed by directed cloudlet link and slice. */
 	private static final Map<String, int[]> activeTransfers = new HashMap<String, int[]>();
 	private static final Map<Integer, String> transferLinks = new HashMap<Integer, String>();
+	private static final Map<Integer, MigrationTransferMetadata> migrationTransfers =
+		new HashMap<Integer, MigrationTransferMetadata>();
+	private static MigrationTransferScheduler migrationScheduler =
+		new MigrationTransferScheduler(percentages, true, dynamicBorrowing);
+
+	/** Description of a migration that is ready to start using a transport link. */
+	public static final class MigrationTransferRequest {
+		private final FogDevice source;
+		private final FogDevice destination;
+		private final MobileDevice mobileDevice;
+		private final double baselineDuration;
+		private final int completionDestinationId;
+		private final int completionEventTag;
+
+		public MigrationTransferRequest(FogDevice source, FogDevice destination,
+			MobileDevice mobileDevice, double baselineDuration,
+			int completionDestinationId, int completionEventTag) {
+			this.source = source;
+			this.destination = destination;
+			this.mobileDevice = mobileDevice;
+			this.baselineDuration = baselineDuration;
+			this.completionDestinationId = completionDestinationId;
+			this.completionEventTag = completionEventTag;
+		}
+
+		public MobileDevice getMobileDevice() {
+			return mobileDevice;
+		}
+	}
+
+	/** Versioned payload used to ignore an obsolete completion event. */
+	public static final class MigrationTransferCompletion {
+		private final int transferId;
+		private final long generation;
+
+		private MigrationTransferCompletion(int transferId, long generation) {
+			this.transferId = transferId;
+			this.generation = generation;
+		}
+	}
+
+	private static final class MigrationTransferMetadata {
+		private final MobileDevice mobileDevice;
+		private final int eventSourceId;
+		private final int completionDestinationId;
+		private final int completionEventTag;
+
+		private MigrationTransferMetadata(MigrationTransferRequest request) {
+			this.mobileDevice = request.mobileDevice;
+			this.eventSourceId = request.completionDestinationId;
+			this.completionDestinationId = request.completionDestinationId;
+			this.completionEventTag = request.completionEventTag;
+		}
+	}
+
+	private static final class MigrationCompletionPredicate extends Predicate {
+		private final int transferId;
+
+		private MigrationCompletionPredicate(int transferId) {
+			this.transferId = transferId;
+		}
+
+		@Override
+		public boolean match(SimEvent event) {
+			Object data = event.getData();
+			return data instanceof MigrationTransferCompletion
+				&& ((MigrationTransferCompletion) data).transferId == transferId;
+		}
+	}
 
 	private NetworkSlicing() {
 	}
@@ -228,23 +301,16 @@ public final class NetworkSlicing {
 	}
 
 	/**
-	 * Starts accounting for a migration on a link and returns the bandwidth
-	 * currently available to it. A migration receives its reserved share plus
-	 * an equal share of the capacity reserved by slices that have no active
-	 * migration on this same directed link. Concurrent migrations in one slice
-	 * share that slice's current capacity equally.
+	 * Starts snapshot accounting for a migration on a link and returns the
+	 * bandwidth currently available to it. In fixed mode, concurrent migrations
+	 * in one slice share its reserved capacity. In dynamic mode, active slices
+	 * also share the reservations of idle slices. Actual migration execution
+	 * uses {@link #startMigrationTransfer(MigrationTransferRequest)} so existing
+	 * completion events can be updated when this allocation changes.
 	 */
 	public static synchronized double reserveBandwidth(FogDevice source,
 		FogDevice destination, MobileDevice mobileDevice) {
 		int sliceId = validateSliceId(mobileDevice.getNetworkSliceId());
-		if (!coversTransportNetwork()) {
-			linkKey(source, destination);
-			releaseBandwidth(mobileDevice);
-			return getPhysicalBandwidth(source, destination);
-		}
-		if (!dynamicBorrowing) {
-			return getSliceBandwidth(source, destination, sliceId);
-		}
 		String link = linkKey(source, destination);
 		releaseBandwidth(mobileDevice);
 
@@ -261,6 +327,8 @@ public final class NetworkSlicing {
 
 	/** Releases a migration's reservation when it finishes or is aborted. */
 	public static synchronized void releaseBandwidth(MobileDevice mobileDevice) {
+		cancelMigrationTransfer(mobileDevice);
+
 		String link = transferLinks.remove(mobileDevice.getId());
 		if (link == null) {
 			return;
@@ -281,10 +349,81 @@ public final class NetworkSlicing {
 		activeTransfers.remove(link);
 	}
 
+	/**
+	 * Starts a time-aware transfer and schedules its completion. Existing
+	 * transfers on the same directed link are progressed at their previous
+	 * rates and receive replacement completion events at their new rates.
+	 */
+	public static synchronized void startMigrationTransfer(
+		MigrationTransferRequest request) {
+		validateTransferRequest(request);
+
+		int transferId = request.mobileDevice.getId();
+		MigrationTransferMetadata previous = migrationTransfers.remove(transferId);
+		cancelCompletionEvent(transferId, previous);
+
+		double physicalBandwidth = getPhysicalBandwidth(request.source,
+			request.destination);
+		double baselineBandwidth = getSliceBandwidth(request.source,
+			request.destination, request.mobileDevice.getNetworkSliceId());
+		double work = request.baselineDuration * baselineBandwidth;
+
+		List<MigrationTransferScheduler.Schedule> schedules = migrationScheduler.start(
+			transferId, linkKey(request.source, request.destination),
+			request.mobileDevice.getNetworkSliceId(), work, physicalBandwidth,
+			CloudSim.clock());
+		migrationTransfers.put(transferId, new MigrationTransferMetadata(request));
+		applySchedules(schedules);
+	}
+
+	/**
+	 * Completes the transfer represented by an event payload. Returns the mobile
+	 * device for a current event, or {@code null} for a stale rescheduled event.
+	 */
+	public static synchronized MobileDevice completeMigrationTransfer(
+		MigrationTransferCompletion completion) {
+		if (completion == null) {
+			throw new IllegalArgumentException("Migration completion cannot be null");
+		}
+
+		MigrationTransferScheduler.Completion result = migrationScheduler.complete(
+			completion.transferId, completion.generation, CloudSim.clock());
+		if (!result.isAccepted()) {
+			return null;
+		}
+
+		MigrationTransferMetadata metadata = migrationTransfers.remove(
+			result.getTransferId());
+		if (metadata == null) {
+			return null;
+		}
+		metadata.mobileDevice.setMigTime(result.getDuration());
+		applySchedules(result.getSchedules());
+		return metadata.mobileDevice;
+	}
+
+	/** Returns whether a mobile device currently owns a timed transfer. */
+	public static synchronized boolean hasActiveMigrationTransfer(
+		MobileDevice mobileDevice) {
+		return mobileDevice != null && migrationScheduler.contains(mobileDevice.getId());
+	}
+
 	private static double availableBandwidth(FogDevice source, FogDevice destination,
 		int[] activeBySlice, int requestedSlice) {
 		double physicalBandwidth = Math.min(source.getUplinkBandwidth(),
 			destination.getDownlinkBandwidth());
+		if (!coversTransportNetwork()) {
+			int activeTransferCount = 0;
+			for (int active : activeBySlice) {
+				activeTransferCount += active;
+			}
+			return physicalBandwidth / activeTransferCount;
+		}
+		if (!dynamicBorrowing) {
+			return getSliceBandwidth(physicalBandwidth, requestedSlice)
+				/ activeBySlice[requestedSlice];
+		}
+
 		int activeSlices = 0;
 		double idlePercentage = 0.0;
 		for (int sliceId = 0; sliceId < activeBySlice.length; sliceId++) {
@@ -395,8 +534,79 @@ public final class NetworkSlicing {
 	}
 
 	private static void resetUsage() {
+		if (CloudSim.running()) {
+			for (Map.Entry<Integer, MigrationTransferMetadata> entry
+				: migrationTransfers.entrySet()) {
+				cancelCompletionEvent(entry.getKey(), entry.getValue());
+			}
+		}
 		activeTransfers.clear();
 		transferLinks.clear();
+		migrationTransfers.clear();
+		migrationScheduler = new MigrationTransferScheduler(percentages,
+			coversTransportNetwork(), dynamicBorrowing);
+	}
+
+	private static void cancelMigrationTransfer(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			return;
+		}
+		int transferId = mobileDevice.getId();
+		MigrationTransferMetadata metadata = migrationTransfers.remove(transferId);
+		if (metadata == null && !migrationScheduler.contains(transferId)) {
+			return;
+		}
+		cancelCompletionEvent(transferId, metadata);
+		List<MigrationTransferScheduler.Schedule> schedules =
+			migrationScheduler.cancel(transferId, CloudSim.clock());
+		applySchedules(schedules);
+	}
+
+	private static void applySchedules(
+		List<MigrationTransferScheduler.Schedule> schedules) {
+		for (MigrationTransferScheduler.Schedule schedule : schedules) {
+			MigrationTransferMetadata metadata = migrationTransfers.get(
+				schedule.getTransferId());
+			if (metadata == null) {
+				continue;
+			}
+			metadata.mobileDevice.setMigTime(schedule.getTotalDuration());
+			if (!CloudSim.running()) {
+				continue;
+			}
+			cancelCompletionEvent(schedule.getTransferId(), metadata);
+			CloudSim.send(metadata.eventSourceId, metadata.completionDestinationId,
+				schedule.getDelay(), metadata.completionEventTag,
+				new MigrationTransferCompletion(schedule.getTransferId(),
+					schedule.getGeneration()));
+		}
+	}
+
+	private static void cancelCompletionEvent(int transferId,
+		MigrationTransferMetadata metadata) {
+		if (metadata != null && CloudSim.running()) {
+			CloudSim.cancelAll(metadata.eventSourceId,
+				new MigrationCompletionPredicate(transferId));
+		}
+	}
+
+	private static void validateTransferRequest(MigrationTransferRequest request) {
+		if (request == null || request.mobileDevice == null) {
+			throw new IllegalArgumentException(
+				"A migration transfer requires a mobile device");
+		}
+		linkKey(request.source, request.destination);
+		validateSliceId(request.mobileDevice.getNetworkSliceId());
+		if (Double.isNaN(request.baselineDuration)
+			|| Double.isInfinite(request.baselineDuration)
+			|| request.baselineDuration < 0.0) {
+			throw new IllegalArgumentException(
+				"Migration duration must be finite and non-negative");
+		}
+		if (request.completionDestinationId < 0) {
+			throw new IllegalArgumentException(
+				"Migration completion requires a destination entity");
+		}
 	}
 
 	private static int validateSliceId(int sliceId) {

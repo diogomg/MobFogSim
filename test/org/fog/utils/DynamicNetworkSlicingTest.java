@@ -47,6 +47,20 @@ public class DynamicNetworkSlicingTest {
 	}
 
 	@Test
+	public void fixedModeSharesASliceBetweenConcurrentMigrations() {
+		NetworkSlicing.setDynamicBorrowing(false);
+		MobileDevice first = mobile("first", 0);
+		MobileDevice second = mobile("second", 0);
+
+		assertEquals(560.0,
+			NetworkSlicing.reserveBandwidth(source, destination, first), DELTA);
+		assertEquals(280.0,
+			NetworkSlicing.reserveBandwidth(source, destination, second), DELTA);
+		assertEquals(280.0,
+			NetworkSlicing.reserveBandwidth(source, destination, first), DELTA);
+	}
+
+	@Test
 	public void loneActiveSliceBorrowsAllIdleCapacity() {
 		assertEquals(800.0,
 			NetworkSlicing.reserveBandwidth(source, destination, mobile("mobile", 0)), DELTA);

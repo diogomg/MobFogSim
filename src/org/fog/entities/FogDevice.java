@@ -607,6 +607,9 @@ public class FogDevice extends PowerDatacenter {
 		case MobileEvents.START_MIGRATION:
 			invokeStartMigration(ev);
 			break;
+		case MobileEvents.START_MIGRATION_TRANSFER:
+			startMigrationTransfer(ev);
+			break;
 		case MobileEvents.ABORT_MIGRATION:
 			invokeAbortMigration(ev);
 			break;
@@ -780,8 +783,10 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void invokeStartMigration(SimEvent ev) {
-		MobileDevice smartThing = (MobileDevice) ev.getData();
-		NetworkSlicing.releaseBandwidth(smartThing);
+		MobileDevice smartThing = completeMigrationTransfer(ev);
+		if (smartThing == null) {
+			return;
+		}
 
 		// the smartThing is outside of the map
 		if (MobileController.getSmartThings().contains(smartThing)) {
@@ -953,24 +958,21 @@ public class FogDevice extends PowerDatacenter {
 						smartThing.setTimeStartLiveMigration(CloudSim.clock());
 					}
 					else {
-						double reservedBandwidth = NetworkSlicing.reserveBandwidth(
-							smartThing.getVmLocalServerCloudlet(),
-							smartThing.getDestinationServerCloudlet(), smartThing);
-						double reservedSliceBandwidth = NetworkSlicing.getSliceBandwidth(
-							smartThing.getVmLocalServerCloudlet(),
-							smartThing.getDestinationServerCloudlet(),
-							smartThing.getNetworkSliceId());
-						// migTime was calculated using the reserved baseline slice.
-						// Rescale it with the work-conserving bandwidth granted now.
-						smartThing.setMigTime(smartThing.getMigTime()
-							* reservedSliceBandwidth / reservedBandwidth);
 						smartThing.setMigStatus(true);
 						MyStatistics.getInstance().startWithoutVmTime(smartThing.getMyId(),
 							CloudSim.clock());
 						smartThing.setTimeFinishDeliveryVm(-1.0);
-						// It'll happen according the Migration Time
-						send(smartThing.getVmLocalServerCloudlet().getId(), smartThing.getMigTime()
-							+ delayProcess, MobileEvents.START_MIGRATION, smartThing);
+						NetworkSlicing.MigrationTransferRequest transferRequest =
+							new NetworkSlicing.MigrationTransferRequest(
+								smartThing.getVmLocalServerCloudlet(),
+								smartThing.getDestinationServerCloudlet(), smartThing,
+								smartThing.getMigTime(),
+								smartThing.getVmLocalServerCloudlet().getId(),
+								MobileEvents.START_MIGRATION);
+						// Data preparation occurs before the transfer starts consuming
+						// physical-link capacity.
+						send(smartThing.getVmLocalServerCloudlet().getId(), delayProcess,
+							MobileEvents.START_MIGRATION_TRANSFER, transferRequest);
 					}
 					smartThing.setLockedToMigration(true);
 				}
@@ -998,9 +1000,37 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void migStatusToLiveMigration(SimEvent ev) {
-		MobileDevice smartThing = (MobileDevice) ev.getData();
+		MobileDevice smartThing = completeMigrationTransfer(ev);
+		if (smartThing == null) {
+			return;
+		}
 		sendNow(smartThing.getVmLocalServerCloudlet().getId(),
 			MobileEvents.START_MIGRATION, smartThing);// It'll happen according the Migration Time
+	}
+
+	private void startMigrationTransfer(SimEvent ev) {
+		NetworkSlicing.MigrationTransferRequest request =
+			(NetworkSlicing.MigrationTransferRequest) ev.getData();
+		MobileDevice smartThing = request.getMobileDevice();
+		if (!MobileController.getSmartThings().contains(smartThing)
+			|| smartThing.isAbortMigration()
+			|| (!smartThing.isMigStatus() && !smartThing.isMigStatusLive())) {
+			NetworkSlicing.releaseBandwidth(smartThing);
+			return;
+		}
+		NetworkSlicing.startMigrationTransfer(request);
+	}
+
+	private MobileDevice completeMigrationTransfer(SimEvent ev) {
+		Object data = ev.getData();
+		if (data instanceof NetworkSlicing.MigrationTransferCompletion) {
+			return NetworkSlicing.completeMigrationTransfer(
+				(NetworkSlicing.MigrationTransferCompletion) data);
+		}
+
+		MobileDevice smartThing = (MobileDevice) data;
+		NetworkSlicing.releaseBandwidth(smartThing);
+		return smartThing;
 	}
 
 	private void invokeDecisionMigration(SimEvent ev) {

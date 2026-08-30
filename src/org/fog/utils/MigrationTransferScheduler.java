@@ -1,0 +1,320 @@
+package org.fog.utils;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Fluid-share scheduler for migration transfers on directed physical links.
+ *
+ * Transfer work is expressed in bandwidth-milliseconds. Whenever the active
+ * transfer set changes, the scheduler first accounts for work completed at the
+ * previous rates and then returns replacement completion schedules using the
+ * new rates.
+ */
+final class MigrationTransferScheduler {
+
+	private static final double TIME_EPSILON = 0.000001;
+
+	static final class Schedule {
+		private final int transferId;
+		private final long generation;
+		private final double delay;
+		private final double bandwidth;
+		private final double elapsedTime;
+
+		private Schedule(int transferId, long generation, double delay,
+			double bandwidth, double elapsedTime) {
+			this.transferId = transferId;
+			this.generation = generation;
+			this.delay = delay;
+			this.bandwidth = bandwidth;
+			this.elapsedTime = elapsedTime;
+		}
+
+		int getTransferId() {
+			return transferId;
+		}
+
+		long getGeneration() {
+			return generation;
+		}
+
+		double getDelay() {
+			return delay;
+		}
+
+		double getBandwidth() {
+			return bandwidth;
+		}
+
+		double getTotalDuration() {
+			return elapsedTime + delay;
+		}
+	}
+
+	static final class Completion {
+		private final boolean accepted;
+		private final int transferId;
+		private final double duration;
+		private final List<Schedule> schedules;
+
+		private Completion(boolean accepted, int transferId, double duration,
+			List<Schedule> schedules) {
+			this.accepted = accepted;
+			this.transferId = transferId;
+			this.duration = duration;
+			this.schedules = schedules;
+		}
+
+		boolean isAccepted() {
+			return accepted;
+		}
+
+		int getTransferId() {
+			return transferId;
+		}
+
+		double getDuration() {
+			return duration;
+		}
+
+		List<Schedule> getSchedules() {
+			return schedules;
+		}
+	}
+
+	private static final class Transfer {
+		private final int id;
+		private final String link;
+		private final int sliceId;
+		private final double startedAt;
+		private double remainingWork;
+		private double bandwidth;
+		private long generation;
+		private double completionTime;
+
+		private Transfer(int id, String link, int sliceId, double work,
+			double startedAt) {
+			this.id = id;
+			this.link = link;
+			this.sliceId = sliceId;
+			this.remainingWork = work;
+			this.startedAt = startedAt;
+		}
+	}
+
+	private static final class LinkState {
+		private final Map<Integer, Transfer> transfers =
+			new HashMap<Integer, Transfer>();
+		private double physicalBandwidth;
+		private double lastUpdated;
+
+		private LinkState(double physicalBandwidth, double now) {
+			this.physicalBandwidth = physicalBandwidth;
+			this.lastUpdated = now;
+		}
+	}
+
+	private final double[] percentages;
+	private final boolean slicingEnabled;
+	private final boolean dynamicBorrowing;
+	private final Map<String, LinkState> links = new HashMap<String, LinkState>();
+	private final Map<Integer, Transfer> transfers = new HashMap<Integer, Transfer>();
+	private long nextGeneration = 1L;
+
+	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing) {
+		this.percentages = percentages.clone();
+		this.slicingEnabled = slicingEnabled;
+		this.dynamicBorrowing = dynamicBorrowing;
+	}
+
+	List<Schedule> start(int transferId, String link, int sliceId, double work,
+		double physicalBandwidth, double now) {
+		validateStart(transferId, link, sliceId, work, physicalBandwidth, now);
+
+		Set<String> affectedLinks = new LinkedHashSet<String>();
+		Transfer previous = transfers.remove(transferId);
+		if (previous != null) {
+			LinkState previousLink = links.get(previous.link);
+			advance(previousLink, now);
+			previousLink.transfers.remove(transferId);
+			affectedLinks.add(previous.link);
+		}
+
+		LinkState linkState = links.get(link);
+		if (linkState == null) {
+			linkState = new LinkState(physicalBandwidth, now);
+			links.put(link, linkState);
+		}
+		else {
+			advance(linkState, now);
+			// The same directed link must never be allocated above its narrowest
+			// physical capacity if device capabilities change during a run.
+			linkState.physicalBandwidth = Math.min(linkState.physicalBandwidth,
+				physicalBandwidth);
+		}
+
+		Transfer transfer = new Transfer(transferId, link, sliceId, work, now);
+		linkState.transfers.put(transferId, transfer);
+		transfers.put(transferId, transfer);
+		affectedLinks.add(link);
+
+		return rebalance(affectedLinks, now);
+	}
+
+	Completion complete(int transferId, long generation, double now) {
+		Transfer transfer = transfers.get(transferId);
+		if (transfer == null || transfer.generation != generation
+			|| now + TIME_EPSILON < transfer.completionTime) {
+			return new Completion(false, transferId, 0.0,
+				new ArrayList<Schedule>());
+		}
+
+		LinkState linkState = links.get(transfer.link);
+		advance(linkState, now);
+		linkState.transfers.remove(transferId);
+		transfers.remove(transferId);
+		double duration = now - transfer.startedAt;
+
+		Set<String> affectedLinks = new LinkedHashSet<String>();
+		affectedLinks.add(transfer.link);
+		return new Completion(true, transferId, duration,
+			rebalance(affectedLinks, now));
+	}
+
+	List<Schedule> cancel(int transferId, double now) {
+		Transfer transfer = transfers.remove(transferId);
+		if (transfer == null) {
+			return new ArrayList<Schedule>();
+		}
+
+		LinkState linkState = links.get(transfer.link);
+		advance(linkState, now);
+		linkState.transfers.remove(transferId);
+
+		Set<String> affectedLinks = new LinkedHashSet<String>();
+		affectedLinks.add(transfer.link);
+		return rebalance(affectedLinks, now);
+	}
+
+	boolean contains(int transferId) {
+		return transfers.containsKey(transferId);
+	}
+
+	private List<Schedule> rebalance(Set<String> affectedLinks, double now) {
+		List<Schedule> schedules = new ArrayList<Schedule>();
+		for (String link : affectedLinks) {
+			LinkState linkState = links.get(link);
+			if (linkState == null) {
+				continue;
+			}
+			if (linkState.transfers.isEmpty()) {
+				links.remove(link);
+				continue;
+			}
+
+			int[] activeBySlice = activeBySlice(linkState);
+			for (Transfer transfer : linkState.transfers.values()) {
+				transfer.bandwidth = allocatedBandwidth(linkState.physicalBandwidth,
+					activeBySlice, transfer.sliceId);
+				if (transfer.bandwidth <= 0.0) {
+					throw new IllegalStateException(
+						"An active migration received no transport bandwidth");
+				}
+				double delay = transfer.remainingWork / transfer.bandwidth;
+				transfer.generation = nextGeneration++;
+				transfer.completionTime = now + delay;
+				schedules.add(new Schedule(transfer.id, transfer.generation, delay,
+					transfer.bandwidth, now - transfer.startedAt));
+			}
+		}
+		return schedules;
+	}
+
+	private double allocatedBandwidth(double physicalBandwidth,
+		int[] activeBySlice, int requestedSlice) {
+		if (!slicingEnabled) {
+			int activeTransfers = 0;
+			for (int count : activeBySlice) {
+				activeTransfers += count;
+			}
+			return physicalBandwidth / activeTransfers;
+		}
+
+		if (!dynamicBorrowing) {
+			return physicalBandwidth * percentages[requestedSlice] / 100.0
+				/ activeBySlice[requestedSlice];
+		}
+
+		int activeSlices = 0;
+		double idlePercentage = 0.0;
+		for (int sliceId = 0; sliceId < activeBySlice.length; sliceId++) {
+			if (activeBySlice[sliceId] == 0) {
+				idlePercentage += percentages[sliceId];
+			}
+			else {
+				activeSlices++;
+			}
+		}
+		double slicePercentage = percentages[requestedSlice]
+			+ idlePercentage / activeSlices;
+		return physicalBandwidth * slicePercentage / 100.0
+			/ activeBySlice[requestedSlice];
+	}
+
+	private int[] activeBySlice(LinkState linkState) {
+		int[] activeBySlice = new int[percentages.length];
+		for (Transfer transfer : linkState.transfers.values()) {
+			activeBySlice[transfer.sliceId]++;
+		}
+		return activeBySlice;
+	}
+
+	private static void advance(LinkState linkState, double now) {
+		if (linkState == null) {
+			return;
+		}
+		if (now + TIME_EPSILON < linkState.lastUpdated) {
+			throw new IllegalArgumentException("Simulation time cannot move backwards");
+		}
+
+		double elapsed = Math.max(0.0, now - linkState.lastUpdated);
+		for (Transfer transfer : linkState.transfers.values()) {
+			transfer.remainingWork = Math.max(0.0,
+				transfer.remainingWork - transfer.bandwidth * elapsed);
+		}
+		linkState.lastUpdated = now;
+	}
+
+	private void validateStart(int transferId, String link, int sliceId,
+		double work, double physicalBandwidth, double now) {
+		if (transferId < 0) {
+			throw new IllegalArgumentException("Transfer ID cannot be negative");
+		}
+		if (link == null || link.trim().isEmpty()) {
+			throw new IllegalArgumentException("A transfer requires a physical link");
+		}
+		if (sliceId < 0 || sliceId >= percentages.length) {
+			throw new IllegalArgumentException("Unknown network slice: " + sliceId);
+		}
+		if (!isFinite(work) || work < 0.0) {
+			throw new IllegalArgumentException("Transfer work must be finite and non-negative");
+		}
+		if (!isFinite(physicalBandwidth) || physicalBandwidth <= 0.0) {
+			throw new IllegalArgumentException(
+				"Physical link bandwidth must be finite and positive");
+		}
+		if (!isFinite(now) || now < 0.0) {
+			throw new IllegalArgumentException("Simulation time must be finite and non-negative");
+		}
+	}
+
+	private static boolean isFinite(double value) {
+		return !Double.isNaN(value) && !Double.isInfinite(value);
+	}
+}

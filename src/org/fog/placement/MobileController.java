@@ -413,18 +413,20 @@ public class MobileController extends SimEntity {
 												.getRamProvisioner().getUsedRam() * 8 * 1024 * 1024)
 												/ baselineBandwidth) * 1000.0;
 										}
-										double reservedBandwidth = NetworkSlicing.reserveBandwidth(
-											st.getVmLocalServerCloudlet(),
-											st.getDestinationServerCloudlet(), st);
-										newMigTime = newMigTime * baselineBandwidth / reservedBandwidth;
 										double delayProcess = st.getVmLocalServerCloudlet()
 											.getCharacteristics().getCpuTime((st.getVmMobileDevice()
 												.getSize() * 1024 * 1024 * 8) * 0.7, 0.0);// the connection already opened
 										st.setTimeFinishDeliveryVm(-1.0);
 										MyStatistics.getInstance().startWithoutVmTime(
 											st.getMyId(),CloudSim.clock());
-										send(st.getVmLocalServerCloudlet().getId(), newMigTime
-											+ delayProcess, MobileEvents.SET_MIG_STATUS_TRUE, st);
+										NetworkSlicing.MigrationTransferRequest transferRequest =
+											new NetworkSlicing.MigrationTransferRequest(
+												st.getVmLocalServerCloudlet(),
+												st.getDestinationServerCloudlet(), st, newMigTime,
+												st.getVmLocalServerCloudlet().getId(),
+												MobileEvents.SET_MIG_STATUS_TRUE);
+										send(st.getVmLocalServerCloudlet().getId(), delayProcess,
+											MobileEvents.START_MIGRATION_TRANSFER, transferRequest);
 									}
 								}
 							}
