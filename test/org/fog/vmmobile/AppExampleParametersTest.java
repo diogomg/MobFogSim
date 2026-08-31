@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.file.Paths;
+
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.junit.After;
@@ -19,6 +21,8 @@ public class AppExampleParametersTest {
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
 		NetworkSlicing.setDynamicBorrowing(true);
 		VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
+		AppExample.setMobilityDirectory(Paths.get("input"));
+		AppExample.setMobilityOrderManifest(Paths.get("input", "inputOrder.csv"));
 	}
 
 	@Test
@@ -79,5 +83,29 @@ public class AppExampleParametersTest {
 		AppExample.configureSimulationParameters(new String[] {
 			"1", "123", "0", "0", "1", "11", "0", "61", "0"
 		});
+	}
+
+	@Test
+	public void readsExplicitMobilityInputPaths() {
+		AppExample.configureSimulationParameters(new String[] {
+			"1", "123", "0", "0", "1", "11", "0", "61", "0", "0",
+			"2", "100", "100", "1", "2", "mobility-fixtures",
+			"config/user-order.csv"
+		});
+
+		assertEquals(Paths.get("mobility-fixtures"), AppExample.getMobilityDirectory());
+		assertEquals(Paths.get("config/user-order.csv"),
+			AppExample.getMobilityOrderManifest());
+	}
+
+	@Test
+	public void directoryOnlyUsesItsDefaultOrderManifest() {
+		AppExample.configureSimulationParameters(new String[] {
+			"1", "123", "0", "0", "1", "11", "0", "61", "0", "0",
+			"2", "100", "100", "1", "2", "mobility-fixtures"
+		});
+
+		assertEquals(Paths.get("mobility-fixtures", "inputOrder.csv"),
+			AppExample.getMobilityOrderManifest());
 	}
 }

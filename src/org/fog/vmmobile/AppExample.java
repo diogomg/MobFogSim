@@ -1,17 +1,16 @@
 package org.fog.vmmobile;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -100,6 +99,8 @@ public class AppExample {
 	private static double latencyBetweenCloudlets;
 	private static int maxBandwidth;
 	private static int maxSmartThings;
+	private static Path mobilityDirectory = Paths.get("input");
+	private static Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
 	private static Coordinate coordDevices;
 	private static int seed;
 	private static Random rand;
@@ -134,7 +135,8 @@ public class AppExample {
 		 *  
 		 *  Example parameters
 		 *  
-		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2
+		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 input
+		 *  input/inputOrder.csv
 		 *  
 		 *  First parameter: 0/1 -> migrations are denied or allowed
 		 *  Second parameter: Positive Integer -> seed to be used in the random numbers generation
@@ -152,6 +154,9 @@ public class AppExample {
 		 *  Thirteenth parameter: Comma-separated network-slice bandwidth percentages.
 		 *  Fourteenth parameter: 0 for fixed slices or 1 to borrow idle slice capacity.
 		 *  Fifteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
+		 *  Sixteenth parameter: Optional mobility trace directory (default: input).
+		 *  Seventeenth parameter: Optional mobility order manifest path
+		 *  (default: mobility directory/inputOrder.csv).
 		 */
 
 		Log.disable();
@@ -212,7 +217,7 @@ public class AppExample {
 			smartThings.get(i).setNetworkSliceId(userSliceAssignments[i]);
 		}
 
-		readMoblityData();
+		readMobilityData();
 
 		int index;// Auxiliary
 		int myCount = 0;
@@ -523,71 +528,45 @@ public class AppExample {
 		NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
 		VmDestinationPolicy.configure(args.length > 14 ? Integer.parseInt(args[14])
 			: VmDestinationPolicy.HYBRID);
+		configureMobilityInputPaths(args);
 	}
 
-	private static void readMoblityData() {
+	private static void configureMobilityInputPaths(String[] args) {
+		String directoryValue = args.length > 15 ? args[15] : "input";
+		if (directoryValue == null || directoryValue.trim().isEmpty()) {
+			throw new IllegalArgumentException("Mobility directory cannot be empty");
+		}
+		try {
+			Path directory = Paths.get(directoryValue);
+			Path manifest = args.length > 16
+				? parseRequiredPath(args[16], "Mobility order manifest")
+				: directory.resolve("inputOrder.csv");
+			setMobilityDirectory(directory);
+			setMobilityOrderManifest(manifest);
+		} catch (InvalidPathException error) {
+			throw new IllegalArgumentException(
+				"Invalid mobility input path: " + error.getInput(), error);
+		}
+	}
 
-		File folder = new File("input");
-		File[] listOfFiles = folder.listFiles();
+	private static Path parseRequiredPath(String value, String description) {
+		if (value == null || value.trim().isEmpty()) {
+			throw new IllegalArgumentException(description + " cannot be empty");
+		}
+		return Paths.get(value);
+	}
 
-		Arrays.sort(listOfFiles);
-		int[] ordem = readDevicePathOrder(listOfFiles[listOfFiles.length - 1]);
+	private static void readMobilityData() {
+		List<MobilityDataLoader.MobilityTrace> traces = MobilityDataLoader.load(
+			getMobilityDirectory(), getMobilityOrderManifest(), getSmartThings().size());
+
 		for (int i = 0; i < getSmartThings().size(); i++) {
-			readDevicePath(getSmartThings().get(i), "input/" + listOfFiles[ordem[i]].getName());
-		}
-	}
-
-	private static int[] readDevicePathOrder(File filename) {
-
-		String line = "";
-		String cvsSplitBy = "\t";
-
-		try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-
-			int i = 1;
-			while (((line = br.readLine()) != null)) {
-				if (i == 1) {
-					break;
-				}
-				i++;
-			}
-			// use comma as separator
-			String[] position = line.split(cvsSplitBy);
-			int order[] = new int[getSmartThings().size()];
-			for (int j = 0; j < getSmartThings().size(); j++) {
-				order[j] = Integer.valueOf(position[j]);
-			}
-			Arrays.sort(order);
-			return order;
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	private static void readDevicePath(MobileDevice st, String filename) {
-
-		String line = "";
-		String cvsSplitBy = "\t";
-
-		try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-
-			while ((line = br.readLine()) != null) {
-
-				// use comma as separator
-				String[] position = line.split(cvsSplitBy);
-
-				st.getPath().add(position);
-			}
-
+			MobileDevice smartThing = getSmartThings().get(i);
+			smartThing.setPath(traces.get(i).getRows());
 			Coordinate coordinate = new Coordinate();
-			coordinate.setInitialCoordinate(st);
-			saveMobility(st);
-		} catch (IOException e) {
-			e.printStackTrace();
+			coordinate.setInitialCoordinate(smartThing);
+			saveMobility(smartThing);
 		}
-
 	}
 
 	private static void saveMobility(MobileDevice st) {
@@ -1393,6 +1372,29 @@ public class AppExample {
 
 	public static void setMaxSmartThings(int maxSmartThings) {
 		AppExample.maxSmartThings = maxSmartThings;
+	}
+
+	public static Path getMobilityDirectory() {
+		return mobilityDirectory;
+	}
+
+	public static void setMobilityDirectory(Path mobilityDirectory) {
+		if (mobilityDirectory == null) {
+			throw new IllegalArgumentException("Mobility directory cannot be null");
+		}
+		AppExample.mobilityDirectory = mobilityDirectory;
+	}
+
+	public static Path getMobilityOrderManifest() {
+		return mobilityOrderManifest;
+	}
+
+	public static void setMobilityOrderManifest(Path mobilityOrderManifest) {
+		if (mobilityOrderManifest == null) {
+			throw new IllegalArgumentException(
+				"Mobility order manifest cannot be null");
+		}
+		AppExample.mobilityOrderManifest = mobilityOrderManifest;
 	}
 
 	public static Random getRand() {

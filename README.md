@@ -9,7 +9,7 @@ More details can be found in the following paper: Puliafito, Carlo, et al. "MobF
 
 Building your own simulation
 *  First step: Follow the following steps;
-*  Second step: Provide the user mobility dataset in the input directory;
+*  Second step: Provide the user mobility dataset and order manifest;
 *  Third step: Initialize the CloudSim package. It should be called before creating any entities;
 *  Fourth step: Create all devices;
 *  Fifth step: Create a Broker;
@@ -59,11 +59,14 @@ Optional:
 *  Thirteenth parameter: comma-separated bandwidth percentages for the slices. Values must be greater than zero and sum to 100.
 *  Fourteenth parameter: 0 keeps the configured slice bandwidth fixed (static slicing); 1 lets active slices borrow idle capacity (dynamic slicing).
 *  Fifteenth parameter: VM destination type: 0 edge servers only, 1 end devices only, or 2 hybrid.
+*  Sixteenth parameter: optional path to the mobility trace directory. It defaults to `input`.
+*  Seventeenth parameter: optional path to the mobility order manifest. It defaults to `inputOrder.csv` inside the selected mobility directory.
 
 ### Example
 
-text
-1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2
+```text
+1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 input input/inputOrder.csv
+```
 
 
 This example configures the simulation as follows:
@@ -85,6 +88,8 @@ This example configures the simulation as follows:
 | Slice shares | 70,30 | Gives slice 0 70% and slice 1 30% of bandwidth in the selected scope. |
 | Slice mode | 1 | Enables dynamic borrowing of idle slice capacity. |
 | VM destinations | 2 | Allows both edge servers and eligible end devices as migration destinations. |
+| Mobility directory | input | Reads mobility traces from the repository's default input directory. |
+| Mobility manifest | input/inputOrder.csv | Maps users to traces in the manifest's original order. |
 
 When a user-allocation percentage produces a fractional number of users, the simulator assigns the remaining users to the slices with the largest fractional remainders. Within the selected scope, each group receives its configured bandwidth share. For example, a physical link or AP direction with 11 Mbps and a 70/30 configuration gives group 0 7.7 Mbps and group 1 3.3 Mbps. Users connected to the same AP and assigned to the same slice share that slice's wireless capacity equally; their effective rate is also capped by the individual mobile device's link rate. A network outside the selected scope is not divided into slices; AP capacity is shared equally among connected users in that case. During VM migration, an active group may borrow transport capacity reserved for groups with no active migration on that same directed link. Concurrent migrations on the same directed link share the available capacity; whenever a migration starts, finishes, or is aborted, the simulator updates the remaining data, recalculates every affected rate, and replaces their completion events so their combined rate never exceeds the physical link. On an AP, connected groups may borrow the capacity of groups that have no connected users there. Borrowed capacity is returned automatically when a migration finishes, or when AP membership changes; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
 
@@ -93,11 +98,24 @@ Every connected mobile device can host another user's application VM. During a m
 
 ## Input
 
-Mobility data can be read as .csv files. These files can be taken from mobility patterns of SUMO - Simulation of Uban MObility
+Mobility data is read from `.csv` files generated from mobility patterns
+such as SUMO (Simulation of Urban MObility). Trace filenames must match
+`*log.csv`; unrelated files in the same directory are ignored.
 
 An example of an offline mobility dataset from [Luxembourg SUMO Traffic](https://github.com/lcodeca/LuSTScenario) is placed in the directory named as 'input'.
 
-The user mobility is based on the following parameters: time (in seconds), direction (in rad), position x and y, and speed (in m/s)
+Each non-empty trace must contain exactly five tab-separated, finite numeric
+columns: time in seconds, direction in radians, X position, Y position, and
+speed in metres per second. Time must be non-negative and nondecreasing, and
+speed must be non-negative.
+
+The order manifest is also tab-separated despite its `.csv` extension.
+It contains zero-based indexes into the lexicographically sorted `*log.csv`
+files. Indexes can span multiple rows, are applied exactly in their written
+order, and the manifest must contain at least one entry per simulated user. For
+example, `2<TAB>0<TAB>1` assigns trace 2 to user 0, trace 0 to user 1, and trace
+1 to user 2. Missing files, malformed rows, insufficient entries, and invalid trace
+indexes stop startup with a contextual `MobilityInputException`.
 
 Example input/1702log.csv 
 

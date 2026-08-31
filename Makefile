@@ -18,6 +18,7 @@ TEST_SUITES := \
 	org.fog.vmmigration.MobileEdgeHostSelectorTest \
 	org.fog.vmmigration.NextStepTest \
 	org.fog.vmmobile.AppExampleParametersTest \
+	org.fog.vmmobile.MobilityDataLoaderTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
 	org.fog.utils.TimeKeeperTest \
 	org.fog.utils.distribution.RandomizedDistributionTest \
