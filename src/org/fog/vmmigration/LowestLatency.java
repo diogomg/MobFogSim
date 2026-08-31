@@ -1,6 +1,7 @@
 package org.fog.vmmigration;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
@@ -13,8 +14,8 @@ public class LowestLatency implements DecisionMigration {
 	private List<ApDevice> apDevices;
 	private int migPointPolicy;
 	private ApDevice correntAP;
-	private int nextApId;
-	private int nextServerClouletId;
+	private ApDevice nextAp;
+	private FogDevice nextServerCloudlet;
 	private int policyReplicaVM;
 
 	private int smartThingPosition;
@@ -45,22 +46,25 @@ public class LowestLatency implements DecisionMigration {
 			return false;// no migration
 		}
 		else {
-			setNextServerClouletId(Migration.lowestLatencyCostServerCloudlet(serverCloudlets, apDevices, smartThing));
-			if (getNextServerClouletId() < 0) {
+			Optional<FogDevice> selectedServerCloudlet =
+				Migration.lowestLatencyCostServerCloudlet(
+					serverCloudlets, apDevices, smartThing);
+			if (!selectedServerCloudlet.isPresent()) {
 				return false;
 			}
-			else {
-				setNextApId(Migration.nextAp(apDevices, smartThing));
-				if (getNextApId() >= 0) {
-					// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-					if (!Migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
-						return false;// no migration
-					}
-				}
+			setNextServerCloudlet(selectedServerCloudlet.get());
+			Optional<ApDevice> selectedAp = Migration.nextAp(apDevices, smartThing);
+			if (!selectedAp.isPresent()) {
+				return false;
+			}
+			setNextAp(selectedAp.get());
+			// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
+			if (!Migration.isEdgeAp(getNextAp(), smartThing)) {
+				return false;// no migration
 			}
 		}
 		return MobileEdgeHostSelector.selectDestination(smartThing,
-			serverCloudlets.get(getNextServerClouletId()));
+			getNextServerCloudlet());
 	}
 
 	public ApDevice getCorrentAP() {
@@ -91,20 +95,20 @@ public class LowestLatency implements DecisionMigration {
 		this.migPointPolicy = migPointPolicy;
 	}
 
-	public int getNextApId() {
-		return nextApId;
+	public ApDevice getNextAp() {
+		return nextAp;
 	}
 
-	public void setNextApId(int nextApId) {
-		this.nextApId = nextApId;
+	public void setNextAp(ApDevice nextAp) {
+		this.nextAp = nextAp;
 	}
 
-	public int getNextServerClouletId() {
-		return nextServerClouletId;
+	public FogDevice getNextServerCloudlet() {
+		return nextServerCloudlet;
 	}
 
-	public void setNextServerClouletId(int nextServerClouletId) {
-		this.nextServerClouletId = nextServerClouletId;
+	public void setNextServerCloudlet(FogDevice nextServerCloudlet) {
+		this.nextServerCloudlet = nextServerCloudlet;
 	}
 
 	public int getSmartThingPosition() {

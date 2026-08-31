@@ -2,6 +2,7 @@ package org.fog.vmmigration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
@@ -14,8 +15,8 @@ public class LowestDistBwSmartThingServerCloudlet implements DecisionMigration {
 	private List<ApDevice> apDevices;
 	private int migPointPolicy;
 	private ApDevice correntAP;
-	private int nextApId;
-	private int nextServerClouletId;
+	private ApDevice nextAp;
+	private FogDevice nextServerCloudlet;
 	private int smartThingPosition;
 	private boolean migZone;
 	private boolean migPoint;
@@ -48,26 +49,29 @@ public class LowestDistBwSmartThingServerCloudlet implements DecisionMigration {
 			return false;// no migration
 		}
 		else {
-			// choose the closest cloudlet, it returns the Id or -1
-			setNextServerClouletId(Migration.nextServerCloudlet(serverCloudlets, smartThing));
-			if (getNextServerClouletId() < 0) {// Does next ServerCloudlet exist?
+			Optional<FogDevice> selectedServerCloudlet =
+				Migration.nextServerCloudlet(serverCloudlets, smartThing);
+			if (!selectedServerCloudlet.isPresent()) {
 				return false;
 			}
+			setNextServerCloudlet(selectedServerCloudlet.get());
 			// It creates a temporary List to invoke the nextAp
 			List<ApDevice> tempListAps = new ArrayList<>();
-			for (ApDevice ap : serverCloudlets.get(getNextServerClouletId()).getApDevices()) {
+			for (ApDevice ap : getNextServerCloudlet().getApDevices()) {
 				tempListAps.add(ap);
 			}
-			setNextApId(Migration.nextAp(tempListAps, smartThing));
-			if (getNextApId() < 0) {
+			Optional<ApDevice> selectedAp = Migration.nextAp(tempListAps, smartThing);
+			if (!selectedAp.isPresent()) {
+				return false;
 			}
+			setNextAp(selectedAp.get());
 			// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-			else if (!Migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
+			if (!Migration.isEdgeAp(getNextAp(), smartThing)) {
 				return false;// no migration
 			}
 		}
 		return MobileEdgeHostSelector.selectDestination(smartThing,
-			serverCloudlets.get(getNextServerClouletId()));
+			getNextServerCloudlet());
 	}
 
 	public List<FogDevice> getServerCloudlets() {
@@ -102,20 +106,20 @@ public class LowestDistBwSmartThingServerCloudlet implements DecisionMigration {
 		this.correntAP = correntAP;
 	}
 
-	public int getNextApId() {
-		return nextApId;
+	public ApDevice getNextAp() {
+		return nextAp;
 	}
 
-	public void setNextApId(int nextApId) {
-		this.nextApId = nextApId;
+	public void setNextAp(ApDevice nextAp) {
+		this.nextAp = nextAp;
 	}
 
-	public int getNextServerClouletId() {
-		return nextServerClouletId;
+	public FogDevice getNextServerCloudlet() {
+		return nextServerCloudlet;
 	}
 
-	public void setNextServerClouletId(int nextServerClouletId) {
-		this.nextServerClouletId = nextServerClouletId;
+	public void setNextServerCloudlet(FogDevice nextServerCloudlet) {
+		this.nextServerCloudlet = nextServerCloudlet;
 	}
 
 	public int getSmartThingPosition() {

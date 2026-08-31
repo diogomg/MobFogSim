@@ -213,18 +213,8 @@ public class AppExample {
 		readMobilityData();
 		MobileUserRegistration.preparePendingUsers(getSmartThings());
 
-		int index;// Auxiliary
-
-		// it makes the connection between AccessPoint and the closest ServerCloudlet
-		for (ApDevice ap : getApDevices()) {
-			index = Distances.theClosestServerCloudletToAp(getServerCloudlets(), ap);
-			ap.setServerCloudlet(getServerCloudlets().get(index));
-			ap.setParentId(getServerCloudlets().get(index).getId());
-			getServerCloudlets().get(index).setApDevices(ap, Policies.ADD);
-			NetworkTopology.addLink(serverCloudlets.get(index).getId(),
-				ap.getId(), ap.getDownlinkBandwidth(),
-				getRand().nextDouble());
-		}
+		connectAccessPointsToClosestServerCloudlets(getServerCloudlets(),
+			getApDevices(), getRand());
 
 		/**
 		 * STEP 3: CREATE CONTROLLER. Brokers, VMs, and applications are created
@@ -840,6 +830,34 @@ public class AppExample {
 				NetworkTopology.addLink(source.getId(), destination.getId(), bandwidth,
 					latency);
 			}
+		}
+	}
+
+	static void connectAccessPointsToClosestServerCloudlets(
+		List<FogDevice> serverCloudlets, List<ApDevice> accessPoints, Random random) {
+		validateServerCloudlets(serverCloudlets);
+		if (accessPoints == null) {
+			throw new IllegalArgumentException("Access point list cannot be null");
+		}
+		if (random == null) {
+			throw new IllegalArgumentException("Random generator cannot be null");
+		}
+
+		for (ApDevice accessPoint : accessPoints) {
+			if (accessPoint == null) {
+				throw new IllegalArgumentException(
+					"Access point list cannot contain null entries");
+			}
+			FogDevice closestServerCloudlet = Distances
+				.findClosestServerCloudletToAp(serverCloudlets, accessPoint)
+				.orElseThrow(() -> new IllegalStateException(
+					"Cannot connect access point without a server cloudlet"));
+			accessPoint.setServerCloudlet(closestServerCloudlet);
+			accessPoint.setParentId(closestServerCloudlet.getId());
+			closestServerCloudlet.setApDevices(accessPoint, Policies.ADD);
+			NetworkTopology.addLink(closestServerCloudlet.getId(),
+				accessPoint.getId(), accessPoint.getDownlinkBandwidth(),
+				random.nextDouble());
 		}
 	}
 

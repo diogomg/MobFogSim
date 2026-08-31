@@ -1,189 +1,108 @@
 package org.fog.localization;
 
-import java.lang.Math;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
-import org.fog.vmmobile.constants.*;
-import org.fog.entities.*;
+import org.fog.entities.ApDevice;
+import org.fog.entities.FogDevice;
+import org.fog.entities.MobileDevice;
+import org.fog.vmmobile.constants.Directions;
+import org.fog.vmmobile.constants.MaxAndMin;
 
-public class Distances {
+public final class Distances {
 
-	public Distances() {
-		// TODO Auto-generated constructor stub
+	private Distances() {
 	}
 
-	/**
-	 * @param args
-	 * @author Marcio Moraes Lopes
-	 */
-	private static int coordX;
-	private static int coordY;
-	private static double first;
-	private static double second;
-	private static double distance;
-	private static double theta;
-
-	// verify what return type is better (int or ApDevice)
-	public static int theClosestAp(List<ApDevice> apDevices, MobileDevice smartThing) {
-		int choose = apDevices.get(0).getMyId();// Id of the first ap in the list
-		// the first Ap
-		double min = checkDistance(apDevices.get(0).getCoord(), smartThing.getCoord());
-		for (ApDevice ap : apDevices) {
-			setDistance(checkDistance(ap.getCoord(), smartThing.getCoord()));
-
-			if (getDistance() < min) {
-				choose = ap.getMyId();// index or id
-				min = getDistance();
-			}
-		}
-
-		if (min <= MaxAndMin.AP_COVERAGE)// the user should be inside Access Point coverage
-			return choose;// id
-		else {
-
-			return -1;// flag error
-		}
-	}
-
-	public static int theClosestServerCloudlet(List<FogDevice> serverCloudlets,
+	public static Optional<ApDevice> findClosestAp(List<ApDevice> apDevices,
 		MobileDevice smartThing) {
-		int choose = serverCloudlets.get(0).getMyId();
-		double min = checkDistance(serverCloudlets.get(0).getCoord(), smartThing.getFutureCoord());
-
-		for (FogDevice sc : serverCloudlets) {
-			setDistance(checkDistance(sc.getCoord(), smartThing.getFutureCoord()));
-			if (getDistance() < min) {
-				choose = sc.getMyId();// id
-				min = getDistance();
-			}
+		Objects.requireNonNull(smartThing, "smartThing cannot be null");
+		ApDevice closest = findClosestAp(apDevices, smartThing.getCoord());
+		if (closest == null
+			|| checkDistance(closest.getCoord(), smartThing.getCoord()) > MaxAndMin.AP_COVERAGE) {
+			return Optional.empty();
 		}
-
-		return choose;// id
+		return Optional.of(closest);
 	}
 
-	public static int theClosestServerCloudletToAp(List<FogDevice> serverCloudlets,
-		ApDevice apDevice) {
+	public static Optional<FogDevice> findClosestServerCloudlet(
+		List<FogDevice> serverCloudlets, MobileDevice smartThing) {
+		Objects.requireNonNull(smartThing, "smartThing cannot be null");
+		return Optional.ofNullable(findClosestFogDevice(serverCloudlets,
+			smartThing.getFutureCoord()));
+	}
 
-		int choose = 0;
-		double min = checkDistance(serverCloudlets.get(0).getCoord(), apDevice.getCoord());
+	public static Optional<FogDevice> findClosestServerCloudletToAp(
+		List<FogDevice> serverCloudlets, ApDevice apDevice) {
+		Objects.requireNonNull(apDevice, "apDevice cannot be null");
+		return Optional.ofNullable(findClosestFogDevice(serverCloudlets,
+			apDevice.getCoord()));
+	}
 
-		for (FogDevice sc : serverCloudlets) {
-			setDistance(checkDistance(sc.getCoord(), apDevice.getCoord()));
-			// if(getDistance() != 0)
-			if (getDistance() < min) {
-				choose = sc.getMyId();// id
-				min = getDistance();
+	private static ApDevice findClosestAp(List<ApDevice> apDevices,
+		Coordinate target) {
+		Objects.requireNonNull(apDevices, "apDevices cannot be null");
+		ApDevice closest = null;
+		double minimumDistance = Double.POSITIVE_INFINITY;
+		for (ApDevice apDevice : apDevices) {
+			Objects.requireNonNull(apDevice, "apDevices cannot contain null");
+			double candidateDistance = checkDistance(apDevice.getCoord(), target);
+			if (candidateDistance < minimumDistance) {
+				closest = apDevice;
+				minimumDistance = candidateDistance;
 			}
-
 		}
+		return closest;
+	}
 
-		return choose;// id
-
+	private static FogDevice findClosestFogDevice(List<FogDevice> fogDevices,
+		Coordinate target) {
+		Objects.requireNonNull(fogDevices, "fogDevices cannot be null");
+		Objects.requireNonNull(target, "target coordinate cannot be null");
+		FogDevice closest = null;
+		double minimumDistance = Double.POSITIVE_INFINITY;
+		for (FogDevice fogDevice : fogDevices) {
+			Objects.requireNonNull(fogDevice, "fogDevices cannot contain null");
+			double candidateDistance = checkDistance(fogDevice.getCoord(), target);
+			if (candidateDistance < minimumDistance) {
+				closest = fogDevice;
+				minimumDistance = candidateDistance;
+			}
+		}
+		return closest;
 	}
 
 	public static double findTheta(int coordX, int coordY) {
-		setCoordX(coordX);
-		setCoordY(coordY);
-		if (coordX != 0)// verify if the point is on Y axis and must not do the y/0
-			setTheta(Math.atan(((double) coordY) / ((double) coordX)) * (180 / Math.PI));
-		else
-			setTheta(0);// the point is
-		// Theta is negative, but it is first quadrant and it needs to be in second quadrant
-		if (coordX < 0 && coordY >= 0)
-			return 180 + getTheta();
-		// Theta is positive and it needs to be in third quadrant
-		else if (coordX < 0 && coordY < 0)
-			return 180 + getTheta();
-		// Theta is negative and it needs to be in fourth quadrant
-		else if (coordX > 0 && coordY < 0)
-			return 360 + getTheta();
-		// Theta is zero and it needs to be on Y (positive)
-		else if (coordX == 0 && coordY > 0)
-			return 90 + getTheta();
-		// Theta is zero and it needs to be on y (negative)
-		else if (coordX == 0 && coordY < 0)
-			return 270 + getTheta();
-		else
-			return getTheta(); /* theta is ok */
+		double angle = Math.toDegrees(Math.atan2(coordY, coordX));
+		return angle < 0.0 ? angle + 360.0 : angle;
 	}
 
-	public static int findPosition(double th) {
-		setTheta(th);
-		/* find the position in 45 degree for each */
-		if ((getTheta() >= 0 && getTheta() <= 22.5) || (getTheta() > 337.5 && getTheta() <= 360))
+	public static int findPosition(double theta) {
+		if ((theta >= 0 && theta <= 22.5) || (theta > 337.5 && theta <= 360))
 			return Directions.EAST;
-		else if (getTheta() > 22.5 && getTheta() <= 67.5)
-			return Directions.SOUTHEAST;// Directions.NORTHEAST;
-		else if (getTheta() > 67.5 && getTheta() <= 112.5)
-			return Directions.SOUTH;// Directions.NORTH;
-		else if (getTheta() > 112.5 && getTheta() <= 157.5)
-			return Directions.SOUTHWEST;// Directions.NORTHWEST;
-		else if (getTheta() > 157.5 && getTheta() <= 202.5)
+		else if (theta > 22.5 && theta <= 67.5)
+			return Directions.SOUTHEAST;
+		else if (theta > 67.5 && theta <= 112.5)
+			return Directions.SOUTH;
+		else if (theta > 112.5 && theta <= 157.5)
+			return Directions.SOUTHWEST;
+		else if (theta > 157.5 && theta <= 202.5)
 			return Directions.WEST;
-		else if (getTheta() > 202.5 && getTheta() <= 247.5)
-			return Directions.NORTHWEST;// Directions.SOUTHWEST;
-		else if (getTheta() > 247.5 && getTheta() <= 292.5)
-			return Directions.NORTH;// Directions.SOUTH;
-		else if (getTheta() > 292.5 && getTheta() <= 337.5)
-			return Directions.NORTHEAST;// Directions.SOUTHEAST;
+		else if (theta > 202.5 && theta <= 247.5)
+			return Directions.NORTHWEST;
+		else if (theta > 247.5 && theta <= 292.5)
+			return Directions.NORTH;
+		else if (theta > 292.5 && theta <= 337.5)
+			return Directions.NORTHEAST;
 		return Directions.NONE;
-
 	}
 
 	public static double checkDistance(Coordinate firstCoord, Coordinate secondCoord) {
-		//Distance between two points formula
-		setFirst((double) Math.pow(firstCoord.getCoordX() - secondCoord.getCoordX(), 2));
-		setSecond((double) Math.pow(firstCoord.getCoordY() - secondCoord.getCoordY(), 2));
-		setDistance(Math.sqrt(getFirst() + getSecond()));
-		return getDistance();
+		Objects.requireNonNull(firstCoord, "firstCoord cannot be null");
+		Objects.requireNonNull(secondCoord, "secondCoord cannot be null");
+		double deltaX = (double) firstCoord.getCoordX() - secondCoord.getCoordX();
+		double deltaY = (double) firstCoord.getCoordY() - secondCoord.getCoordY();
+		return Math.hypot(deltaX, deltaY);
 	}
-
-	public static int getCoordX() {
-		return coordX;
-	}
-
-	public static void setCoordX(int coordX) {
-		Distances.coordX = coordX;
-	}
-
-	public static int getCoordY() {
-		return coordY;
-	}
-
-	public static void setCoordY(int coordY) {
-		Distances.coordY = coordY;
-	}
-
-	public static double getFirst() {
-		return first;
-	}
-
-	public static void setFirst(double first) {
-		Distances.first = first;
-	}
-
-	public static double getSecond() {
-		return second;
-	}
-
-	public static void setSecond(double second) {
-		Distances.second = second;
-	}
-
-	public static double getDistance() {
-		return distance;
-	}
-
-	public static void setDistance(double distance) {
-		Distances.distance = distance;
-	}
-
-	public static double getTheta() {
-		return theta;
-	}
-
-	public static void setTheta(double theta) {
-		Distances.theta = theta;
-	}
-
 }

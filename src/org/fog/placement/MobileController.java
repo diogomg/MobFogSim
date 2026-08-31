@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
@@ -431,7 +432,6 @@ public class MobileController extends SimEntity {
 	}
 
 	private void checkNewStep() {
-		int index = 0;
 		for (MobileDevice st : getSmartThings()) {
 			if (st.getTravelTimeId() == -1) {
 				continue;
@@ -457,9 +457,9 @@ public class MobileController extends SimEntity {
 						+ MaxAndMin.AP_COVERAGE);
 					if (distance >= MaxAndMin.AP_COVERAGE - MaxAndMin.MAX_DISTANCE_TO_HANDOFF
 						&& distance < MaxAndMin.AP_COVERAGE) {
-						index = Migration.nextAp(getApDevices(), st);
-						if (index >= 0) {// index isn't negative
-							st.setDestinationAp(getApDevices().get(index));
+						Optional<ApDevice> nextAp = Migration.nextAp(getApDevices(), st);
+						if (nextAp.isPresent()) {
+							st.setDestinationAp(nextAp.get());
 							st.setHandoffStatus(true);
 							st.setLockedToHandoff(true);
 

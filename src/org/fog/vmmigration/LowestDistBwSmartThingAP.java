@@ -1,6 +1,7 @@
 package org.fog.vmmigration;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
@@ -13,8 +14,8 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	private List<ApDevice> apDevices;
 	private int migPointPolicy;
 	private ApDevice correntAP;
-	private int nextApId;
-	private int nextServerClouletId;
+	private ApDevice nextAp;
+	private FogDevice nextServerCloudlet;
 	private int smartThingPosition;
 	private boolean migZone;
 	private boolean migPoint;
@@ -42,19 +43,20 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 			return false;// no migration
 		}
 		else {
-			setNextApId(Migration.nextAp(apDevices, smartThing));
-			if (getNextApId() < 0) {// index is negative
+			Optional<ApDevice> selectedAp = Migration.nextAp(apDevices, smartThing);
+			if (!selectedAp.isPresent()) {
 				return false;// no migration
 			}
+			setNextAp(selectedAp.get());
 			// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-			if (!Migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
+			if (!Migration.isEdgeAp(getNextAp(), smartThing)) {
 				return false;// no migration
 			}
 			// ServerCloudlet linked with nextap
-			setNextServerClouletId(apDevices.get(getNextApId()).getServerCloudlet().getMyId());
+			setNextServerCloudlet(getNextAp().getServerCloudlet());
 		}
 		return MobileEdgeHostSelector.selectDestination(smartThing,
-			serverCloudlets.get(getNextServerClouletId()));
+			getNextServerCloudlet());
 	}
 
 	public List<FogDevice> getServerCloudlets() {
@@ -89,20 +91,20 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 		this.correntAP = correntAP;
 	}
 
-	public int getNextApId() {
-		return nextApId;
+	public ApDevice getNextAp() {
+		return nextAp;
 	}
 
-	public void setNextApId(int nextApId) {
-		this.nextApId = nextApId;
+	public void setNextAp(ApDevice nextAp) {
+		this.nextAp = nextAp;
 	}
 
-	public int getNextServerClouletId() {
-		return nextServerClouletId;
+	public FogDevice getNextServerCloudlet() {
+		return nextServerCloudlet;
 	}
 
-	public void setNextServerClouletId(int nextServerClouletId) {
-		this.nextServerClouletId = nextServerClouletId;
+	public void setNextServerCloudlet(FogDevice nextServerCloudlet) {
+		this.nextServerCloudlet = nextServerCloudlet;
 	}
 
 	public int getSmartThingPosition() {

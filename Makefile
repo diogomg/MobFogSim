@@ -9,6 +9,7 @@ TEST_SUITES := \
 	org.fog.entities.FogDeviceChildStateTest \
 	org.fog.entities.SensorTest \
 	org.fog.localization.CoordinateTest \
+	org.fog.localization.DistancesTest \
 	org.fog.placement.MobileControllerDelayedEntryTest \
 	org.fog.placement.ModulePlacementEdgewardsAtomicityTest \
 	org.fog.vmmigration.MigrationTechniqueTest \

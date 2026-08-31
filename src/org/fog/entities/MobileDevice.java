@@ -648,10 +648,4 @@ public class MobileDevice extends FogDevice {
 		this.timeStartLiveMigration = timeStartLiveMigration;
 	}
 
-	public void setNextServerClouletId(int i) {
-	}
-
-	public int getNextServerClouletId() {
-		return 1;
-	}
 }

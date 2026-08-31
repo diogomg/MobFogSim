@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -104,30 +105,24 @@ public class ApDevice extends FogDevice {
 
 	public static boolean connectApSmartThing(List<ApDevice> apDevices, MobileDevice st,
 		double delay) {
-		int index = Distances.theClosestAp(apDevices, st);
-
-		if (index >= 0) {
-			// it checks the accessPoint limit
-			if (apDevices.get(index).getMaxSmartThing() > apDevices.get(index).getSmartThings().size()) {
-				st.setSourceAp(apDevices.get(index));
-				apDevices.get(index).setSmartThings(st, Policies.ADD);
-				NetworkTopology.addLink(apDevices.get(index).getId(), st.getId(),
-					NetworkSlicing.getAccessPointUplinkBandwidth(
-						apDevices.get(index), st), delay);
-				LogMobile.debug("ApDevice.java", st.getName() + " was connected to "
-					+ st.getSourceAp().getName());
-				apDevices.get(index).setUplinkLatency(
-					apDevices.get(index).getUplinkLatency() + delay);
-				return true;
-			}
-			else {// Ap is full
-				return false;
-			}
-		}
-		else {// The next Ap is far way
+		Optional<ApDevice> closestAp = Distances.findClosestAp(apDevices, st);
+		if (!closestAp.isPresent()) {
 			return false;
 		}
 
+		ApDevice apDevice = closestAp.get();
+		if (apDevice.getMaxSmartThing() <= apDevice.getSmartThings().size()) {
+			return false;
+		}
+
+		st.setSourceAp(apDevice);
+		apDevice.setSmartThings(st, Policies.ADD);
+		NetworkTopology.addLink(apDevice.getId(), st.getId(),
+			NetworkSlicing.getAccessPointUplinkBandwidth(apDevice, st), delay);
+		LogMobile.debug("ApDevice.java", st.getName() + " was connected to "
+			+ apDevice.getName());
+		apDevice.setUplinkLatency(apDevice.getUplinkLatency() + delay);
+		return true;
 	}
 
 	public ApDevice(String name, int coordX, int coordY, int id) {

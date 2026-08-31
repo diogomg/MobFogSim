@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
@@ -50,14 +51,11 @@ public class Migration {
 	}
 
 	// Policy: the closest Ap
-	public static int nextAp(List<ApDevice> apDevices, MobileDevice smartThing) {
+	public static Optional<ApDevice> nextAp(List<ApDevice> apDevices,
+		MobileDevice smartThing) {
 		// It return apDevice list without the smartThing's sourceAp
 		setApsAvailable(apAvailableList(apDevices, smartThing));
-		if (getApsAvailable().size() == 0) {
-			return -1;
-		}
-		// return the closest ap's id or -1 if it doesn't exist
-		return Distances.theClosestAp(getApsAvailable(), smartThing);
+		return Distances.findClosestAp(getApsAvailable(), smartThing);
 	}
 
 	public int nextApFromCloudlet(Set<ApDevice> apDevices, MobileDevice smartThing) {
@@ -159,109 +157,72 @@ public class Migration {
 			localServerCloudlet = DiscoverLocalization.discoverLocal(
 				smartThing.getFutureCoord(), sc.getCoord());
 			cone = insideCone(localServerCloudlet, directionMPError);
-			if (cone && (sc.getMyId() != smartThing.getSourceServerCloudlet().getMyId())) {
+			if (cone && sc != smartThing.getSourceServerCloudlet()) {
 				newServerCloudlets.add(sc);
 			}
 		}
 		return newServerCloudlets;
 	}
 
-	public static int nextServerCloudlet(List<FogDevice> serverCloudlets, MobileDevice smartThing) {
+	public static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,
+		MobileDevice smartThing) {
 		// Policy: the closest serverCloudlet
 		setServerCloudletsAvailable(serverClouletsAvailableList(serverCloudlets, smartThing));
-		if (getServerCloudletsAvailable().size() == 0) {
-			return -1;
-		}
-		else {
-			return Distances.theClosestServerCloudlet(getServerCloudletsAvailable(), smartThing);
-		}
+		return Distances.findClosestServerCloudlet(getServerCloudletsAvailable(), smartThing);
 	}
 
 	public static boolean isEdgeAp(ApDevice apDevice, MobileDevice smartThing) {
-		if (apDevice.getServerCloudlet().getMyId() == smartThing.getSourceServerCloudlet()
-			.getMyId())// verify if the next Ap is edge
-			return false;
-		else
-			return true;
+		return apDevice.getServerCloudlet() != smartThing.getSourceServerCloudlet();
 	}
 
-	public static int lowestLatencyCostServerCloudlet(List<FogDevice> oldServerCloudlets,
+	public static Optional<FogDevice> lowestLatencyCostServerCloudlet(
+		List<FogDevice> oldServerCloudlets,
 		List<ApDevice> oldApDevices, MobileDevice smartThing) {
 		List<FogDevice> newServerCloudlets = new ArrayList<>();
 		List<FogDevice> numServerCloudlets = new ArrayList<>();
-		List<Double> costList = new ArrayList<>();
 
 		for (FogDevice sc : oldServerCloudlets) {
 			newServerCloudlets.add(sc);
 		}
 
 		for (int i = 0; i < 9; i++) {
-			int destinationServerCloudlet = nextServerCloudlet(newServerCloudlets, smartThing);
-			if (destinationServerCloudlet >= 0) {
-				for (FogDevice sc1 : newServerCloudlets) {
-					if (sc1.getMyId() == destinationServerCloudlet) {
-						numServerCloudlets.add(sc1);
-						break;
-					}
-				}
-
-				FogDevice sc = null;
-				for (int j = 0; j < newServerCloudlets.size(); j++) {
-
-					sc = newServerCloudlets.get(j);
-					if (sc.getMyId() == destinationServerCloudlet) {
-						newServerCloudlets.remove(sc);
-						break;
-					}
-				}
-			}
-			else {
+			Optional<FogDevice> destinationServerCloudlet =
+				nextServerCloudlet(newServerCloudlets, smartThing);
+			if (!destinationServerCloudlet.isPresent()) {
 				break;
 			}
+			FogDevice selectedServerCloudlet = destinationServerCloudlet.get();
+			numServerCloudlets.add(selectedServerCloudlet);
+			newServerCloudlets.remove(selectedServerCloudlet);
 		}
 
 		if (numServerCloudlets.size() == 0) {
-			return -1;
+			return Optional.empty();
 		}
 		// this point numServerCloudlets has + than 0 and - than 10 sc
-		double sumCost;
-		int choose = -1;
-		double minCost = -1;
-		int idNextAp = nextAp(oldApDevices, smartThing);
-
-		if (idNextAp < 0) {
-			return -1;
+		Optional<ApDevice> nextAp = nextAp(oldApDevices, smartThing);
+		if (!nextAp.isPresent()) {
+			return Optional.empty();
 		}
 
 		for (FogDevice sc : oldServerCloudlets) {
-			System.out.println(sumCostFunction(sc, oldApDevices.get(idNextAp), smartThing));
-		}
-		for (int i = 0; i < numServerCloudlets.size(); i++) {
-			minCost = sumCostFunction(numServerCloudlets.get(i), oldApDevices.get(idNextAp),
-				smartThing);
-			System.out.println(minCost);
-			if (minCost >= 0) {
-				choose = numServerCloudlets.get(i).getMyId();
-				break;
-			}
-		}
-		if (minCost < 0) {
-			return -1;
+			System.out.println(sumCostFunction(sc, nextAp.get(), smartThing));
 		}
 
+		FogDevice selectedServerCloudlet = null;
+		double minimumCost = Double.POSITIVE_INFINITY;
 		for (FogDevice sc : numServerCloudlets) {
-			sumCost = sumCostFunction(sc, oldApDevices.get(idNextAp), smartThing);
-			costList.add(sumCost);
+			double sumCost = sumCostFunction(sc, nextAp.get(), smartThing);
 			System.out.println(sumCost);
 			if (sumCost < 0) {
 				continue;
 			}
-			if (sumCost < minCost) {
-				minCost = sumCost;
-				choose = sc.getMyId();
+			if (sumCost < minimumCost) {
+				minimumCost = sumCost;
+				selectedServerCloudlet = sc;
 			}
 		}
-		return choose;
+		return Optional.ofNullable(selectedServerCloudlet);
 	}
 
 	public static void lowestLatencyCostServerCloudletILP(List<FogDevice> oldServerCloudlets,
@@ -270,11 +231,14 @@ public class Migration {
 		List<Double> costList = new ArrayList<>();
 
 		Double sumCost;
-		int idNextAp = nextAp(oldApDevices, smartThing);
+		Optional<ApDevice> nextAp = nextAp(oldApDevices, smartThing);
+		if (!nextAp.isPresent()) {
+			return;
+		}
 
 		clusterOfCloudlets = serverClouletsAvailableList(oldServerCloudlets, smartThing);
 		for (FogDevice sc : clusterOfCloudlets) {
-			sumCost = sumCostFunction(sc, oldApDevices.get(idNextAp), smartThing);
+			sumCost = sumCostFunction(sc, nextAp.get(), smartThing);
 			costList.add(sumCost);
 		}
 		List<List<Double>> latencyMatrix = getLatencyMatrix(smartThing.getFutureCoord());

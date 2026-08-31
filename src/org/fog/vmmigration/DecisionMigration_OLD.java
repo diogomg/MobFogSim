@@ -2,6 +2,7 @@ package org.fog.vmmigration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.fog.entities.*;
 import org.fog.localization.*;
 import org.fog.vmmobile.constants.Policies;
@@ -10,8 +11,8 @@ import org.fog.vmmobile.constants.Services;
 public class DecisionMigration_OLD {
 
 	private static ApDevice correntAP;
-	private static int nextApId;
-	private static int nextServerClouletId;
+	private static ApDevice nextAp;
+	private static FogDevice nextServerCloudlet;
 
 	private static int smartThingPosition;
 	private static boolean migZone;
@@ -46,93 +47,98 @@ public class DecisionMigration_OLD {
 
 			if (migStrategyPolicy == Policies.LOWEST_LATENCY) {
 				// to do this policy
-				setNextServerClouletId(migration.lowestLatencyCostServerCloudlet(serverCloudlets,
-					apDevices, smartThing));
-				if (getNextServerClouletId() < 0) {
+				Optional<FogDevice> selectedServerCloudlet =
+					migration.lowestLatencyCostServerCloudlet(
+						serverCloudlets, apDevices, smartThing);
+				if (!selectedServerCloudlet.isPresent()) {
 					return false;
 				}
+				setNextServerCloudlet(selectedServerCloudlet.get());
 				// It creates a temporary List to invoke the nextAp
 				List<ApDevice> tempListAps = new ArrayList<>(); 
-				for (ApDevice ap : serverCloudlets.get(getNextServerClouletId()).getApDevices()) {
+				for (ApDevice ap : getNextServerCloudlet().getApDevices()) {
 					tempListAps.add(ap);
 				}
 
-				setNextApId(migration.nextAp(tempListAps, smartThing));
-				if (getNextApId() < 0) {
+				Optional<ApDevice> selectedAp = migration.nextAp(tempListAps, smartThing);
+				if (!selectedAp.isPresent()) {
 					return false;// no migration
 				}
+				setNextAp(selectedAp.get());
 				// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-				if (!migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
+				if (!migration.isEdgeAp(getNextAp(), smartThing)) {
 					return false;// no migration
 				}
 
 			}
 			else if (migStrategyPolicy == Policies.LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET) {
-				// choose the closest cloudlet, it returns the Id or -1
-				setNextServerClouletId(migration.nextServerCloudlet(serverCloudlets, smartThing));
-				if (getNextServerClouletId() < 0) {// Does next ServerCloudlet exist?
+				Optional<FogDevice> selectedServerCloudlet =
+					migration.nextServerCloudlet(serverCloudlets, smartThing);
+				if (!selectedServerCloudlet.isPresent()) {
 					return false;
 				}
+				setNextServerCloudlet(selectedServerCloudlet.get());
 				// It creates a temporary List to invoke the nextAp
 				List<ApDevice> tempListAps = new ArrayList<>(); 
-				for (ApDevice ap : serverCloudlets.get(getNextServerClouletId()).getApDevices()) {
+				for (ApDevice ap : getNextServerCloudlet().getApDevices()) {
 					tempListAps.add(ap);
 				}
 
-				setNextApId(migration.nextAp(tempListAps, smartThing));
-				if (getNextApId() < 0) {
+				Optional<ApDevice> selectedAp = migration.nextAp(tempListAps, smartThing);
+				if (!selectedAp.isPresent()) {
 					return false;// no migration
 				}
+				setNextAp(selectedAp.get());
 				// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-				if (!migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
+				if (!migration.isEdgeAp(getNextAp(), smartThing)) {
 					return false;// no migration
 				}
 
 			}
 			else if (migStrategyPolicy == Policies.LOWEST_DIST_BW_SMARTTING_AP) {
-				setNextApId(migration.nextAp(apDevices, smartThing));
-				if (getNextApId() < 0) {// index is negative
+				Optional<ApDevice> selectedAp = migration.nextAp(apDevices, smartThing);
+				if (!selectedAp.isPresent()) {
 					return false;// no migration
 				}
+				setNextAp(selectedAp.get());
 				// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-				if (!migration.isEdgeAp(apDevices.get(getNextApId()), smartThing)) {
+				if (!migration.isEdgeAp(getNextAp(), smartThing)) {
 					return false;// no migration
 				}
 				// ServerCloudlet linked with nextap
-				setNextServerClouletId(apDevices.get(getNextApId()).getServerCloudlet().getMyId());
+				setNextServerCloudlet(getNextAp().getServerCloudlet());
 			}
 
 			if (!checkLinkStatus(smartThing.getSourceServerCloudlet(),
-				serverCloudlets.get(getNextServerClouletId()))) {
+				getNextServerCloudlet())) {
 				return false;
 
 			}
 
 			// to define some policy for this available!!!
-			if (!serverCloudlets.get(getNextServerClouletId()).isAvailable()) { 
+			if (!getNextServerCloudlet().isAvailable()) {
 				return false;// no migration
 			}
 		}
 		else {
-			setNextServerClouletId(getCorrentAP().getServerCloudlet().getMyId());
+			setNextServerCloudlet(getCorrentAP().getServerCloudlet());
 		}
-		int serviceType = serverCloudlets.get(getNextServerClouletId()).getService().getType();
+		int serviceType = getNextServerCloudlet().getService().getType();
 
 		if (serviceType == Services.PRIVATE) {
 			// it saves the destination serverCloudlet
-			smartThing.setDestinationServerCloudlet(serverCloudlets.get(getNextServerClouletId()));
+			smartThing.setDestinationServerCloudlet(getNextServerCloudlet());
 			return true;
 		}
 		else if (serviceType == Services.HIBRID) {// it needs to define the policy
 			// it saves the destination serverCloudlet
-			smartThing.setDestinationServerCloudlet(serverCloudlets.get(getNextServerClouletId()));
+			smartThing.setDestinationServerCloudlet(getNextServerCloudlet());
 			return true;
 		}
 		else if (serviceType == Services.PUBLIC) {
-			float serviceValue = serverCloudlets.get(getNextServerClouletId()).getService().getValue();
+			float serviceValue = getNextServerCloudlet().getService().getValue();
 			if (serviceValue <= smartThing.getMaxServiceValue()) {
-				smartThing.setDestinationServerCloudlet(serverCloudlets
-					.get(getNextServerClouletId()));// it saves the destination serverCloudlet
+				smartThing.setDestinationServerCloudlet(getNextServerCloudlet());
 				return true; // the smartThing agrees
 			}
 			else {
@@ -142,7 +148,7 @@ public class DecisionMigration_OLD {
 
 		throw new IllegalStateException("Unsupported service type " + serviceType
 			+ " for migration destination "
-			+ serverCloudlets.get(getNextServerClouletId()).getName());
+			+ getNextServerCloudlet().getName());
 
 	}// end class
 
@@ -174,12 +180,12 @@ public class DecisionMigration_OLD {
 		DecisionMigration_OLD.smartThingPosition = smartThingPosition;
 	}
 
-	public static int getNextApId() {
-		return nextApId;
+	public static ApDevice getNextAp() {
+		return nextAp;
 	}
 
-	public static void setNextApId(int nextApId) {
-		DecisionMigration_OLD.nextApId = nextApId;
+	public static void setNextAp(ApDevice nextAp) {
+		DecisionMigration_OLD.nextAp = nextAp;
 	}
 
 	public static boolean isMigPoint() {
@@ -198,12 +204,12 @@ public class DecisionMigration_OLD {
 		DecisionMigration_OLD.migZone = migZone;
 	}
 
-	public static int getNextServerClouletId() {
-		return nextServerClouletId;
+	public static FogDevice getNextServerCloudlet() {
+		return nextServerCloudlet;
 	}
 
-	public static void setNextServerClouletId(int nextCloulet) {
-		DecisionMigration_OLD.nextServerClouletId = nextCloulet;
+	public static void setNextServerCloudlet(FogDevice nextServerCloudlet) {
+		DecisionMigration_OLD.nextServerCloudlet = nextServerCloudlet;
 	}
 
 }
