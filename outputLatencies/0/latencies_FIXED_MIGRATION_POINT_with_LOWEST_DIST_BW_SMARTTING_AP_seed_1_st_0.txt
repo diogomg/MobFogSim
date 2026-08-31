@@ -1,2 +1,0 @@
-FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_1_st_0
-Time-latency

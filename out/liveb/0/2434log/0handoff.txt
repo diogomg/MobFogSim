@@ -1,1 +1,0 @@
-0	1.4537E7	6503	4951	7	13	AccessPoint63 [serverCloulet=ServerCloudlet20]	AccessPoint64 [serverCloulet=ServerCloudlet20]

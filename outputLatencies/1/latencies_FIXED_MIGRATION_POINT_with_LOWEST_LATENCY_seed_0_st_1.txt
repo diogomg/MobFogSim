@@ -1,2 +1,0 @@
-FIXED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_0_st_1
-Time-latency

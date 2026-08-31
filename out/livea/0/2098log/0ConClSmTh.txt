@@ -1,7 +1,0 @@
-0.0	0	connectApSmartThing T
-0.0	0	desconnectApSmartThing
-9040000.0	0	connectApSmartThing T
-9119000.0	0	desconnectServerCloudletSmartThing
-9120183.77209743	0	connectServerCloudletSmartThing
-9299000.0	0	desconnectServerCloudletSmartThing
-9300057.87607981	0	connectServerCloudletSmartThing

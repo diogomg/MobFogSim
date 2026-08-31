@@ -1,2 +1,0 @@
-SPEED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_1_st_1
-Time-latency

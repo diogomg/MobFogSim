@@ -1,2 +1,0 @@
-SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_5_st_2
-Time-latency

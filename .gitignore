@@ -1,0 +1,13 @@
+/build/
+/bin/
+/runs/
+/out/
+/outputLatencies/
+/averages/
+*.class
+*.swp
+*.swo
+/creating_modules.txt
+/cscope.files
+/cscope.out
+/mobfogsim.tar.gz
