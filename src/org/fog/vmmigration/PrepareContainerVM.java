@@ -1,57 +1,22 @@
 package org.fog.vmmigration;
 
-import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.vmmobile.constants.MaxAndMin;
 
-public class PrepareContainerVM implements BeforeMigration {
+public class PrepareContainerVM extends AbstractMigrationPreparation {
+	private static final int MAXIMUM_CONNECTION_ATTEMPTS = 5;
 
-	private double timeToOpenConnection = 0.0;
+	public PrepareContainerVM() {
+		super(MAXIMUM_CONNECTION_ATTEMPTS);
+	}
 
-	@Override
-	public double dataprepare(MobileDevice smartThing) {
-
-		FogDevice scSource = smartThing.getVmLocalServerCloudlet();
-		if (openConnection(scSource, smartThing.getDestinationServerCloudlet())) {
-			double delayProcess = scSource.getCharacteristics().
-				getCpuTime(
-					(smartThing.getVmMobileDevice().getSize() * 1024 * 1024)
-						* MaxAndMin.PROCESS_CONTAINER, 0.0)
-				+ getTimeToOpenConnection();
-			return delayProcess;
-		}
-		else {
-			return -1;
-		}
+	public PrepareContainerVM(ConnectionAttemptPolicy connectionAttemptPolicy) {
+		super(MAXIMUM_CONNECTION_ATTEMPTS, connectionAttemptPolicy);
 	}
 
 	@Override
-	public boolean openConnection(FogDevice sourceServerCloudlet,
-		FogDevice destinationServerCloudlet) {
-		for (int i = 0; i < 5; i++) {// It'll try three times to opening connection
-			if (tryOpenConnection()) {// It should be a method that really open the connection
-				setTimeToOpenConnection(getTimeToOpenConnection() + 10.0);
-				return true;
-			}
-			else {
-				// maybe to exchange anything (e.g Links)
-				setTimeToOpenConnection(getTimeToOpenConnection() + 30.0);
-			}
-		}
-		return false;
+	protected double getPreparationWorkload(MobileDevice smartThing) {
+		return smartThing.getVmMobileDevice().getSize() * 1024 * 1024
+			* MaxAndMin.PROCESS_CONTAINER;
 	}
-
-	public double getTimeToOpenConnection() {
-		return timeToOpenConnection;
-	}
-
-	public void setTimeToOpenConnection(double timeToOpenConnection) {
-		this.timeToOpenConnection = timeToOpenConnection;
-	}
-
-	@Override
-	public boolean tryOpenConnection() {
-		return true;
-	}
-
 }

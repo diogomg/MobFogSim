@@ -1,57 +1,20 @@
 package org.fog.vmmigration;
 
-import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 
-public class PrepareLiveMigration implements BeforeMigration {
-	private double timeToOpenConnection = 0.0;
+public class PrepareLiveMigration extends AbstractMigrationPreparation {
+	private static final int MAXIMUM_CONNECTION_ATTEMPTS = 5;
 
-	@Override
-	public double dataprepare(MobileDevice smartThing) {
+	public PrepareLiveMigration() {
+		super(MAXIMUM_CONNECTION_ATTEMPTS);
+	}
 
-		FogDevice scSource = smartThing.getVmLocalServerCloudlet();
-		if (openConnection(scSource, smartThing.getDestinationServerCloudlet())) {
-			double delayProcess = scSource.getCharacteristics().
-				getCpuTime((smartThing.getVmMobileDevice().getSize() * 1024 * 1024), 0.0)
-				+ getTimeToOpenConnection();
-			return delayProcess;
-		}
-		else {
-			return -1;
-		}
+	public PrepareLiveMigration(ConnectionAttemptPolicy connectionAttemptPolicy) {
+		super(MAXIMUM_CONNECTION_ATTEMPTS, connectionAttemptPolicy);
 	}
 
 	@Override
-	public boolean openConnection(FogDevice sourceServerCloudlet,
-		FogDevice destinationServerCloudlet) {
-		for (int i = 0; i < 5; i++) {// It'll try three times to opening connection
-			if (tryOpenConnection()) {// It should be a method that really open the connection
-				setTimeToOpenConnection(getTimeToOpenConnection() + 10.0);
-				return true;
-			}
-			else {
-				// maybe to exchange anything (e.g Links)
-				setTimeToOpenConnection(getTimeToOpenConnection() + 30.0);
-			}
-		}
-		return false;
+	protected double getPreparationWorkload(MobileDevice smartThing) {
+		return smartThing.getVmMobileDevice().getSize() * 1024 * 1024;
 	}
-
-	public void jaque() {
-
-	}
-
-	@Override
-	public boolean tryOpenConnection() {
-		return true;
-	}
-
-	public double getTimeToOpenConnection() {
-		return timeToOpenConnection;
-	}
-
-	public void setTimeToOpenConnection(double timeToOpenConnection) {
-		this.timeToOpenConnection = timeToOpenConnection;
-	}
-
 }
