@@ -1,9 +1,12 @@
 package org.fog.vmmobile;
 
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
+import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmobile.constants.Policies;
@@ -11,7 +14,9 @@ import org.fog.vmmobile.constants.Policies;
 /** Immutable, fully validated command-line configuration for one simulation. */
 public final class SimulationConfig {
 	private static final int REQUIRED_PARAMETER_COUNT = 10;
-	private static final int MAXIMUM_PARAMETER_COUNT = 17;
+	private static final int MAXIMUM_PARAMETER_COUNT = 16;
+	private static final DateTimeFormatter RUN_DIRECTORY_TIMESTAMP =
+		DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
 	private final boolean migrationEnabled;
 	private final int seed;
@@ -27,13 +32,16 @@ public final class SimulationConfig {
 	private final int vmDestinationPolicy;
 	private final Path mobilityDirectory;
 	private final Path mobilityOrderManifest;
+	private final Path outputDirectory;
+	private final RunOutputMode outputMode;
 
 	private SimulationConfig(boolean migrationEnabled, int seed,
 		int migrationPointPolicy, int migrationStrategyPolicy, int maximumUsers,
 		int maximumBandwidth, int vmMigrationPolicy, double cloudletLatency,
 		int travelPredictionTime, int mobilityPredictionError,
 		NetworkSlicing.Configuration slicingConfiguration, int vmDestinationPolicy,
-		Path mobilityDirectory, Path mobilityOrderManifest) {
+		Path mobilityDirectory, Path mobilityOrderManifest, Path outputDirectory,
+		RunOutputMode outputMode) {
 		this.migrationEnabled = migrationEnabled;
 		this.seed = seed;
 		this.migrationPointPolicy = migrationPointPolicy;
@@ -48,6 +56,8 @@ public final class SimulationConfig {
 		this.vmDestinationPolicy = vmDestinationPolicy;
 		this.mobilityDirectory = mobilityDirectory;
 		this.mobilityOrderManifest = mobilityOrderManifest;
+		this.outputDirectory = outputDirectory;
+		this.outputMode = outputMode;
 	}
 
 	public static SimulationConfig parse(String[] args) {
@@ -57,7 +67,7 @@ public final class SimulationConfig {
 		}
 		if (args.length > MAXIMUM_PARAMETER_COUNT) {
 			throw new IllegalArgumentException(
-				"AppExample accepts at most seventeen simulation parameters");
+				"AppExample accepts at most sixteen simulation parameters");
 		}
 
 		boolean migrationEnabled = parseFlag(args, 0, "Migration enabled");
@@ -104,17 +114,24 @@ public final class SimulationConfig {
 		requireRange(vmDestinationPolicy, VmDestinationPolicy.EDGE_SERVERS_ONLY,
 			VmDestinationPolicy.HYBRID, "VM destination policy");
 
-		Path mobilityDirectory = parsePath(args.length > 15 ? args[15] : "input",
-			"Mobility directory");
-		Path mobilityOrderManifest = args.length > 16
-			? parsePath(args[16], "Mobility order manifest")
-			: mobilityDirectory.resolve("inputOrder.csv");
+		Path mobilityDirectory = Paths.get("input");
+		Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
+		Path outputDirectory = defaultOutputDirectory(seed);
+		RunOutputMode outputMode = args.length > 15
+			? RunOutputMode.parse(args[15]) : RunOutputMode.SUMMARY;
 
 		return new SimulationConfig(migrationEnabled, seed, migrationPointPolicy,
 			migrationStrategyPolicy, maximumUsers, maximumBandwidth,
 			vmMigrationPolicy, cloudletLatency, travelPredictionTime,
 			mobilityPredictionError, slicingConfiguration, vmDestinationPolicy,
-			mobilityDirectory, mobilityOrderManifest);
+			mobilityDirectory, mobilityOrderManifest, outputDirectory, outputMode);
+	}
+
+	private static Path defaultOutputDirectory(int seed) {
+		String timestamp = LocalDateTime.now().format(RUN_DIRECTORY_TIMESTAMP);
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		return Paths.get("runs", "seed-" + seed + "-" + timestamp + "-"
+			+ uniqueSuffix);
 	}
 
 	private static boolean parseFlag(String[] args, int index, String description) {
@@ -181,17 +198,6 @@ public final class SimulationConfig {
 		return value;
 	}
 
-	private static Path parsePath(String value, String description) {
-		String parsedValue = requiredValue(value, description);
-		try {
-			return Paths.get(parsedValue);
-		}
-		catch (InvalidPathException error) {
-			throw new IllegalArgumentException(
-				"Invalid " + description.toLowerCase() + ": " + error.getInput(), error);
-		}
-	}
-
 	public boolean isMigrationEnabled() {
 		return migrationEnabled;
 	}
@@ -246,5 +252,13 @@ public final class SimulationConfig {
 
 	public Path getMobilityOrderManifest() {
 		return mobilityOrderManifest;
+	}
+
+	public Path getOutputDirectory() {
+		return outputDirectory;
+	}
+
+	public RunOutputMode getOutputMode() {
+		return outputMode;
 	}
 }

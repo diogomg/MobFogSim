@@ -1,16 +1,13 @@
 package org.fog.entities;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
 import org.fog.placement.MobileController;
@@ -78,15 +75,10 @@ public class Actuator extends SimEntity {
 	}
 
 	public void printResults(String a, String filename) {
-		try (FileWriter fw1 = new FileWriter(filename, true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(filename, true))
 		{
 			out1.println(a);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

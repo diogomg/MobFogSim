@@ -1,17 +1,14 @@
 package org.fog.vmmigration;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.entities.*;
 import org.fog.localization.Coordinate;
 import org.fog.localization.DiscoverLocalization;
@@ -95,19 +92,14 @@ public class Migration {
 		Coordinate coord_prev, Coordinate coord_erro, Double dist_atual_prev,
 		Double dist_atual_erro, Double dist_prev_erro, int velocidade, String filename) {
 
-		try (FileWriter fw1 = new FileWriter(filename, true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(filename, true))
 		{
 			out1.println(travelTimeId + "\t" + coord_atual.getCoordX() + "\t"
 				+ coord_atual.getCoordY() + "\t" + coord_prev.getCoordX() + "\t"
 				+ coord_prev.getCoordY() + "\t" + coord_erro.getCoordX() + "\t"
 				+ coord_erro.getCoordY() + "\t" + dist_atual_prev + "\t" + dist_atual_erro + "\t"
 				+ dist_prev_erro + "\t" + velocidade);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

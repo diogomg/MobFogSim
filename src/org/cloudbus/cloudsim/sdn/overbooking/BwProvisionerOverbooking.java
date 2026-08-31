@@ -7,18 +7,15 @@
 
 package org.cloudbus.cloudsim.sdn.overbooking;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.provisioners.BwProvisioner;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 
 /**
  * BwProvisionerSimple is a class that implements a simple best effort
@@ -58,9 +55,8 @@ public class BwProvisionerOverbooking extends BwProvisioner {
 	public boolean allocateBwForVm(Vm vm, long bw) {
 		deallocateBwForVm(vm);
 
-		try (FileWriter fw1 = new FileWriter("creating_modules.txt", true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter("creating_modules.txt", true))
 		{
 			out1.print(CloudSim.clock() + " Bandwich " + getAvailableBw() + " Required " + bw
 				+ " result " + (getAvailableBw() - bw) + " App " + vm.getVmm() + " device ");
@@ -70,12 +66,6 @@ public class BwProvisionerOverbooking extends BwProvisioner {
 			else {
 				out1.println("null");
 			}
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -7,17 +7,14 @@
 
 package org.cloudbus.cloudsim.provisioners;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 
 /**
  * RamProvisionerSimple is an extension of RamProvisioner which uses a
@@ -58,9 +55,8 @@ public class RamProvisionerSimple extends RamProvisioner {
 
 		deallocateRamForVm(vm);
 
-		try (FileWriter fw1 = new FileWriter("creating_modules.txt", true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter("creating_modules.txt", true))
 		{
 			out1.print(CloudSim.clock() + " RAM " + getAvailableRam() + " required " + ram
 				+ " result " + (getAvailableRam() - ram) + " App " + vm.getVmm() + " device ");
@@ -70,12 +66,6 @@ public class RamProvisionerSimple extends RamProvisioner {
 			else {
 				out1.println("null");
 			}
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

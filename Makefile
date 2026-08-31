@@ -5,6 +5,7 @@ TEST_CLASSES := build/test-classes
 TEST_CLASSPATH := $(TEST_CLASSES):jars/*:jars/commons-math3-3.5/*
 TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
+	org.cloudbus.cloudsim.util.RunOutputManagerTest \
 	org.fog.entities.ActuatorTest \
 	org.fog.entities.FogDeviceChildStateTest \
 	org.fog.entities.SensorTest \

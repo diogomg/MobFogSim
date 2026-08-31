@@ -3,7 +3,7 @@ package org.cloudbus.cloudsim.util;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -35,6 +35,10 @@ public final class BufferedFileManager {
 	}
 
 	public static synchronized void writeLines(File file, String... lines) {
+		RunOutputManager output = RunOutputManager.getInstance();
+		if (!output.isDetailedOutputEnabled()) {
+			return;
+		}
 		try {
 			BufferedWriter writer = getWriter(file);
 			for (String line : lines) {
@@ -54,6 +58,9 @@ public final class BufferedFileManager {
 	}
 
 	public static synchronized void open(File file) {
+		if (!RunOutputManager.getInstance().isFullOutputEnabled()) {
+			return;
+		}
 		try {
 			getWriter(file);
 		} catch (IOException e) {
@@ -62,10 +69,21 @@ public final class BufferedFileManager {
 	}
 
 	private static BufferedWriter getWriter(File file) throws IOException {
-		Path path = file.toPath().toAbsolutePath().normalize();
+		Path requested = file.toPath();
+		Path path;
+		if (requested.isAbsolute()) {
+			path = requested.normalize();
+			Path parent = path.getParent();
+			if (parent != null) {
+				Files.createDirectories(parent);
+			}
+		}
+		else {
+			path = RunOutputManager.getInstance().resolve(requested);
+		}
 		BufferedWriter writer = WRITERS.get(path);
 		if (writer == null) {
-			writer = new BufferedWriter(Files.newBufferedWriter(path, Charset.defaultCharset(),
+			writer = new BufferedWriter(Files.newBufferedWriter(path, StandardCharsets.UTF_8,
 				StandardOpenOption.CREATE, StandardOpenOption.APPEND), BUFFER_SIZE);
 			WRITERS.put(path, writer);
 		}

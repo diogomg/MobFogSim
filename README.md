@@ -59,15 +59,13 @@ Optional:
 *  Thirteenth parameter: comma-separated bandwidth percentages for the slices. Values must be greater than zero and sum to 100.
 *  Fourteenth parameter: 0 keeps the configured slice bandwidth fixed (static slicing); 1 lets active slices borrow idle capacity (dynamic slicing).
 *  Fifteenth parameter: VM destination type: 0 edge servers only, 1 end devices only, or 2 hybrid.
-*  Sixteenth parameter: optional path to the mobility trace directory. It defaults to `input`.
-*  Seventeenth parameter: optional path to the mobility order manifest. It defaults to `inputOrder.csv` inside the selected mobility directory.
+*  Sixteenth parameter: output mode: `summary`, `full`, or `none`. It defaults to `summary` when omitted.
 
 ### Example
 
 ```text
-1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 input input/inputOrder.csv
+1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary
 ```
-
 
 This example configures the simulation as follows:
 
@@ -88,8 +86,23 @@ This example configures the simulation as follows:
 | Slice shares | 70,30 | Gives slice 0 70% and slice 1 30% of bandwidth in the selected scope. |
 | Slice mode | 1 | Enables dynamic borrowing of idle slice capacity. |
 | VM destinations | 2 | Allows both edge servers and eligible end devices as migration destinations. |
-| Mobility directory | input | Reads mobility traces from the repository's default input directory. |
-| Mobility manifest | input/inputOrder.csv | Maps users to traces in the manifest's original order. |
+| Output mode | summary | Writes bounded end-of-run metrics and omits detailed event records. |
+
+Mobility traces are always read from `input`, using `input/inputOrder.csv` as
+the order manifest. Every simulation receives an automatically generated,
+unique output directory below `runs/`; its name contains the seed, timestamp,
+and a short unique identifier.
+
+Every enabled simulator-generated file is resolved below the run output
+directory. The modes control which files are enabled:
+
+| Mode | Output behavior |
+| --- | --- |
+| `summary` | Default. Writes bounded end-of-run averages, totals, network usage, migration statistics, and tuple-loss statistics. It omits per-event records and `out.txt`. |
+| `full` | Writes the summaries and every detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace record. This preserves the previous output detail. |
+| `none` | Disables every output file. The configured run root may still be created, but it remains empty. |
+
+All enabled output remains uncompressed plain text;
 
 When a user-allocation percentage produces a fractional number of users, the simulator assigns the remaining users to the slices with the largest fractional remainders. Within the selected scope, each group receives its configured bandwidth share. For example, a physical link or AP direction with 11 Mbps and a 70/30 configuration gives group 0 7.7 Mbps and group 1 3.3 Mbps. Users connected to the same AP and assigned to the same slice share that slice's wireless capacity equally; their effective rate is also capped by the individual mobile device's link rate. A network outside the selected scope is not divided into slices; AP capacity is shared equally among connected users in that case. During VM migration, an active group may borrow transport capacity reserved for groups with no active migration on that same directed link. Concurrent migrations on the same directed link share the available capacity; whenever a migration starts, finishes, or is aborted, the simulator updates the remaining data, recalculates every affected rate, and replaces their completion events so their combined rate never exceeds the physical link. On an AP, connected groups may borrow the capacity of groups that have no connected users there. Borrowed capacity is returned automatically when a migration finishes, or when AP membership changes; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
 

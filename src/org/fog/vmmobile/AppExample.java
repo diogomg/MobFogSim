@@ -1,12 +1,8 @@
 package org.fog.vmmobile;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -28,6 +24,8 @@ import org.cloudbus.cloudsim.power.PowerHost;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
+import org.cloudbus.cloudsim.util.RunOutputManager;
+import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
@@ -94,6 +92,8 @@ public class AppExample {
 	private static int maxSmartThings;
 	private static Path mobilityDirectory = Paths.get("input");
 	private static Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
+	private static Path outputDirectory = Paths.get("runs", "unconfigured");
+	private static RunOutputMode outputMode = RunOutputMode.SUMMARY;
 	private static Coordinate coordDevices;
 	private static int seed;
 	private static Random rand;
@@ -127,8 +127,7 @@ public class AppExample {
 		 *  
 		 *  Example parameters
 		 *  
-		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 input
-		 *  input/inputOrder.csv
+		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary
 		 *  
 		 *  First parameter: 0/1 -> migrations are denied or allowed
 		 *  Second parameter: Positive Integer -> seed to be used in the random numbers generation
@@ -146,9 +145,8 @@ public class AppExample {
 		 *  Thirteenth parameter: Comma-separated network-slice bandwidth percentages.
 		 *  Fourteenth parameter: 0 for fixed slices or 1 to borrow idle slice capacity.
 		 *  Fifteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
-		 *  Sixteenth parameter: Optional mobility trace directory (default: input).
-		 *  Seventeenth parameter: Optional mobility order manifest path
-		 *  (default: mobility directory/inputOrder.csv).
+		 *  Sixteenth parameter: summary, full, or none output mode
+		 *  (default: summary).
 		 */
 
 		Log.disable();
@@ -162,6 +160,7 @@ public class AppExample {
 		setPositionScPolicy(Policies.FIXED_SC_LOCATION);
 		setStepPolicy(1);
 		configureSimulationParameters(args);
+		RunOutputManager.initialize(getOutputDirectory(), getOutputMode());
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
@@ -322,10 +321,17 @@ public class AppExample {
 				+ ap.getServerCloudlet().getName());
 
 		}
-		System.setOut(new PrintStream("out.txt"));
-		System.out.println("Inicio: " + Calendar.getInstance().getTime());
-		CloudSim.startSimulation();
-		System.out.println("Simulation over");
+		PrintStream console = System.out;
+		try (PrintStream simulationOutput = RunOutputManager.getInstance()
+			.newFullPrintStream("out.txt")) {
+			System.setOut(simulationOutput);
+			System.out.println("Inicio: " + Calendar.getInstance().getTime());
+			CloudSim.startSimulation();
+			System.out.println("Simulation over");
+		}
+		finally {
+			System.setOut(console);
+		}
 	}
 
 	static void configureSimulationParameters(String[] args) {
@@ -348,6 +354,8 @@ public class AppExample {
 		VmDestinationPolicy.configure(configuration.getVmDestinationPolicy());
 		setMobilityDirectory(configuration.getMobilityDirectory());
 		setMobilityOrderManifest(configuration.getMobilityOrderManifest());
+		setOutputDirectory(configuration.getOutputDirectory());
+		setOutputMode(configuration.getOutputMode());
 	}
 
 	private static void readMobilityData() {
@@ -365,9 +373,8 @@ public class AppExample {
 
 	private static void saveMobility(MobileDevice st) {
 
-		try (FileWriter fw1 = new FileWriter(st.getMyId() + "out.txt", true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(st.getMyId() + "out.txt", true))
 		{
 			out1.println(st.getMyId() + " Position: " + st.getCoord().getCoordX() + ", "
 				+ st.getCoord().getCoordY() + " Direction: " + st.getDirection() + " Speed: "
@@ -383,25 +390,16 @@ public class AppExample {
 					+ " Apps: " + st.getDestinationServerCloudlet().getActiveApplications()
 					+ " Map " + st.getDestinationServerCloudlet().getApplicationMap());
 			}
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		try (FileWriter fw = new FileWriter(st.getMyId() + "route.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
+		try (PrintWriter out = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(st.getMyId() + "route.txt", true))
 		{
 			out.println(st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t"
 				+ st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t" + st.getSpeed()
 				+ "\t" + CloudSim.clock());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -1151,6 +1149,28 @@ public class AppExample {
 				"Mobility order manifest cannot be null");
 		}
 		AppExample.mobilityOrderManifest = mobilityOrderManifest;
+	}
+
+	public static Path getOutputDirectory() {
+		return outputDirectory;
+	}
+
+	public static void setOutputDirectory(Path outputDirectory) {
+		if (outputDirectory == null) {
+			throw new IllegalArgumentException("Run output directory cannot be null");
+		}
+		AppExample.outputDirectory = outputDirectory;
+	}
+
+	public static RunOutputMode getOutputMode() {
+		return outputMode;
+	}
+
+	public static void setOutputMode(RunOutputMode outputMode) {
+		if (outputMode == null) {
+			throw new IllegalArgumentException("Run output mode cannot be null");
+		}
+		AppExample.outputMode = outputMode;
 	}
 
 	public static Random getRand() {

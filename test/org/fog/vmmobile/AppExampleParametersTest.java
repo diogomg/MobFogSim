@@ -5,7 +5,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 
+import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.junit.After;
@@ -23,6 +25,8 @@ public class AppExampleParametersTest {
 		VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
 		AppExample.setMobilityDirectory(Paths.get("input"));
 		AppExample.setMobilityOrderManifest(Paths.get("input", "inputOrder.csv"));
+		AppExample.setOutputDirectory(Paths.get("runs", "unconfigured"));
+		AppExample.setOutputMode(RunOutputMode.SUMMARY);
 	}
 
 	@Test
@@ -86,27 +90,51 @@ public class AppExampleParametersTest {
 	}
 
 	@Test
-	public void readsExplicitMobilityInputPaths() {
+	public void readsExplicitOutputMode() {
 		AppExample.configureSimulationParameters(new String[] {
 			"1", "123", "0", "0", "1", "11", "0", "61", "0", "0",
-			"2", "100", "100", "1", "2", "mobility-fixtures",
-			"config/user-order.csv"
+			"2", "100", "100", "1", "2", "FuLl"
 		});
 
-		assertEquals(Paths.get("mobility-fixtures"), AppExample.getMobilityDirectory());
-		assertEquals(Paths.get("config/user-order.csv"),
-			AppExample.getMobilityOrderManifest());
+		assertEquals(RunOutputMode.FULL, AppExample.getOutputMode());
 	}
 
 	@Test
-	public void directoryOnlyUsesItsDefaultOrderManifest() {
+	public void removedPathParametersUseTheirDefaults() {
 		AppExample.configureSimulationParameters(new String[] {
-			"1", "123", "0", "0", "1", "11", "0", "61", "0", "0",
-			"2", "100", "100", "1", "2", "mobility-fixtures"
+			"0", "123", "0", "0", "1", "11", "0", "61", "0", "0"
 		});
 
-		assertEquals(Paths.get("mobility-fixtures", "inputOrder.csv"),
+		assertEquals(Paths.get("input"), AppExample.getMobilityDirectory());
+		assertEquals(Paths.get("input", "inputOrder.csv"),
 			AppExample.getMobilityOrderManifest());
+		assertEquals(Paths.get("runs"), AppExample.getOutputDirectory().getParent());
+		assertTrue(AppExample.getOutputDirectory().getFileName().toString()
+			.startsWith("seed-123-"));
+		assertEquals(RunOutputMode.SUMMARY, AppExample.getOutputMode());
+	}
+
+	@Test
+	public void rejectsParametersAfterOutputOptionsWithoutApplyingThem() {
+		AppExample.configureSimulationParameters(baselineArguments());
+		String[] invalid = Arrays.copyOf(changedArguments(), 17);
+		invalid[16] = "unexpected";
+
+		assertConfigurationRejected(invalid);
+
+		assertBaselineConfiguration();
+	}
+
+	@Test
+	public void rejectsUnsupportedOutputModesWithoutApplyingArguments() {
+		AppExample.configureSimulationParameters(baselineArguments());
+
+		for (String unsupportedMode : new String[] { "input", "sampled", "verbose" }) {
+			String[] invalid = changedArguments();
+			invalid[15] = unsupportedMode;
+			assertConfigurationRejected(invalid);
+			assertBaselineConfiguration();
+		}
 	}
 
 	@Test
@@ -172,16 +200,14 @@ public class AppExampleParametersTest {
 	private static String[] baselineArguments() {
 		return new String[] {
 			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
-			"1", "60,40", "70,30", "0", "1", "baseline-mobility",
-			"baseline/order.csv"
+			"1", "60,40", "70,30", "0", "1", "full"
 		};
 	}
 
 	private static String[] changedArguments() {
 		return new String[] {
 			"0", "999", "0", "0", "3", "99", "0", "77", "1", "2",
-			"0", "50,50", "50,50", "1", "2", "changed-mobility",
-			"changed/order.csv"
+			"0", "50,50", "50,50", "1", "2", "none"
 		};
 	}
 
@@ -213,8 +239,12 @@ public class AppExampleParametersTest {
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
 		assertFalse(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
-		assertEquals(Paths.get("baseline-mobility"), AppExample.getMobilityDirectory());
-		assertEquals(Paths.get("baseline/order.csv"),
+		assertEquals(Paths.get("input"), AppExample.getMobilityDirectory());
+		assertEquals(Paths.get("input", "inputOrder.csv"),
 			AppExample.getMobilityOrderManifest());
+		assertEquals(Paths.get("runs"), AppExample.getOutputDirectory().getParent());
+		assertTrue(AppExample.getOutputDirectory().getFileName().toString()
+			.startsWith("seed-123-"));
+		assertEquals(RunOutputMode.FULL, AppExample.getOutputMode());
 	}
 }

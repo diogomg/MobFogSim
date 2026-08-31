@@ -1,11 +1,7 @@
 package org.fog.entities;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +28,7 @@ import org.cloudbus.cloudsim.power.models.PowerModel;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
@@ -1101,9 +1098,8 @@ public class FogDevice extends PowerDatacenter {
 		NetworkUsageMonitor.migrationTrafficUsage(st.getVmLocalServerCloudlet()
 			.getUplinkBandwidth(), st.getVmMobileDevice().getSize());
 		NetworkUsageMonitor.migrationVMTransferredData(st.getVmMobileDevice().getSize());
-		try (FileWriter fw = new FileWriter(st.getMyId() + "migration.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
+		try (PrintWriter out = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(st.getMyId() + "migration.txt", true))
 		{
 			out.println(st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t" +
 				st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t" +
@@ -1111,10 +1107,6 @@ public class FogDevice extends PowerDatacenter {
 				st.getDestinationServerCloudlet().getName() + "\t" +
 				CloudSim.clock() + "\t" + st.getMigTime() + "\t"
 				+ (CloudSim.clock() + st.getMigTime()));
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -1437,15 +1429,10 @@ public class FogDevice extends PowerDatacenter {
 	int numClients = 0;
 
 	public void saveLostTupple(String a, String filename) {
-		try (FileWriter fw1 = new FileWriter(filename, true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(filename, true))
 		{
 			out1.println(a);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -1589,15 +1576,10 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void printResults(String a, String filename) {
-		try (FileWriter fw1 = new FileWriter(filename, true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(filename, true))
 		{
 			out1.println(a);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

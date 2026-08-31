@@ -4,11 +4,13 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.fog.vmmobile.LogMobile;
 import org.cloudbus.cloudsim.util.BufferedFileManager;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 
 public class MyStatistics {
 	private static MyStatistics instance;
@@ -226,60 +228,19 @@ public class MyStatistics {
 	}
 
 	public void printResults() {
-		try {
-
-			File file1 = null;
-			File file2 = null;
-			File file3 = null;
-			File file4 = null;
-			File file5 = null;
-			File file6 = null;
-
-			String name1 = "./averages/withoutConnection_" + getToPrint();
-			String name2 = "./averages/withoutVM_" + getToPrint();
-			String name3 = "./averages/delayAfterConnection_" + getToPrint();
-			String name4 = "./averages/timeOfMigration_" + getToPrint();
-			String name5 = "./averages/downtime_" + getToPrint();
-			String name6 = "./averages/all_" + getToPrint();
-
-			file1 = new File(name1);
-			file2 = new File(name2);
-			file3 = new File(name3);
-			file4 = new File(name4);
-			file5 = new File(name5);
-			file6 = new File(name6);
-			if (!file1.exists()) {
-				file1.createNewFile();
-			}
-			if (!file2.exists()) {
-				file2.createNewFile();
-			}
-			if (!file3.exists()) {
-				file3.createNewFile();
-			}
-			if (!file4.exists()) {
-				file4.createNewFile();
-			}
-			if (!file5.exists()) {
-				file5.createNewFile();
-			}
-			if (!file6.exists()) {
-				file6.createNewFile();
-			}
-
-			FileWriter fileWriter1 = new FileWriter(name1, true);
-			FileWriter fileWriter2 = new FileWriter(name2, true);
-			FileWriter fileWriter3 = new FileWriter(name3, true);
-			FileWriter fileWriter4 = new FileWriter(name4, true);
-			FileWriter fileWriter5 = new FileWriter(name5, true);
-			FileWriter fileWriter6 = new FileWriter(name6, true);
-			BufferedWriter buffer1 = new BufferedWriter(fileWriter1);
-			BufferedWriter buffer2 = new BufferedWriter(fileWriter2);
-			BufferedWriter buffer3 = new BufferedWriter(fileWriter3);
-			BufferedWriter buffer4 = new BufferedWriter(fileWriter4);
-			BufferedWriter buffer5 = new BufferedWriter(fileWriter5);
-			BufferedWriter buffer6 = new BufferedWriter(fileWriter6);
-
+		String name1 = "averages/withoutConnection_" + getToPrint();
+		String name2 = "averages/withoutVM_" + getToPrint();
+		String name3 = "averages/delayAfterConnection_" + getToPrint();
+		String name4 = "averages/timeOfMigration_" + getToPrint();
+		String name5 = "averages/downtime_" + getToPrint();
+		String name6 = "averages/all_" + getToPrint();
+		RunOutputManager output = RunOutputManager.getInstance();
+		try (BufferedWriter buffer1 = output.newSummaryBufferedWriter(name1, true);
+			BufferedWriter buffer2 = output.newSummaryBufferedWriter(name2, true);
+			BufferedWriter buffer3 = output.newSummaryBufferedWriter(name3, true);
+			BufferedWriter buffer4 = output.newSummaryBufferedWriter(name4, true);
+			BufferedWriter buffer5 = output.newSummaryBufferedWriter(name5, true);
+			BufferedWriter buffer6 = output.newSummaryBufferedWriter(name6, true)) {
 			buffer1.write(Double.toString(getAverageWithoutConnection()) + " "
 				+ Integer.toString(getSeed()));
 			buffer2.write(Double.toString(getAverageWithoutVmTime()) + " "
@@ -304,21 +265,6 @@ public class MyStatistics {
 			buffer4.newLine();
 			buffer5.newLine();
 			buffer6.newLine();
-
-			buffer1.close();
-			buffer2.close();
-			buffer3.close();
-			buffer4.close();
-			buffer5.close();
-			buffer6.close();
-
-			fileWriter1.close();
-			fileWriter2.close();
-			fileWriter3.close();
-			fileWriter4.close();
-			fileWriter5.close();
-			fileWriter6.close();
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -374,13 +320,12 @@ public class MyStatistics {
 	}
 
 	public void setFileMap(String name, int id) {
-		File file = new File(name);
-		this.fileMap.put(id, file);
-		getFileMap().get(id).delete();
 		try {
-			getFileMap().get(id).createNewFile();
-		} catch (Exception e) {
-			e.printStackTrace();
+			File file = RunOutputManager.getInstance().createFreshDetailedFile(name);
+			this.fileMap.put(id, file);
+		} catch (IOException error) {
+			throw new UncheckedIOException(
+				"Unable to create latency output file " + name, error);
 		}
 	}
 

@@ -1,11 +1,7 @@
 package org.fog.placement;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -20,6 +16,7 @@ import org.cloudbus.cloudsim.CloudletScheduler;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
@@ -559,17 +556,12 @@ public class MobileController extends SimEntity {
 		System.out.println("HANDOFF " + st.getMyId() + " Position: " + st.getCoord().getCoordX()
 			+ ", " + st.getCoord().getCoordY() + " Direction: " + st.getDirection() + " Speed: "
 			+ st.getSpeed());
-		try (FileWriter fw = new FileWriter(st.getMyId() + "handoff.txt", true);
-			BufferedWriter bw = new BufferedWriter(fw);
-			PrintWriter out = new PrintWriter(bw))
+		try (PrintWriter out = RunOutputManager.getInstance()
+			.newDetailedPrintWriter(st.getMyId() + "handoff.txt", true))
 		{
 			out.println(st.getMyId() + "\t" + CloudSim.clock() + "\t" + st.getCoord().getCoordX()
 				+ "\t" + st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t"
 				+ st.getSpeed() + "\t" + st.getSourceAp() + "\t" + st.getDestinationAp());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -590,15 +582,10 @@ public class MobileController extends SimEntity {
 	}
 
 	public void printResults(String a, String filename) {
-		try (FileWriter fw1 = new FileWriter(filename, true);
-			BufferedWriter bw1 = new BufferedWriter(fw1);
-			PrintWriter out1 = new PrintWriter(bw1))
+		try (PrintWriter out1 = RunOutputManager.getInstance()
+			.newSummaryPrintWriter(filename, true))
 		{
 			out1.println(a);
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -870,11 +857,15 @@ public class MobileController extends SimEntity {
 			"averageDowntime.txt");
 		System.out.println("Max Downtime: " + tempoDowntimeMax);
 		printResults(String.valueOf(tempoDowntimeMax), "averageDowntimeMax.txt");
-		System.out.println("Tuple lost: "
-			+ (((double) MyStatistics.getInstance().getMyCountLostTuple() / MyStatistics
-				.getInstance().getMyCountTotalTuple())) * 100 + "%");
-		System.out.println("Tuple lost: " + MyStatistics.getInstance().getMyCountLostTuple());
-		System.out.println("Total tuple: " + MyStatistics.getInstance().getMyCountTotalTuple());
+		long lostTuples = MyStatistics.getInstance().getMyCountLostTuple();
+		long totalTuples = MyStatistics.getInstance().getMyCountTotalTuple();
+		double lostPercentage = totalTuples == 0L
+			? 0.0 : (double) lostTuples / totalTuples * 100.0;
+		System.out.println("Tuple lost: " + lostPercentage + "%");
+		System.out.println("Tuple lost: " + lostTuples);
+		System.out.println("Total tuple: " + totalTuples);
+		printResults(lostTuples + "\t" + totalTuples + "\t" + lostPercentage,
+			"tupleLoss.txt");
 
 	}
 
