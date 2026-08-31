@@ -16,7 +16,6 @@ import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
 import org.cloudbus.cloudsim.CloudletScheduler;
-import org.cloudbus.cloudsim.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -29,9 +28,7 @@ import org.fog.entities.Actuator;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
-import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
-import org.fog.entities.MobileSensor;
 import org.fog.entities.Sensor;
 import org.fog.localization.Coordinate;
 import org.fog.localization.Distances;
@@ -46,8 +43,12 @@ import org.fog.vmmigration.Migration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.MobileUserApplicationFactory;
+import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
+import org.fog.vmmobile.constants.Policies;
+import org.fog.scheduler.TupleScheduler;
 
 public class MobileController extends SimEntity {
 	private static boolean migrationAble;
@@ -65,6 +66,8 @@ public class MobileController extends SimEntity {
 		new HashMap<String, Integer>();
 	private static List<ApDevice> apDevices;
 	private static List<FogBroker> brokerList;
+	private static Map<Integer, FogBroker> brokersByMobileId =
+		new HashMap<Integer, FogBroker>();
 
 	private Map<String, Application> applications;
 	private Map<String, Integer> appLaunchDelays;
@@ -97,6 +100,7 @@ public class MobileController extends SimEntity {
 		setApDevices(apDevices);
 		setSmartThings(smartThings);
 		setBrokerList(brokers);
+		setBrokersByMobileId(indexBrokersByMobileId(smartThings, brokers));
 		setMigPointPolicy(migPointPolicy);
 		setMigStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
@@ -123,6 +127,8 @@ public class MobileController extends SimEntity {
 		setServerCloudlets(serverCloudlets);
 		setApDevices(apDevices);
 		setSmartThings(smartThings);
+		setBrokerList(new ArrayList<FogBroker>());
+		setBrokersByMobileId(new HashMap<Integer, FogBroker>());
 		setMigPointPolicy(migPointPolicy);
 		setMigStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
@@ -183,13 +189,7 @@ public class MobileController extends SimEntity {
 		}
 
 		for (MobileDevice st : getSmartThings()) {
-			System.out.println(st.getStartTravelTime() * 1000);
 			send(getId(), st.getStartTravelTime() * 1000, MobileEvents.CREATE_NEW_SMARTTHING, st);
-			st.getSourceAp().desconnectApSmartThing(st);
-			st.getSourceServerCloudlet().desconnectServerCloudletSmartThing(st);
-			if (st.isLockedToMigration() || st.isMigStatus()) {
-				sendNow(st.getVmLocalServerCloudlet().getId(), MobileEvents.ABORT_MIGRATION, st);
-			}
 		}
 
 		send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
@@ -308,7 +308,6 @@ public class MobileController extends SimEntity {
 			break;
 		case MobileEvents.CHECK_NEW_STEP:
 			checkNewStep();
-			System.out.println("SmartThingListSize: " + getSmartThings().size());
 			if (getSmartThings().isEmpty())
 				sendNow(getId(), MobileEvents.STOP_SIMULATION);
 			break;
@@ -338,9 +337,85 @@ public class MobileController extends SimEntity {
 
 	private void createNewSmartThing(SimEvent ev) {
 		MobileDevice st = (MobileDevice) ev.getData();
-
-		System.out.println("criado...");
+		if (st.getTravelTimeId() != -1) {
+			return;
+		}
 		st.setTravelTimeId(0);
+		activateMobileUser(st);
+	}
+
+	protected boolean activateMobileUser(MobileDevice mobileDevice) {
+		if (mobileDevice.getSourceAp() == null
+			&& (getApDevices() == null || getApDevices().isEmpty()
+				|| !ApDevice.connectApSmartThing(getApDevices(), mobileDevice,
+					getRand().nextDouble()))) {
+			LogMobile.debug("MobileController.java", mobileDevice.getName()
+				+ " entered the simulation outside access-point coverage");
+			return false;
+		}
+
+		ApDevice sourceAp = mobileDevice.getSourceAp();
+		if (sourceAp.getServerCloudlet() == null) {
+			throw new IllegalStateException("Access point " + sourceAp.getName()
+				+ " has no server cloudlet for entering user " + mobileDevice.getName());
+		}
+		if (mobileDevice.getSourceServerCloudlet() == null) {
+			sourceAp.getServerCloudlet().connectServerCloudletSmartThing(mobileDevice);
+		}
+		LogMobile.debug("MobileController.java", mobileDevice.getName()
+			+ " connected to access point " + sourceAp.getName()
+			+ " and server cloudlet "
+			+ mobileDevice.getSourceServerCloudlet().getName());
+		if (mobileDevice.getVmMobileDevice() == null) {
+			registerMobileUser(mobileDevice);
+		}
+		return true;
+	}
+
+	private void registerMobileUser(MobileDevice mobileDevice) {
+		FogBroker broker;
+		try {
+			broker = new FogBroker("My_broker" + mobileDevice.getMyId());
+		} catch (Exception error) {
+			throw new IllegalStateException("Could not create broker for entering user "
+				+ mobileDevice.getName(), error);
+		}
+		addBrokerFor(mobileDevice, broker);
+
+		String appId = "MyApp_vr_game" + mobileDevice.getMyId();
+		CloudletScheduler scheduler = new TupleScheduler(500, 1);
+		long vmSize = 128;
+		AppModule vm = new AppModule(mobileDevice.getMyId(),
+			"AppModuleVm_" + mobileDevice.getName(), appId, broker.getId(), 281,
+			128, 1000, vmSize, "Vm_" + mobileDevice.getName(), scheduler,
+			new HashMap<Pair<String, String>, SelectivityModel>());
+		mobileDevice.setVmMobileDevice(vm);
+
+		if (!mobileDevice.getSourceServerCloudlet().getHost().vmCreate(vm)) {
+			mobileDevice.setVmMobileDevice(null);
+			removeBrokerFor(mobileDevice, broker);
+			throw new IllegalStateException("Could not allocate VM for entering user "
+				+ mobileDevice.getName() + " on "
+				+ mobileDevice.getSourceServerCloudlet().getName());
+		}
+
+		mobileDevice.setVmLocalServerCloudlet(mobileDevice.getSourceServerCloudlet());
+		mobileDevice.setLockedToMigration(false);
+		mobileDevice.getSourceServerCloudlet().setSmartThingsWithVm(
+			mobileDevice, Policies.ADD);
+		MobileUserRegistration.submitVm(broker, mobileDevice);
+
+		Application application = MobileUserApplicationFactory.create(appId,
+			broker.getId(), mobileDevice.getMyId(), vm);
+		MobileUserRegistration.configurePeripherals(mobileDevice, broker, appId);
+		getModuleMapping().addModuleToDevice(vm.getName(),
+			mobileDevice.getSourceServerCloudlet().getName(), 1);
+		getModuleMapping().addModuleToDevice("client" + mobileDevice.getMyId(),
+			mobileDevice.getName(), 1);
+		submitApplication(application, 0);
+		processAppSubmit(application);
+		MobileUserRegistration.activatePeripherals(mobileDevice);
+		registerActiveSensors(mobileDevice);
 	}
 
 	private double migrationTimeToLiveMigration(MobileDevice smartThing) {
@@ -475,48 +550,7 @@ public class MobileController extends SimEntity {
 				}
 			}
 			else {
-				if (ApDevice.connectApSmartThing(getApDevices(), st, getRand().nextDouble())) {
-					st.getSourceAp().getServerCloudlet().connectServerCloudletSmartThing(st);
-					LogMobile.debug("MobileController.java", st.getName()
-						+ " has a new connection - SourceAp: " + st.getSourceAp().getName() +
-						" SourceServerCouldlet: " + st.getSourceServerCloudlet().getName());
-
-					CloudletScheduler cloudletScheduler = new CloudletSchedulerTimeShared();
-
-					long sizeVm = (MaxAndMin.MIN_VM_SIZE + (long) 
-						((MaxAndMin.MAX_VM_SIZE - MaxAndMin.MIN_VM_SIZE) * (getRand().nextDouble())));
-					AppModule vmSmartThing = new AppModule(st.getMyId(), "AppModuleVm_"
-						+ st.getName() , "MyApp_vr_game" + st.getMyId()
-						, getBrokerList().get(st.getMyId()).getId(), 2000, 64, 1000
-						, sizeVm, "Vm_" + st.getName(), cloudletScheduler
-						, new HashMap<Pair<String, String>, SelectivityModel>());
-					st.setVmMobileDevice(vmSmartThing);
-					st.getSourceServerCloudlet().getHost().vmCreate(vmSmartThing);
-					st.setVmLocalServerCloudlet(st.getSourceServerCloudlet());
-					st.setLockedToMigration(false);
-
-					int brokerId = getBrokerList().get(st.getMyId()).getId();
-					for (MobileSensor s : st.getSensors()) {
-						s.setAppId("MyApp_vr_game" + st.getMyId());
-						s.setUserId(brokerId);
-						s.setGatewayDeviceId(st.getId());
-						s.setLatency(6.0);
-
-					}
-					for (MobileActuator a : st.getActuators()) {
-						a.setUserId(brokerId);
-						a.setAppId("MyApp_vr_game" + st.getMyId());
-						a.setGatewayDeviceId(st.getId());
-						a.setLatency(1.0);
-						a.setActuatorType("DISPLAY" + st.getMyId());
-
-					}
-					ModuleMapping moduleMapping = ModuleMapping.createModuleMapping();
-					moduleMapping.addModuleToDevice(((AppModule) st.getVmMobileDevice()).getName(),
-						st.getSourceServerCloudlet().getName(), 1);// numOfDepts*numOfMobilesPerDept);
-					moduleMapping.addModuleToDevice("client" + st.getMyId(), st.getName(), 1);
-					processAppSubmit(getApplications().get("MyApp_vr_game" + st.getMyId()));
-				}
+				activateMobileUser(st);
 			}
 		}
 	}
@@ -971,6 +1005,52 @@ public class MobileController extends SimEntity {
 		this.brokerList = brokerList;
 	}
 
+	private static Map<Integer, FogBroker> indexBrokersByMobileId(
+		List<MobileDevice> mobileDevices, List<FogBroker> brokers) {
+		if (mobileDevices == null || brokers == null) {
+			throw new IllegalArgumentException(
+				"Mobile devices and brokers cannot be null");
+		}
+		if (!brokers.isEmpty() && mobileDevices.size() != brokers.size()) {
+			throw new IllegalArgumentException("Expected one broker per registered mobile user");
+		}
+		Map<Integer, FogBroker> indexedBrokers = new HashMap<Integer, FogBroker>();
+		if (brokers.isEmpty()) {
+			return indexedBrokers;
+		}
+		for (int i = 0; i < mobileDevices.size(); i++) {
+			MobileDevice mobileDevice = mobileDevices.get(i);
+			FogBroker broker = brokers.get(i);
+			if (mobileDevice == null || broker == null) {
+				throw new IllegalArgumentException(
+					"Registered mobile users and brokers cannot contain null entries");
+			}
+			if (indexedBrokers.put(mobileDevice.getMyId(), broker) != null) {
+				throw new IllegalArgumentException("Duplicate mobile user ID: "
+					+ mobileDevice.getMyId());
+			}
+		}
+		return indexedBrokers;
+	}
+
+	private static void setBrokersByMobileId(Map<Integer, FogBroker> brokers) {
+		brokersByMobileId = new HashMap<Integer, FogBroker>(brokers);
+	}
+
+	private void addBrokerFor(MobileDevice mobileDevice, FogBroker broker) {
+		if (brokersByMobileId.containsKey(mobileDevice.getMyId())) {
+			throw new IllegalStateException("A broker is already registered for mobile user "
+				+ mobileDevice.getName());
+		}
+		brokersByMobileId.put(mobileDevice.getMyId(), broker);
+		getBrokerList().add(broker);
+	}
+
+	private void removeBrokerFor(MobileDevice mobileDevice, FogBroker broker) {
+		brokersByMobileId.remove(mobileDevice.getMyId());
+		getBrokerList().remove(broker);
+	}
+
 	public static int getSeed() {
 		return seed;
 	}
@@ -1003,6 +1083,9 @@ public class MobileController extends SimEntity {
 		}
 		for (MobileDevice smartThing : smartThings) {
 			for (Sensor sensor : smartThing.getSensors()) {
+				if (!sensor.isEnabled()) {
+					continue;
+				}
 				String appId = sensor.getAppId();
 				Integer count = activeSensorApplications.get(appId);
 				activeSensorApplications.put(appId, count == null ? 1 : count + 1);
@@ -1014,11 +1097,25 @@ public class MobileController extends SimEntity {
 		return activeSensorApplications.containsKey(appId);
 	}
 
+	private static void registerActiveSensors(MobileDevice smartThing) {
+		for (Sensor sensor : smartThing.getSensors()) {
+			if (!sensor.isEnabled()) {
+				continue;
+			}
+			String appId = sensor.getAppId();
+			Integer count = activeSensorApplications.get(appId);
+			activeSensorApplications.put(appId, count == null ? 1 : count + 1);
+		}
+	}
+
 	public static boolean removeSmartThing(MobileDevice smartThing) {
 		if (!smartThings.remove(smartThing)) {
 			return false;
 		}
 		for (Sensor sensor : smartThing.getSensors()) {
+			if (!sensor.isEnabled()) {
+				continue;
+			}
 			String appId = sensor.getAppId();
 			Integer count = activeSensorApplications.get(appId);
 			if (count == null || count <= 1) {

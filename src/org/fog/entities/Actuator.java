@@ -31,6 +31,7 @@ public class Actuator extends SimEntity {
 	private String actuatorType;
 	private Application app;
 	private int myId;
+	private boolean enabled = true;
 
 	public Actuator(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, String actuatorType, String srcModuleName) {
@@ -54,11 +55,21 @@ public class Actuator extends SimEntity {
 
 	@Override
 	public void startEntity() {
+		if (!isEnabled()) {
+			return;
+		}
+		scheduleJoin();
+	}
+
+	private void scheduleJoin() {
 		sendNow(gatewayDeviceId, FogEvents.ACTUATOR_JOINED, getLatency());
 	}
 
 	@Override
 	public void processEvent(SimEvent ev) {
+		if (!isEnabled()) {
+			return;
+		}
 		switch (ev.getTag()) {
 		case FogEvents.TUPLE_ARRIVAL:
 			processTupleArrival(ev);
@@ -258,6 +269,28 @@ public class Actuator extends SimEntity {
 
 	public void setMyId(int myId) {
 		this.myId = myId;
+	}
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public void deactivate() {
+		setEnabled(false);
+	}
+
+	public void activate() {
+		if (isEnabled()) {
+			return;
+		}
+		setEnabled(true);
+		if (CloudSim.running()) {
+			scheduleJoin();
+		}
 	}
 
 }

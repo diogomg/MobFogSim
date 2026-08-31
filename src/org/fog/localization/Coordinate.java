@@ -97,7 +97,7 @@ public class Coordinate { // extends Map {
 
 			smartThing.setTravelTimeId(-1);
 
-			int time = (int) Double.parseDouble(coodinates[0]);
+			double time = Double.parseDouble(coodinates[0]);
 			int direction = convertDirection(Double.parseDouble(coodinates[1]));
 			int x = (int) Double.parseDouble(coodinates[2]);
 			int y = (int) Double.parseDouble(coodinates[3]);

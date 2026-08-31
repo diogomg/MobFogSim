@@ -19,14 +19,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.math3.util.Pair;
-import org.cloudbus.cloudsim.CloudletScheduler;
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Storage;
-import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.power.PowerHost;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
@@ -34,10 +31,8 @@ import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
-import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.application.selectivity.FractionalSelectivity;
-import org.fog.application.selectivity.SelectivityModel;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
@@ -52,7 +47,6 @@ import org.fog.placement.MobileController;
 import org.fog.placement.ModuleMapping;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
-import org.fog.scheduler.TupleScheduler;
 import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.FogUtils;
 
@@ -126,11 +120,10 @@ public class AppExample {
 		 *  Third step: Initialize the CloudSim package. It should be called
 		 *  before creating any entities.
 		 *  Fourth step: Create all devices
-		 *  Fifth step: Create Broker
-		 *  Sixth step: Create one virtual machine
-		 *  Seventh step: Create one Application (appModule, appEdge, appLoop and tuples)
-		 *  Eight step: Configure the network
-		 *  Ninth step: Starts the simulation
+		 *  Fifth step: Configure users as pending until their mobility entry time
+		 *  Sixth step: Configure the network
+		 *  Seventh step: Start the simulation; each user creates its broker, VM,
+		 *  and application after its scheduled entry and wireless association
 		 *  Final step: Print results when simulation is over
 		 *  
 		 *  Example parameters
@@ -218,20 +211,9 @@ public class AppExample {
 		}
 
 		readMobilityData();
+		MobileUserRegistration.preparePendingUsers(getSmartThings());
 
 		int index;// Auxiliary
-		int myCount = 0;
-
-		// it makes the connection between SmartThing and the closest AccessPoint
-		for (MobileDevice st : getSmartThings()) {
-			if (!ApDevice.connectApSmartThing(getApDevices(), st,
-				getRand().nextDouble())) {
-				myCount++;
-				LogMobile.debug("AppExample.java",
-					st.getName() + " isn't connected");
-			}
-		}
-		LogMobile.debug("AppExample.java", "total no connection: " + myCount);
 
 		// it makes the connection between AccessPoint and the closest ServerCloudlet
 		for (ApDevice ap : getApDevices()) {
@@ -242,148 +224,22 @@ public class AppExample {
 			NetworkTopology.addLink(serverCloudlets.get(index).getId(),
 				ap.getId(), ap.getDownlinkBandwidth(),
 				getRand().nextDouble());
-
-			// it makes the symbolic link between smartThing and ServerCloudlet
-			for (MobileDevice st : ap.getSmartThings()) {
-				getServerCloudlets().get(index).connectServerCloudletSmartThing(st);
-				getServerCloudlets().get(index).setSmartThingsWithVm(st, Policies.ADD);
-
-			}
-		}
-		/** STEP 3: CREATE BROKER**/
-
-		for (MobileDevice st : getSmartThings()) {
-			getBrokerList().add(new FogBroker(
-				"My_broker" + Integer.toString(st.getMyId())));
 		}
 
 		/**
-		 * STEP 4: CREATE ONE VIRTUAL MACHINE FOR EACH BROKER/USER -> example
-		 * from: CloudSim - example5.java
-		 **/
-		// It only creates the virtual machine for each smartThing
-		for (MobileDevice st : getSmartThings()) {
-			if (st.getSourceAp() != null) {
-				CloudletScheduler cloudletScheduler = new TupleScheduler(500, 1); 
-				long sizeVm = 128;
-				AppModule vmSmartThingTest = new AppModule(st.getMyId() // id
-					, "AppModuleVm_" + st.getName() // name
-					, "MyApp_vr_game" + st.getMyId() // appId
-					, getBrokerList().get(st.getMyId()).getId() // userId
-					, 281 // mips
-					, 128 // (int) sizeVm/3 //ram
-					, 1000 // bw
-					, sizeVm, "Vm_" + st.getName() // vmm
-					, cloudletScheduler,
-					new HashMap<Pair<String, String>, SelectivityModel>());
-
-				st.setVmMobileDevice(vmSmartThingTest);
-				st.getSourceServerCloudlet().getHost().vmCreate(vmSmartThingTest);
-				st.setVmLocalServerCloudlet(st.getSourceServerCloudlet());
-
-				System.out.println(st.getMyId() + " Position: "
-					+ st.getCoord().getCoordX() + ", "
-					+ st.getCoord().getCoordY() + " Direction: "
-					+ st.getDirection() + " Speed: " + st.getSpeed());
-				System.out.println("Source AP: " + st.getSourceAp()
-					+ " Dest AP: " + st.getDestinationAp() + " Host: "
-					+ st.getHost().getId());
-				System.out.println("Local server: "
-					+ st.getVmLocalServerCloudlet().getName() + " Apps "
-					+ st.getVmLocalServerCloudlet().getActiveApplications() + " Map "
-					+ st.getVmLocalServerCloudlet().getApplicationMap());
-				if (st.getDestinationServerCloudlet() == null) {
-					System.out.println("Dest server: null Apps: null Map: null");
-				} else {
-					System.out.println("Dest server: "
-						+ st.getDestinationServerCloudlet().getName() + " Apps: " 
-						+ st.getDestinationServerCloudlet().getActiveApplications()
-						+ " Map " + st.getDestinationServerCloudlet().getApplicationMap());
-				}
-			}
-		}
-		int i = 0;
-		// Each broker receives one smartThing's VM
-		for (FogBroker br : getBrokerList()) {
-			List<Vm> tempVmList = new ArrayList<>();
-			tempVmList.add(getSmartThings().get(i++).getVmMobileDevice());
-			br.submitVmList(tempVmList);
-		}
-
-		/**
-		 * STEP 5: CREATE THE APPLICATION
-		 **/
-		i = 0;
-
-		for (FogBroker br : getBrokerList()) {
-			getAppIdList().add("MyApp_vr_game" + Integer.toString(i));
-
-			Application myApp = createApplication(getAppIdList().get(i), br.getId(), i,
-				(AppModule) getSmartThings().get(i).getVmMobileDevice());
-			getApplicationList().add(myApp);
-			i++;
-		}
-
-		/**
-		 * STEP 5.1: IT LINKS SENSORS AND ACTUATORS FOR EACH BROKER -> example
-		 * from: CloudSim and iFogSim
-		 **/
-		for (MobileDevice st : getSmartThings()) {
-			int brokerId = getBrokerList().get(st.getMyId()).getId();
-			String appId = getAppIdList().get(st.getMyId());
-			if (st.getSourceAp() != null) {
-				for (MobileSensor s : st.getSensors()) {
-					s.setAppId(appId);
-					s.setUserId(brokerId);
-					s.setGatewayDeviceId(st.getId());
-					s.setLatency(6.0);
-				}
-				for (MobileActuator a : st.getActuators()) {
-					a.setUserId(brokerId);
-					a.setAppId(appId);
-					a.setGatewayDeviceId(st.getId());
-					a.setLatency(1.0);
-					a.setActuatorType("DISPLAY" + st.getMyId());
-				}
-			}
-		}
-
-		/**
-		 * STEP 6: CREATE MAPPING, CONTROLLER, AND SUBMIT APPLICATION
+		 * STEP 3: CREATE CONTROLLER. Brokers, VMs, and applications are created
+		 * when each user's scheduled entry event occurs.
 		 **/
 
 		MobileController mobileController = null;
 		// initializing a module mapping
 		ModuleMapping moduleMapping = ModuleMapping.createModuleMapping();
 
-		for (Application app : getApplicationList()) {
-			app.setPlacementStrategy("Mapping");
-		}
-		i = 0;
-		for (FogDevice sc : getServerCloudlets()) {
-			i = 0;
-			for (MobileDevice st : getSmartThings()) {
-				if (st.getApDevices() != null) {
-					if (sc.equals(st.getSourceServerCloudlet())) {
-						moduleMapping.addModuleToDevice(((AppModule) st.getVmMobileDevice()).getName(),
-							sc.getName(), 1);
-						moduleMapping.addModuleToDevice("client" + st.getMyId(),
-							st.getName(), 1);
-					}
-				}
-				i++;
-			}
-		}
-
 		mobileController = new MobileController("MobileController",
 			getServerCloudlets(), getApDevices(), getSmartThings(),
 			getBrokerList(), moduleMapping, getMigPointPolicy(),
 			getMigStrategyPolicy(), getStepPolicy(), getCoordDevices(),
 			getSeed(), isMigrationAble());
-		i = 0;
-		for (Application app : applicationList) {
-			mobileController.submitApplication(app, 1);
-		}
 		TimeKeeper.getInstance().setSimulationStartTime(
 			Calendar.getInstance().getTimeInMillis());
 		MyStatistics.getInstance().setSeed(getSeed());
@@ -455,22 +311,12 @@ public class AppExample {
 			MyStatistics.getInstance().getMyCount().put(st.getMyId(), 0);
 		}
 
-		myCount = 0;
-
-		for (MobileDevice st : getSmartThings()) {
-			if (st.getSourceAp() != null) {
-				System.out.println("Distance between " + st.getName() + " and "
-					+ st.getSourceAp().getName() + ": "
-					+ Distances.checkDistance(st.getCoord(),
-						st.getSourceAp().getCoord()));
-			}
-		}
 		for (MobileDevice st : getSmartThings()) {
 			System.out.println(
 				st.getName() + "- X: " + st.getCoord().getCoordX() + " Y: "
 					+ st.getCoord().getCoordY() + " Direction: "
 					+ st.getDirection() + " Speed: " + st.getSpeed()
-					+ " VmSize: " + st.getVmMobileDevice().getSize());
+					+ " EntryTime: " + st.getStartTravelTime() + " seconds");
 		}
 		System.out
 			.println("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_");
@@ -1032,103 +878,6 @@ public class AppExample {
 					"Server cloudlet list cannot contain duplicate devices");
 			}
 		}
-	}
-
-	@SuppressWarnings("unused")
-	private static Application createApplication(String appId, int userId,
-		int myId, AppModule userVm) {
-
-		// creates an empty application model (empty directed graph)
-		Application application = Application.createApplication(appId, userId);
-		// adding module Client to the application model
-		application.addAppModule(userVm);
-		application.addAppModule("client" + myId, "appModuleClient" + myId, 10);
-
-		/*
-		 * Connecting the application modules (vertices) in the application
-		 * model (directed graph) with edges
-		 */
-		if (EEG_TRANSMISSION_TIME >= 10)
-			// adding edge from EEG (sensor) to Client module carrying tuples of type EEG
-			application.addAppEdge("EEG" + myId, "client" + myId, 966, 54,
-				"EEG" + myId, Tuple.UP, AppEdge.SENSOR);
-		else
-			application.addAppEdge("EEG" + myId, "client" + myId, 966, 54,
-				"EEG" + myId, Tuple.UP, AppEdge.SENSOR);
-
-		// adding edge from Client to Concentration Calculator module carrying tuples of type _SENSOR
-		application.addAppEdge("client" + myId, userVm.getName(), 966, 54,
-			"_SENSOR" + myId, Tuple.UP, AppEdge.MODULE);
-
-		// adding periodic edge (period=1000ms) from Concentration Calculator to
-		//Connector module carrying tuples of type PLAYER_GAME_STATE
-		application.addAppEdge(userVm.getName(), userVm.getName(), 1000, 966,
-			54, "PLAYER_GAME_STATE" + myId, Tuple.UP, AppEdge.MODULE);
-		// adding edge from Concentration Calculator to Client module carrying
-		//tuples of type CONCENTRATION
-		application.addAppEdge(userVm.getName(), "client" + myId, 2439, 87,
-			"CONCENTRATION" + myId, Tuple.DOWN, AppEdge.MODULE);
-		// adding periodic edge (period=1000ms) from Connector to Client module
-		//carrying tuples of type GLOBAL_GAME_STATE
-		application.addAppEdge(userVm.getName(), "client" + myId, 2439, 28,
-			87, "GLOBAL_GAME_STATE" + myId, Tuple.DOWN, AppEdge.MODULE);
-		// adding edge from Client module to Display (actuator) carrying tuples
-		// of type SELF_STATE_UPDATE
-		application.addAppEdge("client" + myId, "DISPLAY" + myId, 2439, 87,
-			"SELF_STATE_UPDATE" + myId, Tuple.DOWN, AppEdge.ACTUATOR);
-		// adding edge from Client module to Display (actuator) carrying tuples
-		// of type GLOBAL_STATE_UPDATE
-		application.addAppEdge("client" + myId, "DISPLAY" + myId, 2439, 87,
-			"GLOBAL_STATE_UPDATE" + myId, Tuple.DOWN, AppEdge.ACTUATOR);
-
-		/*
-		 * Defining the input-output relationships (represented by selectivity)
-		 * of the application modules.
-		 */
-
-		// 0.9 tuples of type _SENSOR are emitted by Client module per incoming
-		//tuple of type EEG
-		application.addTupleMapping("client" + myId, "EEG" + myId,
-			"_SENSOR" + myId, new FractionalSelectivity(0.9));
-		// 1.0 tuples of type SELF_STATE_UPDATE are emitted by Client module per
-		//incoming tuple of type CONCENTRATION
-		application.addTupleMapping("client" + myId, "CONCENTRATION" + myId,
-			"SELF_STATE_UPDATE" + myId, new FractionalSelectivity(1.0));
-		// 1.0 tuples of type CONCENTRATION are emitted by Concentration
-		//Calculator module per incoming tuple of type _SENSOR
-		application.addTupleMapping(userVm.getName(), "_SENSOR" + myId,
-			"CONCENTRATION" + myId, new FractionalSelectivity(1.0));
-		// 1.0 tuples of type GLOBAL_STATE_UPDATE are emitted by Client module
-		//per incoming tuple of type GLOBAL_GAME_STATE
-		application.addTupleMapping("client" + myId, "GLOBAL_GAME_STATE" + myId,
-			"GLOBAL_STATE_UPDATE" + myId, new FractionalSelectivity(1.0));
-
-		/*
-		 * Defining application loops to monitor the latency of. Here, we add
-		 * only one loop for monitoring : EEG(sensor) -> Client -> Concentration
-		 * Calculator -> Client -> DISPLAY (actuator)
-		 */
-		final String client = "client" + myId;// userVm.getName();
-		final String concentration = userVm.getName();
-		final String eeg = "EEG" + myId;
-		final String display = "DISPLAY" + myId;
-		final AppLoop loop1 = new AppLoop(new ArrayList<String>() {
-			{
-				add(eeg);
-				add(client);
-				add(concentration);
-				add(client);
-				add(display);
-			}
-		});
-		List<AppLoop> loops = new ArrayList<AppLoop>() {
-			{
-				add(loop1);
-			}
-		};
-		application.setLoops(loops);
-
-		return application;
 	}
 
 	@SuppressWarnings("unused")

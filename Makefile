@@ -9,6 +9,7 @@ TEST_SUITES := \
 	org.fog.entities.FogDeviceChildStateTest \
 	org.fog.entities.SensorTest \
 	org.fog.localization.CoordinateTest \
+	org.fog.placement.MobileControllerDelayedEntryTest \
 	org.fog.placement.ModulePlacementEdgewardsAtomicityTest \
 	org.fog.vmmigration.MigrationTechniqueTest \
 	org.fog.vmmigration.MigrationPreparationTest \
@@ -18,6 +19,7 @@ TEST_SUITES := \
 	org.fog.vmmigration.MobileEdgeHostSelectorTest \
 	org.fog.vmmigration.NextStepTest \
 	org.fog.vmmobile.AppExampleParametersTest \
+	org.fog.vmmobile.AppExampleUserRegistrationTest \
 	org.fog.vmmobile.MobilityDataLoaderTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
 	org.fog.utils.TimeKeeperTest \

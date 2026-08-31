@@ -117,6 +117,14 @@ example, `2<TAB>0<TAB>1` assigns trace 2 to user 0, trace 0 to user 1, and trace
 1 to user 2. Missing files, malformed rows, insufficient entries, and invalid trace
 indexes stop startup with a contextual `MobilityInputException`.
 
+The first trace timestamp is the user's simulation-entry time in seconds. Until
+that time, the user remains pending: it has no broker, VM, application, or
+network association, and its sensors and actuators are disabled. At the entry
+event the simulator attempts access-point association and, after association
+succeeds, creates the broker, VM, application, mappings, and
+peripheral bindings. If the first position is outside wireless coverage, the
+user continues along its mobility trace and retries association.
+
 Example input/1702log.csv 
 
 2.1    -1.51173    10370.1    2233.67    0

@@ -130,7 +130,7 @@ public class FogDevice extends PowerDatacenter {
 	protected int policyReplicaVM;
 	private FogDevice serverCloudletToVmMigrate;
 	protected BeforeMigration beforeMigration;
-	protected int startTravelTime;
+	protected double startTravelTime;
 	protected int travelTimeId;
 	protected int travelPredicTime;
 	protected int mobilityPrecitionError;
@@ -209,11 +209,11 @@ public class FogDevice extends PowerDatacenter {
 		this.coord.setCoordY(coordY);
 	}
 
-	public int getStartTravelTime() {
+	public double getStartTravelTime() {
 		return startTravelTime;
 	}
 
-	public void setStartTravelTime(int startTravelTime) {
+	public void setStartTravelTime(double startTravelTime) {
 		this.startTravelTime = startTravelTime;
 	}
 

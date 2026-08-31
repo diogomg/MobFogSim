@@ -29,6 +29,7 @@ public class Sensor extends SimEntity {
 	private int controllerId;
 	private Application app;
 	private double latency;
+	private boolean enabled = true;
 
 	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, Distribution transmitDistribution, int cpuLength, int nwLength,
@@ -168,12 +169,22 @@ public class Sensor extends SimEntity {
 
 	@Override
 	public void startEntity() {
+		if (!isEnabled()) {
+			return;
+		}
+		scheduleInitialEvents();
+	}
+
+	private void scheduleInitialEvents() {
 		send(gatewayDeviceId, CloudSim.getMinTimeBetweenEvents(), FogEvents.SENSOR_JOINED, geoLocation);
 		send(getId(), getTransmitDistribution().getNextValue(), FogEvents.EMIT_TUPLE);
 	}
 
 	@Override
 	public void processEvent(SimEvent ev) {
+		if (!isEnabled()) {
+			return;
+		}
 		switch (ev.getTag()) {
 		case FogEvents.TUPLE_ACK:
 			break;
@@ -277,6 +288,28 @@ public class Sensor extends SimEntity {
 
 	public void setLatency(Double latency) {
 		this.latency = latency;
+	}
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public void deactivate() {
+		setEnabled(false);
+	}
+
+	public void activate() {
+		if (isEnabled()) {
+			return;
+		}
+		setEnabled(true);
+		if (CloudSim.running()) {
+			scheduleInitialEvents();
+		}
 	}
 
 }
