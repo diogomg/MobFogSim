@@ -108,4 +108,113 @@ public class AppExampleParametersTest {
 		assertEquals(Paths.get("mobility-fixtures", "inputOrder.csv"),
 			AppExample.getMobilityOrderManifest());
 	}
+
+	@Test
+	public void rejectsNonFiniteLatencyWithoutPartiallyApplyingArguments() {
+		AppExample.configureSimulationParameters(baselineArguments());
+		String[] invalid = changedArguments();
+
+		for (String invalidLatency : new String[] {
+			"NaN", "Infinity", "-Infinity"
+		}) {
+			invalid[7] = invalidLatency;
+			assertConfigurationRejected(invalid);
+			assertBaselineConfiguration();
+		}
+	}
+
+	@Test
+	public void invalidSlicingPercentagesDoNotApplyEarlierParameters() {
+		AppExample.configureSimulationParameters(baselineArguments());
+		String[] invalid = changedArguments();
+		invalid[12] = "NaN,NaN";
+
+		assertConfigurationRejected(invalid);
+
+		assertBaselineConfiguration();
+	}
+
+	@Test
+	public void invalidLateParameterLeavesCompleteConfigurationUnchanged() {
+		AppExample.configureSimulationParameters(baselineArguments());
+		String[] invalid = changedArguments();
+		invalid[14] = "9";
+
+		assertConfigurationRejected(invalid);
+
+		assertBaselineConfiguration();
+	}
+
+	@Test
+	public void rejectsValuesOutsideDocumentedIntegerRanges() {
+		String[][] invalidValues = {
+			{ "0", "2" },
+			{ "1", "0" },
+			{ "2", "2" },
+			{ "3", "3" },
+			{ "4", "0" },
+			{ "5", "0" },
+			{ "6", "3" },
+			{ "8", "-1" },
+			{ "9", "-1" },
+			{ "10", "3" },
+			{ "13", "2" },
+			{ "14", "3" }
+		};
+
+		for (String[] invalidValue : invalidValues) {
+			String[] arguments = baselineArguments();
+			arguments[Integer.parseInt(invalidValue[0])] = invalidValue[1];
+			assertConfigurationRejected(arguments);
+		}
+	}
+
+	private static String[] baselineArguments() {
+		return new String[] {
+			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
+			"1", "60,40", "70,30", "0", "1", "baseline-mobility",
+			"baseline/order.csv"
+		};
+	}
+
+	private static String[] changedArguments() {
+		return new String[] {
+			"0", "999", "0", "0", "3", "99", "0", "77", "1", "2",
+			"0", "50,50", "50,50", "1", "2", "changed-mobility",
+			"changed/order.csv"
+		};
+	}
+
+	private static void assertConfigurationRejected(String[] arguments) {
+		try {
+			AppExample.configureSimulationParameters(arguments);
+			throw new AssertionError("Expected simulation configuration to be rejected");
+		}
+		catch (IllegalArgumentException expected) {
+			// Expected validation failure.
+		}
+	}
+
+	private static void assertBaselineConfiguration() {
+		assertTrue(AppExample.isMigrationAble());
+		assertEquals(123, AppExample.getSeed());
+		assertEquals(1, AppExample.getMigPointPolicy());
+		assertEquals(2, AppExample.getMigStrategyPolicy());
+		assertEquals(10, AppExample.getMaxSmartThings());
+		assertEquals(11, AppExample.getMaxBandwidth());
+		assertEquals(2, AppExample.getPolicyReplicaVM());
+		assertEquals(61.5, AppExample.getLatencyBetweenCloudlets(), DELTA);
+		assertEquals(12, AppExample.getTravelPredicTimeForST());
+		assertEquals(34, AppExample.getMobilityPrecitionError());
+		assertEquals(NetworkSlicing.WIRELESS_NETWORK, NetworkSlicing.getScope());
+		assertEquals(2, NetworkSlicing.getSliceCount());
+		assertEquals(70.0, NetworkSlicing.getPercentage(0), DELTA);
+		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
+		assertFalse(NetworkSlicing.isDynamicBorrowing());
+		assertFalse(VmDestinationPolicy.allowsEdgeServers());
+		assertTrue(VmDestinationPolicy.allowsEndDevices());
+		assertEquals(Paths.get("baseline-mobility"), AppExample.getMobilityDirectory());
+		assertEquals(Paths.get("baseline/order.csv"),
+			AppExample.getMobilityOrderManifest());
+	}
 }

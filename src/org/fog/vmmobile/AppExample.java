@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -330,66 +329,25 @@ public class AppExample {
 	}
 
 	static void configureSimulationParameters(String[] args) {
-		if (args == null || args.length < 10) {
-			throw new IllegalArgumentException(
-				"AppExample requires at least the first ten simulation parameters");
-		}
-
-		setMigrationAble(Integer.parseInt(args[0]) != 0);
-		setSeed(Integer.parseInt(args[1]));
-		if (getSeed() < 1) {
-			throw new IllegalArgumentException("Seed cannot be less than 1");
-		}
-		setRand(new Random(getSeed() * Integer.MAX_VALUE));
-		setMigPointPolicy(Integer.parseInt(args[2]));
-		setMigStrategyPolicy(Integer.parseInt(args[3]));
-		setMaxSmartThings(Integer.parseInt(args[4]));
-		setMaxBandwidth(Integer.parseInt(args[5]));
-		setPolicyReplicaVM(Integer.parseInt(args[6]));
-		setLatencyBetweenCloudlets(Double.parseDouble(args[7]));
-		setTravelPredicTimeForST(Integer.parseInt(args[8]));
-		setMobilityPredictionError(Integer.parseInt(args[9]));
-
-		NetworkSlicing.setScope(args.length > 10 ? Integer.parseInt(args[10])
-			: NetworkSlicing.END_TO_END_NETWORK);
-		String userAllocation = args.length > 11 ? args[11] : null;
-		NetworkSlicing.configure(args.length > 12 ? args[12] : null);
-		NetworkSlicing.configureUserAllocation(userAllocation);
-
-		int dynamicSlicing = args.length > 13 ? Integer.parseInt(args[13]) : 1;
-		if (dynamicSlicing != 0 && dynamicSlicing != 1) {
-			throw new IllegalArgumentException(
-				"Dynamic slicing must be 0 (fixed) or 1 (borrow idle capacity)");
-		}
-		NetworkSlicing.setDynamicBorrowing(dynamicSlicing == 1);
-		VmDestinationPolicy.configure(args.length > 14 ? Integer.parseInt(args[14])
-			: VmDestinationPolicy.HYBRID);
-		configureMobilityInputPaths(args);
+		applySimulationConfiguration(SimulationConfig.parse(args));
 	}
 
-	private static void configureMobilityInputPaths(String[] args) {
-		String directoryValue = args.length > 15 ? args[15] : "input";
-		if (directoryValue == null || directoryValue.trim().isEmpty()) {
-			throw new IllegalArgumentException("Mobility directory cannot be empty");
-		}
-		try {
-			Path directory = Paths.get(directoryValue);
-			Path manifest = args.length > 16
-				? parseRequiredPath(args[16], "Mobility order manifest")
-				: directory.resolve("inputOrder.csv");
-			setMobilityDirectory(directory);
-			setMobilityOrderManifest(manifest);
-		} catch (InvalidPathException error) {
-			throw new IllegalArgumentException(
-				"Invalid mobility input path: " + error.getInput(), error);
-		}
-	}
-
-	private static Path parseRequiredPath(String value, String description) {
-		if (value == null || value.trim().isEmpty()) {
-			throw new IllegalArgumentException(description + " cannot be empty");
-		}
-		return Paths.get(value);
+	private static void applySimulationConfiguration(SimulationConfig configuration) {
+		setMigrationAble(configuration.isMigrationEnabled());
+		setSeed(configuration.getSeed());
+		setRand(new Random(configuration.getSeed() * Integer.MAX_VALUE));
+		setMigPointPolicy(configuration.getMigrationPointPolicy());
+		setMigStrategyPolicy(configuration.getMigrationStrategyPolicy());
+		setMaxSmartThings(configuration.getMaximumUsers());
+		setMaxBandwidth(configuration.getMaximumBandwidth());
+		setPolicyReplicaVM(configuration.getVmMigrationPolicy());
+		setLatencyBetweenCloudlets(configuration.getCloudletLatency());
+		setTravelPredicTimeForST(configuration.getTravelPredictionTime());
+		setMobilityPredictionError(configuration.getMobilityPredictionError());
+		NetworkSlicing.applyConfiguration(configuration.getSlicingConfiguration());
+		VmDestinationPolicy.configure(configuration.getVmDestinationPolicy());
+		setMobilityDirectory(configuration.getMobilityDirectory());
+		setMobilityOrderManifest(configuration.getMobilityOrderManifest());
 	}
 
 	private static void readMobilityData() {
@@ -680,8 +638,8 @@ public class AppExample {
 		try {
 			coordX = getRand().nextInt(MaxAndMin.MAX_X);
 			coordY = getRand().nextInt(MaxAndMin.MAX_X);
-			double maxBandwidth = getMaxBandwidth() * 1024 * 1024;
-			double minBandwidth = (getMaxBandwidth() - 1) * 1024 * 1024;
+			double maxBandwidth = getMaxBandwidth() * 1024.0 * 1024.0;
+			double minBandwidth = (getMaxBandwidth() - 1) * 1024.0 * 1024.0;
 			double upLinkRandom = minBandwidth
 				+ (maxBandwidth - minBandwidth) * getRand().nextDouble();
 			double downLinkRandom = minBandwidth
@@ -784,8 +742,8 @@ public class AppExample {
 					serviceOffer.setValue(0);
 				}
 				try {
-					double maxBandwidth = getMaxBandwidth() * 1024 * 1024;
-					double minBandwidth = (getMaxBandwidth() - 1) * 1024 * 1024;
+					double maxBandwidth = getMaxBandwidth() * 1024.0 * 1024.0;
+					double minBandwidth = (getMaxBandwidth() - 1) * 1024.0 * 1024.0;
 					double upLinkRandom = minBandwidth + (maxBandwidth - minBandwidth)
 						* getRand().nextDouble();
 					double downLinkRandom = minBandwidth + (maxBandwidth - minBandwidth)
@@ -1002,6 +960,10 @@ public class AppExample {
 	}
 
 	public static void setPolicyReplicaVM(int policyReplicaVM) {
+		if (policyReplicaVM < Policies.MIGRATION_COMPLETE_VM
+			|| policyReplicaVM > Policies.LIVE_MIGRATION) {
+			throw new IllegalArgumentException("VM migration policy must be between 0 and 2");
+		}
 		AppExample.policyReplicaVM = policyReplicaVM;
 	}
 
@@ -1010,6 +972,9 @@ public class AppExample {
 	}
 
 	public static void setTravelPredicTimeForST(int travelPredicTimeForST) {
+		if (travelPredicTimeForST < 0) {
+			throw new IllegalArgumentException("Travel prediction time cannot be negative");
+		}
 		AppExample.travelPredicTimeForST = travelPredicTimeForST;
 	}
 
@@ -1018,6 +983,9 @@ public class AppExample {
 	}
 
 	public static void setMobilityPredictionError(int mobilityPrecitionError) {
+		if (mobilityPrecitionError < 0) {
+			throw new IllegalArgumentException("Mobility prediction error cannot be negative");
+		}
 		AppExample.mobilityPrecitionError = mobilityPrecitionError;
 	}
 
@@ -1026,6 +994,11 @@ public class AppExample {
 	}
 
 	public static void setLatencyBetweenCloudlets(double latencyBetweenCloudlets) {
+		if (!Double.isFinite(latencyBetweenCloudlets)
+			|| latencyBetweenCloudlets <= 0.0) {
+			throw new IllegalArgumentException(
+				"Cloudlet latency must be finite and positive");
+		}
 		AppExample.latencyBetweenCloudlets = latencyBetweenCloudlets;
 	}
 
@@ -1066,6 +1039,11 @@ public class AppExample {
 	}
 
 	public static void setMigPointPolicy(int migPointPolicy) {
+		if (migPointPolicy < Policies.FIXED_MIGRATION_POINT
+			|| migPointPolicy > Policies.SPEED_MIGRATION_POINT) {
+			throw new IllegalArgumentException(
+				"Migration point policy must be between 0 and 1");
+		}
 		AppExample.migPointPolicy = migPointPolicy;
 	}
 
@@ -1074,6 +1052,11 @@ public class AppExample {
 	}
 
 	public static void setMigStrategyPolicy(int migStrategyPolicy) {
+		if (migStrategyPolicy < Policies.LOWEST_LATENCY
+			|| migStrategyPolicy > Policies.LOWEST_DIST_BW_SMARTTING_AP) {
+			throw new IllegalArgumentException(
+				"Migration strategy policy must be between 0 and 2");
+		}
 		AppExample.migStrategyPolicy = migStrategyPolicy;
 	}
 
@@ -1122,6 +1105,9 @@ public class AppExample {
 	}
 
 	public static void setSeed(int seed) {
+		if (seed <= 0) {
+			throw new IllegalArgumentException("Seed must be positive");
+		}
 		AppExample.seed = seed;
 	}
 
@@ -1138,6 +1124,9 @@ public class AppExample {
 	}
 
 	public static void setMaxSmartThings(int maxSmartThings) {
+		if (maxSmartThings <= 0) {
+			throw new IllegalArgumentException("Number of users must be positive");
+		}
 		AppExample.maxSmartThings = maxSmartThings;
 	}
 
@@ -1169,6 +1158,9 @@ public class AppExample {
 	}
 
 	public static void setRand(Random rand) {
+		if (rand == null) {
+			throw new IllegalArgumentException("Random generator cannot be null");
+		}
 		AppExample.rand = rand;
 	}
 
@@ -1177,6 +1169,9 @@ public class AppExample {
 	}
 
 	public static void setMaxBandwidth(int maxBandwidth) {
+		if (maxBandwidth <= 0) {
+			throw new IllegalArgumentException("Network bandwidth must be positive");
+		}
 		AppExample.maxBandwidth = maxBandwidth;
 	}
 

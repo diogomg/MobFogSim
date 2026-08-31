@@ -69,7 +69,22 @@ public class NetworkSlicingConfigurationTest {
 		assertEquals(700.0, NetworkSlicing.getSliceBandwidth(1000.0, 0), DELTA);
 		assertEquals(300.0, NetworkSlicing.getSliceBandwidth(1000.0, 1), DELTA);
 		assertEquals(0.0, NetworkSlicing.getSliceBandwidth(0.0, 0), DELTA);
-		assertEquals(-10.0, NetworkSlicing.getSliceBandwidth(-10.0, 0), DELTA);
+	}
+
+	@Test
+	public void rejectsNonFiniteAndNegativePhysicalBandwidths() {
+		double[] invalidBandwidths = {
+			Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -10.0
+		};
+		for (double invalidBandwidth : invalidBandwidths) {
+			try {
+				NetworkSlicing.getSliceBandwidth(invalidBandwidth, 0);
+				throw new AssertionError("Expected invalid bandwidth to be rejected");
+			}
+			catch (IllegalArgumentException expected) {
+				// Expected validation failure.
+			}
+		}
 	}
 
 	@Test
@@ -132,6 +147,41 @@ public class NetworkSlicingConfigurationTest {
 		NetworkSlicing.configure("fast,slow");
 	}
 
+	@Test
+	public void rejectsNonFinitePercentagesWithoutChangingConfiguration() {
+		NetworkSlicing.configure("70,30");
+		NetworkSlicing.configureUserAllocation("60,40");
+
+		assertInvalidConfigurationPreservesState("NaN,NaN");
+		assertInvalidConfigurationPreservesState("Infinity,1");
+		assertInvalidConfigurationPreservesState("-Infinity,100");
+	}
+
+	@Test
+	public void combinedSlicingConfigurationIsAtomic() {
+		NetworkSlicing.configure("70,30");
+		NetworkSlicing.configureUserAllocation("60,40");
+		NetworkSlicing.setScope(NetworkSlicing.WIRELESS_NETWORK);
+		NetworkSlicing.setDynamicBorrowing(false);
+
+		try {
+			NetworkSlicing.parseConfiguration("50,50", "NaN,NaN",
+				NetworkSlicing.TRANSPORT_NETWORK, true);
+			throw new AssertionError("Expected non-finite user allocation to be rejected");
+		}
+		catch (IllegalArgumentException expected) {
+			// Expected validation failure.
+		}
+
+		assertEquals(2, NetworkSlicing.getSliceCount());
+		assertEquals(70.0, NetworkSlicing.getPercentage(0), DELTA);
+		assertEquals(30.0, NetworkSlicing.getPercentage(1), DELTA);
+		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
+		assertEquals(40.0, NetworkSlicing.getUserAllocationPercentage(1), DELTA);
+		assertEquals(NetworkSlicing.WIRELESS_NETWORK, NetworkSlicing.getScope());
+		assertFalse(NetworkSlicing.isDynamicBorrowing());
+	}
+
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsNegativeSliceId() {
 		NetworkSlicing.getPercentage(-1);
@@ -148,5 +198,20 @@ public class NetworkSlicingConfigurationTest {
 		device.setUplinkBandwidth(uplink);
 		device.setDownlinkBandwidth(downlink);
 		return device;
+	}
+
+	private static void assertInvalidConfigurationPreservesState(String percentages) {
+		try {
+			NetworkSlicing.configure(percentages);
+			throw new AssertionError("Expected invalid percentages to be rejected");
+		}
+		catch (IllegalArgumentException expected) {
+			// Expected validation failure.
+		}
+		assertEquals(2, NetworkSlicing.getSliceCount());
+		assertEquals(70.0, NetworkSlicing.getPercentage(0), DELTA);
+		assertEquals(30.0, NetworkSlicing.getPercentage(1), DELTA);
+		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
+		assertEquals(40.0, NetworkSlicing.getUserAllocationPercentage(1), DELTA);
 	}
 }

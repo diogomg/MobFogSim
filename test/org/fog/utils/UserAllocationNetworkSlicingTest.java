@@ -81,6 +81,22 @@ public class UserAllocationNetworkSlicingTest {
 		NetworkSlicing.configureUserAllocation("100,0");
 	}
 
+	@Test
+	public void rejectsNonFiniteUserPercentagesWithoutChangingAllocation() {
+		NetworkSlicing.configureUserAllocation("60,40");
+
+		try {
+			NetworkSlicing.configureUserAllocation("NaN,NaN");
+			throw new AssertionError("Expected non-finite allocation to be rejected");
+		}
+		catch (IllegalArgumentException expected) {
+			// Expected validation failure.
+		}
+
+		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
+		assertEquals(40.0, NetworkSlicing.getUserAllocationPercentage(1), DELTA);
+	}
+
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsNegativeTotalUsers() {
 		NetworkSlicing.getUserAllocations(-1);

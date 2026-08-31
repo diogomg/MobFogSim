@@ -40,6 +40,22 @@ public final class NetworkSlicing {
 	private static MigrationTransferScheduler migrationScheduler =
 		new MigrationTransferScheduler(percentages, true, dynamicBorrowing);
 
+	/** Immutable, fully validated slicing settings for one simulation run. */
+	public static final class Configuration {
+		private final double[] bandwidthPercentages;
+		private final double[] userPercentages;
+		private final boolean dynamicBorrowing;
+		private final int scope;
+
+		private Configuration(double[] bandwidthPercentages,
+			double[] userPercentages, boolean dynamicBorrowing, int scope) {
+			this.bandwidthPercentages = bandwidthPercentages.clone();
+			this.userPercentages = userPercentages.clone();
+			this.dynamicBorrowing = dynamicBorrowing;
+			this.scope = scope;
+		}
+	}
+
 	/** Description of a migration that is ready to start using a transport link. */
 	public static final class MigrationTransferRequest {
 		private final FogDevice source;
@@ -113,15 +129,43 @@ public final class NetworkSlicing {
 	 * {@code "50,50"} or {@code "40,30,20,10"}.
 	 */
 	public static void configure(String percentageList) {
-		if (percentageList == null || percentageList.trim().isEmpty()) {
-			percentages = new double[] { 100.0 };
-			userAllocationPercentages = new double[] { 100.0 };
-			resetUsage();
-			return;
-		}
+		applyConfiguration(parseConfiguration(percentageList, null, scope,
+			dynamicBorrowing));
+	}
 
-		percentages = parsePercentages(percentageList, "Network slice");
-		userAllocationPercentages = equalPercentages(percentages.length);
+	/**
+	 * Parses every slicing option without changing global slicing state.
+	 */
+	public static Configuration parseConfiguration(String bandwidthPercentageList,
+		String userPercentageList, int selectedScope, boolean useDynamicBorrowing) {
+		validateScope(selectedScope);
+		double[] parsedBandwidthPercentages = parsePercentagesOrDefault(
+			bandwidthPercentageList, "Network slice");
+		double[] parsedUserPercentages;
+		if (userPercentageList == null || userPercentageList.trim().isEmpty()) {
+			parsedUserPercentages = equalPercentages(parsedBandwidthPercentages.length);
+		}
+		else {
+			parsedUserPercentages = parsePercentages(userPercentageList,
+				"User allocation");
+			if (parsedUserPercentages.length != parsedBandwidthPercentages.length) {
+				throw new IllegalArgumentException(
+					"User allocation must contain one percentage for each network slice");
+			}
+		}
+		return new Configuration(parsedBandwidthPercentages, parsedUserPercentages,
+			useDynamicBorrowing, selectedScope);
+	}
+
+	/** Applies one already validated slicing configuration in a single update. */
+	public static synchronized void applyConfiguration(Configuration configuration) {
+		if (configuration == null) {
+			throw new IllegalArgumentException("Network slicing configuration cannot be null");
+		}
+		percentages = configuration.bandwidthPercentages.clone();
+		userAllocationPercentages = configuration.userPercentages.clone();
+		dynamicBorrowing = configuration.dynamicBorrowing;
+		scope = configuration.scope;
 		resetUsage();
 	}
 
@@ -162,11 +206,7 @@ public final class NetworkSlicing {
 	 * {@link #WIRELESS_NETWORK}, or {@link #END_TO_END_NETWORK}.
 	 */
 	public static void setScope(int selectedScope) {
-		if (selectedScope < TRANSPORT_NETWORK || selectedScope > END_TO_END_NETWORK) {
-			throw new IllegalArgumentException(
-				"Network slice scope must be 0 (transport), 1 (wireless), or 2 (end-to-end)");
-		}
-		scope = selectedScope;
+		scope = validateScope(selectedScope);
 		resetUsage();
 	}
 
@@ -255,7 +295,8 @@ public final class NetworkSlicing {
 
 	/** Returns the fixed capacity available to one slice on a physical link. */
 	public static double getSliceBandwidth(double physicalBandwidth, int sliceId) {
-		if (physicalBandwidth <= 0.0) {
+		validateNonNegativeFinite(physicalBandwidth, "Physical bandwidth");
+		if (physicalBandwidth == 0.0) {
 			return physicalBandwidth;
 		}
 		return physicalBandwidth * getPercentage(sliceId) / 100.0;
@@ -410,8 +451,7 @@ public final class NetworkSlicing {
 
 	private static double availableBandwidth(FogDevice source, FogDevice destination,
 		int[] activeBySlice, int requestedSlice) {
-		double physicalBandwidth = Math.min(source.getUplinkBandwidth(),
-			destination.getDownlinkBandwidth());
+		double physicalBandwidth = getPhysicalBandwidth(source, destination);
 		if (!coversTransportNetwork()) {
 			int activeTransferCount = 0;
 			for (int active : activeBySlice) {
@@ -447,6 +487,10 @@ public final class NetworkSlicing {
 			throw new IllegalArgumentException(
 				"Wireless network slicing requires an access point and mobile device");
 		}
+		validateNonNegativeFinite(accessPointBandwidth,
+			"Access point bandwidth");
+		validateNonNegativeFinite(mobileDeviceBandwidth,
+			"Mobile-device bandwidth");
 
 		int requestedSlice = validateSliceId(mobileDevice.getNetworkSliceId());
 		if (!coversWirelessNetwork()) {
@@ -490,8 +534,15 @@ public final class NetworkSlicing {
 
 	private static double getPhysicalBandwidth(FogDevice source,
 		FogDevice destination) {
+		if (source == null) {
+			throw new IllegalArgumentException(
+				"Physical bandwidth requires a source cloudlet");
+		}
 		double physicalBandwidth = source.getUplinkBandwidth();
+		validateNonNegativeFinite(physicalBandwidth, "Source uplink bandwidth");
 		if (destination != null) {
+			validateNonNegativeFinite(destination.getDownlinkBandwidth(),
+				"Destination downlink bandwidth");
 			physicalBandwidth = Math.min(physicalBandwidth,
 				destination.getDownlinkBandwidth());
 		}
@@ -500,22 +551,31 @@ public final class NetworkSlicing {
 
 	private static double[] parsePercentages(String percentageList,
 		String description) {
-		String[] values = percentageList.split(",");
+		String[] values = percentageList.split(",", -1);
 		double[] parsed = new double[values.length];
 		double total = 0.0;
 		for (int index = 0; index < values.length; index++) {
 			parsed[index] = Double.parseDouble(values[index].trim());
-			if (parsed[index] <= 0.0 || parsed[index] > 100.0) {
+			if (!Double.isFinite(parsed[index])
+				|| parsed[index] <= 0.0 || parsed[index] > 100.0) {
 				throw new IllegalArgumentException("Each " + description
-					+ " percentage must be greater than 0 and at most 100");
+					+ " percentage must be finite, greater than 0, and at most 100");
 			}
 			total += parsed[index];
 		}
-		if (Math.abs(total - 100.0) > 0.000001) {
+		if (!Double.isFinite(total) || Math.abs(total - 100.0) > 0.000001) {
 			throw new IllegalArgumentException(description
 				+ " percentages must sum to 100");
 		}
 		return parsed;
+	}
+
+	private static double[] parsePercentagesOrDefault(String percentageList,
+		String description) {
+		if (percentageList == null || percentageList.trim().isEmpty()) {
+			return new double[] { 100.0 };
+		}
+		return parsePercentages(percentageList, description);
 	}
 
 	private static double[] equalPercentages(int sliceCount) {
@@ -531,6 +591,23 @@ public final class NetworkSlicing {
 			throw new IllegalArgumentException("Network-slice reservations require source and destination cloudlets");
 		}
 		return source.getId() + "->" + destination.getId();
+	}
+
+	private static int validateScope(int selectedScope) {
+		if (selectedScope < TRANSPORT_NETWORK || selectedScope > END_TO_END_NETWORK) {
+			throw new IllegalArgumentException(
+				"Network slice scope must be 0 (transport), 1 (wireless), or 2 (end-to-end)");
+		}
+		return selectedScope;
+	}
+
+	private static double validateNonNegativeFinite(double value,
+		String description) {
+		if (!Double.isFinite(value) || value < 0.0) {
+			throw new IllegalArgumentException(
+				description + " must be finite and non-negative");
+		}
+		return value;
 	}
 
 	private static void resetUsage() {
