@@ -1,8 +1,10 @@
-run:
-	java -Xmx10g -Dfile.encoding=UTF-8 -classpath bin:jars/cloudsim-3.0.3-sources.jar:jars/cloudsim-3.0.3.jar:jars/cloudsim-examples-3.0.3-sources.jar:jars/cloudsim-examples-3.0.3.jar:jars/commons-math3-3.5/commons-math3-3.5.jar:jars/guava-18.0.jar:jars/json-simple-1.1.1.jar:jars/junit.jar:jars/org.hamcrest.core_1.3.0.v201303031735.jar org.fog.vmmobile.AppExample 1 290538 0 0 3 11 0 61 0 0
-
+BUILD_DIR := build
+MAIN_CLASSES := $(BUILD_DIR)/classes
+MAIN_SOURCE_LIST := $(BUILD_DIR)/main-sources.list
+MAIN_CLASSPATH := $(MAIN_CLASSES):jars/*:jars/commons-math3-3.5/*
 TEST_CLASSES := build/test-classes
 TEST_CLASSPATH := $(TEST_CLASSES):jars/*:jars/commons-math3-3.5/*
+RUN_ARGS ?= 1 290538 0 0 3 11 0 61 0 0
 TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
 	org.cloudbus.cloudsim.util.RunOutputManagerTest \
@@ -34,12 +36,24 @@ TEST_SUITES := \
 	org.fog.utils.MigrationTransferSchedulerTest \
 	org.fog.utils.NetworkSlicingEventIntegrationTest
 
-.PHONY: test
+.PHONY: compile run test clean
+
+compile:
+	rm -rf $(MAIN_CLASSES)
+	mkdir -p $(MAIN_CLASSES) $(MAIN_CLASSES)/images $(MAIN_CLASSES)/topologies
+	find src -name '*.java' -print > $(MAIN_SOURCE_LIST)
+	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(MAIN_CLASSES) @$(MAIN_SOURCE_LIST)
+	cp -R src/images/* $(MAIN_CLASSES)/images/
+	cp -R src/topologies/* $(MAIN_CLASSES)/topologies/
+
+run: compile
+	java -Xmx10g -Dfile.encoding=UTF-8 -classpath '$(MAIN_CLASSPATH)' org.fog.vmmobile.AppExample $(RUN_ARGS)
+
 test:
 	mkdir -p $(TEST_CLASSES)
-	find src test -name '*.java' -print > build/test-sources.list
-	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(TEST_CLASSES) @build/test-sources.list
+	find src test -name '*.java' -print > $(BUILD_DIR)/test-sources.list
+	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(TEST_CLASSES) @$(BUILD_DIR)/test-sources.list
 	java -classpath '$(TEST_CLASSPATH)' org.junit.runner.JUnitCore $(TEST_SUITES)
 
 clean:
-	rm *.txt
+	rm -rf $(BUILD_DIR)

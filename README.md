@@ -21,8 +21,30 @@ Building your own simulation
 
 An example of an application is set in src/org/fog/vmmobile/AppExample.java
 
-### Running in the command line:
-Make run
+### Running in the command line
+
+Compile production classes and runtime resources into `build/classes`:
+
+```text
+make compile
+```
+
+Compile and run the default example:
+
+```text
+make run
+```
+
+`make run` always depends on `compile` and uses `build/classes`; it does not
+use precompiled files from `bin`. Override the default simulation arguments
+when needed:
+
+```text
+make run RUN_ARGS='1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary'
+```
+
+Run the tests with `make test`. Use `make clean` to remove only the generated
+`build` directory.
 
 ### Running in Eclipse IDE:
 Create a new project defining this repository as the main directory
