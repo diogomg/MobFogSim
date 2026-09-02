@@ -1,27 +1,33 @@
 # MobFogSim
-MobFogSim - Simulation of Mobility and Migration for Fog Computing
 
-MobFogSim extends [iFogSim](https://github.com/Cloudslab/iFogSim1) simulator to enable the modelling of device mobility and service migration in fog computing.
+MobFogSim — Simulation of Mobility and Migration for Fog Computing
 
-More details can be found in the following paper: Puliafito, Carlo, et al. "MobFogSim: Simulation of Mobility and Migration for Fog Computing." Simulation Modelling Practice and Theory (2019)
+MobFogSim extends the [iFogSim](https://github.com/Cloudslab/iFogSim1)
+simulator to support the modelling of device mobility and service migration in
+fog computing.
+
+Further details are available in Puliafito et al., ‘MobFogSim: Simulation of
+mobility and migration for fog computing’, *Simulation Modelling Practice and
+Theory* (2020).
 
 ## Running MobFogSim
 
-Building your own simulation
-*  First step: Follow the following steps;
-*  Second step: Provide the user mobility dataset and order manifest;
-*  Third step: Initialize the CloudSim package. It should be called before creating any entities;
-*  Fourth step: Create all devices;
-*  Fifth step: Create a Broker;
-*  Sixth step: Create one virtual machine;
-*  Seventh step: Create one Application (appModule, appEdge, appLoop, and tuples);
-*  Eighth step: Configure the network;
-*  Ninth step: Starts the simulation;
-*  Final step: Print results when the simulation is over.
+### Building your own simulation
 
-An example of an application is set in src/org/fog/vmmobile/AppExample.java
+1. Provide the user mobility dataset and order manifest.
+2. Initialise CloudSim before creating any simulation entities.
+3. Create the infrastructure and mobile devices.
+4. Configure users and their scheduled entry times.
+5. Configure the network.
+6. Start the simulation. When a user enters and associates with an access
+   point, create its broker, VM, application, module mappings, sensors, and
+   actuators.
+7. Collect and print the results after the simulation finishes.
 
-### Running in the command line
+An example application is provided in
+[`src/org/fog/vmmobile/AppExample.java`](src/org/fog/vmmobile/AppExample.java).
+
+### Running from the command line
 
 Compile production classes and runtime resources into `build/classes`:
 
@@ -29,59 +35,65 @@ Compile production classes and runtime resources into `build/classes`:
 make compile
 ```
 
-Compile and run the default example:
+Compile and run the example with the default arguments:
 
 ```text
 make run
 ```
 
-`make run` always depends on `compile` and uses `build/classes`; it does not
-use precompiled files from `bin`. Override the default simulation arguments
-when needed:
+`make run` depends on `compile` and uses `build/classes`; it does not use
+precompiled files from `bin`. Override the simulation arguments when needed:
 
 ```text
 make run RUN_ARGS='1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary'
 ```
 
-Run the tests with `make test`. Use `make clean` to remove only the generated
-`build` directory.
+Run the tests with `make test`. Use `make clean` to remove the generated
+`build` directory only.
 
-### Running in Eclipse IDE:
-Create a new project defining this repository as the main directory
+### Running in the Eclipse IDE
 
-Settings: Project -> Proprieties -> Java Build Path -> Libraries -> ADD External JARs -> Select the JARs files in the directory jars
-
-In src/org/fog/vmmobile/AppExample.java, run as -> run configurations -> Java Application -> AppExample -> Arguments -> Program arguments -> Insert the parameters as you demand
-
-In src/org/fog/vmmobile/AppExample.java, run as -> Java application
+1. Create a Java project that uses the repository root as its project
+   directory.
+2. Select **Project > Properties > Java Build Path > Libraries > Add External
+   JARs**, then add the JAR files from the `jars` directory.
+3. Open `src/org/fog/vmmobile/AppExample.java`, then select **Run As > Run
+   Configurations > Java Application > AppExample > Arguments** and enter the
+   required values under **Program arguments**.
+4. Run `AppExample.java` by selecting **Run As > Java Application**.
 
 ### Requirements
-* JAVA SDK
 
-Optional:
+- Java Development Kit (JDK)
 
-* IBM CPLEX for optimization algorithms
+Optional dependency:
 
-* cscope for browsing the source code
+- IBM ILOG CPLEX for optimisation algorithms
 
 ## Parameters
 
-*  First parameter: 0/1 -> Migration processes are denied or allowed
-*  Second parameter: Positive Integer -> seed to be used in the random numbers generation
-*  Third parameter: 0/1 -> Migration point approach is fixed (0) or based on the user speed (1)
-*  Fourth parameter: 0/1/2 -> Migration strategy approach to select the destination cloudlet. It can be based on the lowest latency (0), the lowest distance between the user and cloudlet (1), or the lowest distance between the user and Access Point (2)
-*  Fifth parameter: Positive Integer -> Number of users
-*  Sixth parameter: Positive Integer -> Base Network Bandwidth between cloudlets
-*  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (2)
-*  Eighth parameter: Positive number -> Base Network Latency between cloudlets.
-*  Ninth parameter: Non-Negative Integer -> User Mobility prediction, in seconds.
-*  Tenth parameter: Non-Negative Integer -> User Mobility prediction inaccuracy, in meters.
-*  Eleventh  parameter: network-slice scope: 0 transport network only (physical links between servers), 1 wireless network only (access-point uplink and downlink), or 2 end-to-end (transport and wireless). It defaults to 2 when omitted.
-*  Twelfth parameter: comma-separated percentages of users assigned to each slice. There must be one value per slice, and the values must be greater than zero and sum to 100.
-*  Thirteenth parameter: comma-separated bandwidth percentages for the slices. Values must be greater than zero and sum to 100.
-*  Fourteenth parameter: 0 keeps the configured slice bandwidth fixed (static slicing); 1 lets active slices borrow idle capacity (dynamic slicing).
-*  Fifteenth parameter: VM destination type: 0 edge servers only, 1 end devices only, or 2 hybrid.
-*  Sixteenth parameter: output mode: `summary`, `full`, or `none`. It defaults to `summary` when omitted.
+The first ten parameters are required. Parameters 11 through 16 are optional
+and use the defaults shown below. Because the interface is positional, all
+preceding parameters must be supplied when setting a later one.
+
+| Order | Parameter | Type, format, and accepted values | Brief explanation |
+| ---: | --- | --- | --- |
+| 1 | Migration | Required integer flag: `0` or `1` | `0` disables service/VM migration; `1` allows the simulator to migrate an application's VM when its trigger and destination conditions are satisfied. User mobility and wireless handoffs can still occur when migration is disabled. |
+| 2 | Random seed | Required positive integer (`> 0`) | Seeds the simulator's pseudo-random choices, making runs with the same inputs and configuration reproducible. |
+| 3 | Migration point | Required integer: `0` fixed, `1` speed-aware | Selects when migration preparation is triggered. The fixed policy uses a predefined distance from the source AP's coverage boundary; the speed-aware policy also considers the user's speed and the estimated migration duration. |
+| 4 | Migration strategy | Required integer: `0` lowest latency, `1` shortest user-to-cloudlet distance, `2` shortest user-to-AP distance | Selects the destination server cloudlet after the user reaches a valid migration point and movement zone. |
+| 5 | Number of users | Required positive integer (`> 0`) | Sets the number of mobile users. The `input` directory must contain enough matching mobility traces, and `input/inputOrder.csv` must contain at least this many assignments. |
+| 6 | Cloudlet bandwidth | Required positive integer (`> 0`), in Mbps | Sets the base network bandwidth used to generate server-cloudlet link capacities. Network slicing divides the resulting physical capacity when transport slicing is enabled. |
+| 7 | Migration policy | Required integer: `0` complete-VM cold migration, `1` complete-container migration, `2` container live migration | Selects the state to transfer and determines how the simulator models migration time and service downtime. |
+| 8 | Cloudlet latency | Required finite positive number (`> 0`) | Sets the base latency per grid hop between server cloudlets; the simulator adds a small seeded random component to each directed link. |
+| 9 | Mobility prediction | Required non-negative integer (`>= 0`), in seconds | Looks this far ahead in the selected mobility trace when estimating the user's future position for destination selection. `0` uses the current trace position. |
+| 10 | Prediction error | Required non-negative integer (`>= 0`), in metres | Adds a displacement of this magnitude to the predicted position, in a seeded random direction, to model location-prediction inaccuracy. `0` represents an error-free prediction. |
+| 11 | Slice scope | Optional integer: `0` transport, `1` wireless, `2` end-to-end; default `2` | Chooses whether slice bandwidth shares apply to physical links between servers, AP uplink and downlink capacities, or both. |
+| 12 | User allocation per slice | Optional comma-separated finite percentages, for example `60,40`; each value must be in `(0, 100]`, values must sum to `100`, and the count must match parameter 13 | Assigns the configured percentage of users to each slice. If omitted, users are divided equally among the slices. Fractional user counts are resolved using the largest-remainder method. |
+| 13 | Bandwidth share per slice | Optional comma-separated finite percentages, for example `70,30`; each value must be in `(0, 100]` and values must sum to `100`; default `100` | Defines the number of slices and the percentage of capacity reserved for each slice within the selected scope. The default creates one slice with all capacity. |
+| 14 | Slice mode | Optional integer flag: `0` static, `1` dynamic; default `1` | Static mode keeps each slice at its configured share. Dynamic mode lets active slices borrow capacity reserved for slices that are idle on the same link or AP. |
+| 15 | VM destination type | Optional integer: `0` edge servers only, `1` end devices only, `2` hybrid; default `2` | Restricts the eligible nodes that may host a migrated VM. Hybrid mode considers both server cloudlets and connected mobile devices with sufficient resources. |
+| 16 | Output mode | Optional, case-insensitive text: `summary`, `full`, or `none`; default `summary` | Controls whether a run writes bounded aggregate results, aggregate results plus detailed event records, or no result files. |
 
 ### Example
 
@@ -93,103 +105,160 @@ This example configures the simulation as follows:
 
 | Parameter | Value | Meaning |
 | --- | ---: | --- |
-| Migration | 1 | Enables service migration. |
-| Random seed | 290538 | Makes random decisions reproducible. |
-| Migration point | 0 | Uses the fixed migration-point policy. |
-| Migration strategy | 0 | Selects the destination with the lowest latency. |
-| Users | 10 | Simulates ten mobile users. |
-| Cloudlet bandwidth | 11 | Sets the base bandwidth between server cloudlets to 11 Mbps. |
-| Migration policy | 0 | Uses complete-VM cold migration. |
-| Cloudlet latency | 61 | Sets the base latency between server cloudlets to 61. |
-| Mobility prediction | 0 | Disables look-ahead mobility prediction. |
-| Prediction error | 0 | Uses no additional mobility-prediction error. |
-| Slice scope | 0 | Applies slicing only to the transport network between servers. |
-| User allocation | 60,40 | Assigns 60% of users to slice 0 and 40% to slice 1: six and four users in this ten-user example. |
-| Slice shares | 70,30 | Gives slice 0 70% and slice 1 30% of bandwidth in the selected scope. |
-| Slice mode | 1 | Enables dynamic borrowing of idle slice capacity. |
-| VM destinations | 2 | Allows both edge servers and eligible end devices as migration destinations. |
-| Output mode | summary | Writes bounded end-of-run metrics and omits detailed event records. |
+| Migration | `1` | Enables service migration. |
+| Random seed | `290538` | Makes random decisions reproducible. |
+| Migration point | `0` | Uses the fixed migration-point policy. |
+| Migration strategy | `0` | Selects the destination with the lowest latency. |
+| Users | `10` | Simulates ten mobile users. |
+| Cloudlet bandwidth | `11` | Sets the base bandwidth between server cloudlets to 11 Mbps. |
+| Migration policy | `0` | Uses complete-VM cold migration. |
+| Cloudlet latency | `61` | Sets the base latency between server cloudlets to 61. |
+| Mobility prediction | `0` | Disables look-ahead mobility prediction. |
+| Prediction error | `0` | Adds no mobility-prediction error. |
+| Slice scope | `0` | Applies slicing only to the transport network between servers. |
+| User allocation | `60,40` | Assigns 60% of users to slice 0 and 40% to slice 1: six and four users, respectively, in this ten-user example. |
+| Slice shares | `70,30` | Gives slice 0 70% and slice 1 30% of the bandwidth in the selected scope. |
+| Slice mode | `1` | Enables dynamic borrowing of idle slice capacity. |
+| VM destinations | `2` | Allows both edge servers and eligible end devices to host migrated VMs. |
+| Output mode | `summary` | Writes bounded end-of-run metrics and omits detailed event records. |
+
+#### Simulation concepts used in this example
+
+**Migration** means moving a mobile user's application VM away from its
+current host to a better host as the user travels. Parameter 1 is set to `1`,
+so MobFogSim may initiate that relocation when all migration conditions are
+met; this does not mean that a migration is forced at every handoff.
+
+The **migration point** controls *when* the simulator starts considering a
+migration. Value `0` uses the fixed policy: the user must enter a predefined
+area near the edge of the current AP's coverage and be moving through an
+eligible directional zone. Value `1` would adjust this trigger according to
+the user's speed and the estimated time needed to migrate, allowing a slower
+transfer or a faster-moving user to be considered earlier.
+
+The **migration strategy** controls *where* the VM should move after the
+trigger. Value `0` evaluates candidate server cloudlets and selects the one
+with the lowest estimated latency cost. This is distinct from parameter 15:
+the strategy chooses the destination server region, while the hybrid VM
+destination policy may use a suitable connected end device as the final host.
+
+The **migration policy** controls *what* the simulator transfers and *how* it
+performs that transfer. Value `0` models a cold migration of the complete VM,
+so the entire VM state is transferred and the model counts the migration
+interval as downtime. Container and live migration policies model different
+transfer sizes and downtime behaviour.
+
+**Mobility prediction** lets destination selection use a future location from
+the user's trace instead of only the current position. Its value is `0` here,
+so there is no look-ahead. A value such as `10` would make the selection logic
+consider the predicted position ten seconds ahead, limited by the available
+trace.
+
+The **prediction error** represents uncertainty in that predicted position.
+Value `0` leaves the selected trace coordinate unchanged. A positive value
+displaces it by that many metres in a pseudo-random direction; the random seed
+makes this perturbation reproducible.
+
+The **slice scope** controls which parts of the network enforce the configured
+slice shares. Value `0` applies slicing only to the transport network: physical
+links between server cloudlets are divided among slices, while wireless AP
+uplink and downlink capacity remains shared without slice reservations. Value
+`1` would slice only the wireless network, and `2` would apply the same slicing
+model end to end.
+
+The **user allocation** determines how the simulated population is distributed
+among slices. With ten users and `60,40`, six users belong to slice 0 and four
+belong to slice 1. If a percentage produces a fractional user count, MobFogSim
+uses the largest remainders to ensure that every user is assigned exactly once.
+
+The **slice shares** specify how much capacity each slice reserves inside the
+selected scope. Value `70,30` reserves 70% of each sliced transport link for
+slice 0 and 30% for slice 1. These percentages describe network capacity and
+are independent of the `60,40` population split, so a slice may serve fewer
+users while receiving a larger bandwidth share.
+
+The **slice mode** controls whether unused reservations can be reused. Value
+`1` enables dynamic slicing, allowing a slice with active migrations to borrow
+capacity from slices that are idle on the same directed transport link. Value
+`0` would keep every slice limited to its configured share. Concurrent
+migrations still share the total capacity available to their slice.
+
+The **VM destinations** setting limits the types of hosts considered after the
+migration strategy selects a destination server region. Value `2` enables
+hybrid placement: MobFogSim may retain the selected edge server or choose a
+closer connected end device with sufficient host resources. Values `0` and `1`
+restrict placement to edge servers or end devices, respectively.
 
 Mobility traces are always read from `input`, using `input/inputOrder.csv` as
 the order manifest. Every simulation receives an automatically generated,
 unique output directory below `runs/`; its name contains the seed, timestamp,
 and a short unique identifier.
 
-Every enabled simulator-generated file is resolved below the run output
-directory. The modes control which files are enabled:
+Every enabled simulator-generated file is written beneath the run output
+directory. The selected mode determines which files are written:
 
-| Mode | Output behavior |
+| Mode | Output behaviour |
 | --- | --- |
 | `summary` | Default. Writes bounded end-of-run averages, totals, network usage, migration statistics, and tuple-loss statistics. It omits per-event records and `out.txt`. |
-| `full` | Writes the summaries and every detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace record. This preserves the previous output detail. |
+| `full` | Writes the summaries and all detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace records. |
 | `none` | Disables every output file. The configured run root may still be created, but it remains empty. |
-
-All enabled output remains uncompressed plain text;
-
-When a user-allocation percentage produces a fractional number of users, the simulator assigns the remaining users to the slices with the largest fractional remainders. Within the selected scope, each group receives its configured bandwidth share. For example, a physical link or AP direction with 11 Mbps and a 70/30 configuration gives group 0 7.7 Mbps and group 1 3.3 Mbps. Users connected to the same AP and assigned to the same slice share that slice's wireless capacity equally; their effective rate is also capped by the individual mobile device's link rate. A network outside the selected scope is not divided into slices; AP capacity is shared equally among connected users in that case. During VM migration, an active group may borrow transport capacity reserved for groups with no active migration on that same directed link. Concurrent migrations on the same directed link share the available capacity; whenever a migration starts, finishes, or is aborted, the simulator updates the remaining data, recalculates every affected rate, and replaces their completion events so their combined rate never exceeds the physical link. On an AP, connected groups may borrow the capacity of groups that have no connected users there. Borrowed capacity is returned automatically when a migration finishes, or when AP membership changes; when more than one active slice borrows capacity, the idle capacity is divided equally between them.
-
-Every connected mobile device can host another user's application VM. During a migration, the simulator keeps the selected server-cloudlet destination unless a different connected mobile device is closer to the application owner and has sufficient host resources. The owner device and the current VM host are excluded. VM traffic is then routed to the VM's current host using the existing network topology, and a later migration may move that VM back to a server cloudlet or to another eligible mobile device.
-
 
 ## Input
 
-Mobility data is read from `.csv` files generated from mobility patterns
-such as SUMO (Simulation of Urban MObility). Trace filenames must match
+Mobility data are read from `.csv` files generated by mobility simulators such
+as SUMO (Simulation of Urban MObility). Trace filenames must match
 `*log.csv`; unrelated files in the same directory are ignored.
 
-An example of an offline mobility dataset from [Luxembourg SUMO Traffic](https://github.com/lcodeca/LuSTScenario) is placed in the directory named as 'input'.
+The `input` directory contains an example offline mobility dataset from the
+[Luxembourg SUMO Traffic (LuST) Scenario](https://github.com/lcodeca/LuSTScenario).
 
 Each non-empty trace must contain exactly five tab-separated, finite numeric
-columns: time in seconds, direction in radians, X position, Y position, and
-speed in metres per second. Time must be non-negative and nondecreasing, and
+columns: time in seconds, direction in radians, x-position, y-position, and
+speed in metres per second. Time must be non-negative and non-decreasing, and
 speed must be non-negative.
 
-The order manifest is also tab-separated despite its `.csv` extension.
-It contains zero-based indexes into the lexicographically sorted `*log.csv`
-files. Indexes can span multiple rows, are applied exactly in their written
-order, and the manifest must contain at least one entry per simulated user. For
-example, `2<TAB>0<TAB>1` assigns trace 2 to user 0, trace 0 to user 1, and trace
-1 to user 2. Missing files, malformed rows, insufficient entries, and invalid trace
-indexes stop startup with a contextual `MobilityInputException`.
+The order manifest is also tab-separated, despite its `.csv` extension. It
+contains zero-based indices into the lexicographically sorted `*log.csv`
+files. Entries may span multiple rows and are applied in exactly the order in
+which they are written. The manifest must contain at least one entry per
+simulated user. For example, `2<TAB>0<TAB>1` assigns trace 2 to user 0, trace 0
+to user 1, and trace 1 to user 2. Missing files, malformed rows, insufficient
+entries, and invalid trace indices cause start-up to fail with a contextual
+`MobilityInputException`.
 
 The first trace timestamp is the user's simulation-entry time in seconds. Until
 that time, the user remains pending: it has no broker, VM, application, or
 network association, and its sensors and actuators are disabled. At the entry
-event the simulator attempts access-point association and, after association
-succeeds, creates the broker, VM, application, mappings, and
+event, the simulator attempts to associate the user with an access point. Once
+association succeeds, it creates the broker, VM, application, mappings, and
 peripheral bindings. If the first position is outside wireless coverage, the
-user continues along its mobility trace and retries association.
+user continues along its mobility trace and retries the association process.
 
-Example input/1702log.csv 
+For example, `input/1702log.csv` begins as follows. The displayed columns are
+tab-separated in the file.
 
-2.1    -1.51173    10370.1    2233.67    0
-
-3.1    -1.68755    10369.2    2234.57    2.34286
-
-4.1    -2.09045    10366.9    2236.81    4.11058
-
-5.1    -2.36655    10363.1    2240.26    6.03548
-
-6.1    -2.41103    10357.9    2244.92    7.94067
-
-7.1    -2.43504    10350.9    2250.8    10.0297
-
-8.1    -2.43476    10342.4    2258.09    12.1859
-
-9.1    -2.42554    10332.5    2266.75    14.044
-
+```text
+2.1     -1.51173    10370.1    2233.67    0
+3.1     -1.68755    10369.2    2234.57    2.34286
+4.1     -2.09045    10366.9    2236.81    4.11058
+5.1     -2.36655    10363.1    2240.26    6.03548
+6.1     -2.41103    10357.9    2244.92    7.94067
+7.1     -2.43504    10350.9    2250.8     10.0297
+8.1     -2.43476    10342.4    2258.09    12.1859
+9.1     -2.42554    10332.5    2266.75    14.044
 10.1    -2.42553    10323.3    2274.71    10.638
-
-.
-
-.
-
-.
+...
+```
 
 ## How to cite MobFogSim
 
-Puliafito, C. et. al. MobFogSim: Simulation of mobility and migration for fog computing. Simulation Modelling Practice and Theory. 2020.
-bibtex
+Puliafito, C. et al. (2020). ‘MobFogSim: Simulation of mobility and migration
+for fog computing’. *Simulation Modelling Practice and Theory*, 101, 102062.
+[DOI: 10.1016/j.simpat.2019.102062](https://doi.org/10.1016/j.simpat.2019.102062)
+
+BibTeX:
+
+```bibtex
 @article{puliafito2020mobfogsim,
   title={MobFogSim: Simulation of mobility and migration for fog computing},
   author={Puliafito, Carlo and Gon{\c{c}}alves, Diogo M and Lopes, M{\'a}rcio M and Martins, Leonardo L and Madeira, Edmundo and Mingozzi, Enzo and Rana, Omer and Bittencourt, Luiz F},
@@ -199,13 +268,18 @@ bibtex
   year={2020},
   publisher={Elsevier}
 }
+```
 
-DOI https://doi.org/10.1016/j.simpat.2019.102062
+### Additional papers on MobFogSim features
 
-### Additional papers regarding MobFogSim features
+Gonçalves, D. et al. (2020). ‘Dynamic network slicing in fog computing for
+mobile users in MobFogSim’. *2020 IEEE/ACM 13th International Conference on
+Utility and Cloud Computing (UCC)*, 237–246.
+[DOI: 10.1109/UCC48980.2020.00042](https://doi.org/10.1109/UCC48980.2020.00042)
 
-Goncalves, D. et. al. Dynamic network slicing in fog computing for mobile users in MobFogSim. IEEE/ACM 13th International Conference on Utility and Cloud Computing. 2020.
- bibtex
+BibTeX:
+
+```bibtex
 @inproceedings{gonccalves2020dynamic,
   title={Dynamic network slicing in fog computing for mobile users in MobFogSim},
   author={Gon{\c{c}}alves, Diogo and Puliafito, Carlo and Mingozzi, Enzo and Rana, Omer and Bittencourt, Luiz and Madeira, Edmundo},
@@ -214,11 +288,15 @@ Goncalves, D. et. al. Dynamic network slicing in fog computing for mobile users 
   year={2020},
   organization={IEEE}
 }
+```
 
-DOI https://doi.org/10.1109/UCC48980.2020.00042
+Gonçalves, D. et al. (2023). ‘End-to-end network slicing in vehicular clouds
+using the MobFogSim simulator’. *Ad Hoc Networks*, 141, 103096.
+[DOI: 10.1016/j.adhoc.2023.103096](https://doi.org/10.1016/j.adhoc.2023.103096)
 
-Goncalves, D. et. al. End-to-end network slicing in vehicular clouds using the MobFogSim simulator. Ad Hoc Networks. 2023.
- bibtex
+BibTeX:
+
+```bibtex
 @article{gonccalves2023end,
   title={End-to-end network slicing in vehicular clouds using the MobFogSim simulator},
   author={Gon{\c{c}}alves, Diogo M and Puliafito, Carlo and Mingozzi, Enzo and Bittencourt, Luiz F and Madeira, Edmundo RM},
@@ -228,5 +306,4 @@ Goncalves, D. et. al. End-to-end network slicing in vehicular clouds using the M
   year={2023},
   publisher={Elsevier}
 }
-
-DOI https://doi.org/10.1016/j.adhoc.2023.103096
+```
