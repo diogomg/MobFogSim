@@ -30,6 +30,8 @@ import org.fog.entities.MobileDevice;
 import org.fog.entities.Sensor;
 import org.fog.localization.Coordinate;
 import org.fog.localization.Distances;
+import org.fog.localization.MobilitySample;
+import org.fog.localization.MobilityTimeline;
 import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
@@ -102,7 +104,7 @@ public class MobileController extends SimEntity {
 		setMigPointPolicy(migPointPolicy);
 		setMigStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
-		setCoordDevices(coordDevices);
+		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
 		initializeCPULoads();
 		setRand(new Random(getSeed() * Long.MAX_VALUE));
@@ -130,7 +132,7 @@ public class MobileController extends SimEntity {
 		setMigPointPolicy(migPointPolicy);
 		setMigStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
-		setCoordDevices(coordDevices);
+		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
 		initializeCPULoads();
 		setRand(new Random(getSeed() * Long.MAX_VALUE));
@@ -174,11 +176,6 @@ public class MobileController extends SimEntity {
 			processAppSubmit(applications.get(appId));
 		}
 
-		schedulePeriodic(getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
-			MobileEvents.NEXT_STEP);
-		schedulePeriodic(getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
-			MobileEvents.CHECK_NEW_STEP);
-
 		if (isMigrationAble()) {
 			for (FogDevice sc : getServerCloudlets()) {
 				schedulePeriodic(sc.getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
@@ -187,7 +184,8 @@ public class MobileController extends SimEntity {
 		}
 
 		for (MobileDevice st : getSmartThings()) {
-			send(getId(), st.getStartTravelTime() * 1000, MobileEvents.CREATE_NEW_SMARTTHING, st);
+			send(getId(), MobilityTimeline.toSimulationTime(st.getStartTravelTime()),
+				MobileEvents.CREATE_NEW_SMARTTHING, st);
 		}
 
 		send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
@@ -293,21 +291,11 @@ public class MobileController extends SimEntity {
 		case FogEvents.CONTROLLER_RESOURCE_MANAGE:
 			manageResources();
 			break;
-		case MobileEvents.NEXT_STEP:
-			NextStep.nextStep(getServerCloudlets()
-				, getApDevices()
-				, getSmartThings()
-				, getCoordDevices()
-				, getStepPolicy()
-				, getSeed());
-			break;
 		case MobileEvents.CREATE_NEW_SMARTTHING:
 			createNewSmartThing(ev);
 			break;
-		case MobileEvents.CHECK_NEW_STEP:
-			checkNewStep();
-			if (getSmartThings().isEmpty())
-				sendNow(getId(), MobileEvents.STOP_SIMULATION);
+		case MobileEvents.MOBILITY_UPDATE:
+			processMobilityUpdate(ev);
 			break;
 		case MobileEvents.STOP_SIMULATION:
 			requestSimulationStop();
@@ -338,8 +326,84 @@ public class MobileController extends SimEntity {
 		if (st.getTravelTimeId() != -1) {
 			return;
 		}
-		st.setTravelTimeId(0);
+		List<MobilitySample> path = st.getMobilityPath();
+		if (path.isEmpty()) {
+			// Compatibility for programmatically-created users without trace data.
+			st.setTravelTimeId(0);
+			activateMobileUser(st);
+			return;
+		}
+
+		// Row zero already established the pending user's initial position.
+		st.setTravelTimeId(1);
+		getCoordDevices().advanceToTime(st, st.getStartTravelTime());
+		if (st.getCoord().getCoordX() == -1) {
+			NextStep.finishMobility(st);
+			requestStopIfNoMobiles();
+			return;
+		}
+		if (st.getTravelTimeId() >= path.size()) {
+			NextStep.finishMobility(st);
+			requestStopIfNoMobiles();
+			return;
+		}
 		activateMobileUser(st);
+		scheduleNextMobilityUpdate(st);
+	}
+
+	private void processMobilityUpdate(SimEvent event) {
+		MobileDevice smartThing = (MobileDevice) event.getData();
+		if (!getSmartThings().contains(smartThing)
+			|| smartThing.getTravelTimeId() < 0) {
+			return;
+		}
+
+		getCoordDevices().advanceToTime(smartThing,
+			MobilityTimeline.toTraceTime(CloudSim.clock()));
+		if (!processCurrentMobilityPosition(smartThing)) {
+			requestStopIfNoMobiles();
+			return;
+		}
+		onMobilityPositionUpdated(smartThing);
+		if (smartThing.getTravelTimeId() >= smartThing.getMobilityPath().size()) {
+			NextStep.finishMobility(smartThing);
+			requestStopIfNoMobiles();
+			return;
+		}
+		checkNewStep(smartThing);
+
+		if (!getSmartThings().contains(smartThing)) {
+			requestStopIfNoMobiles();
+			return;
+		}
+		scheduleNextMobilityUpdate(smartThing);
+	}
+
+	private void scheduleNextMobilityUpdate(MobileDevice smartThing) {
+		MobilitySample next = smartThing.getMobilityPath()
+			.get(smartThing.getTravelTimeId());
+		double delay = MobilityTimeline.toSimulationTime(next.getTimeSeconds())
+			- CloudSim.clock();
+		if (delay < 0.0) {
+			throw new IllegalStateException("Mobility timeline for " + smartThing.getName()
+				+ " moved backwards at sample " + smartThing.getTravelTimeId());
+		}
+		send(getId(), delay, MobileEvents.MOBILITY_UPDATE, smartThing);
+	}
+
+	/** Hook used by observers after all rows at one timestamp have been applied. */
+	protected void onMobilityPositionUpdated(MobileDevice smartThing) {
+	}
+
+	/** Hook for recording or rejecting the position applied by a mobility event. */
+	protected boolean processCurrentMobilityPosition(MobileDevice smartThing) {
+		return NextStep.processCurrentPosition(smartThing);
+	}
+
+	private void requestStopIfNoMobiles() {
+		if (getSmartThings().isEmpty()) {
+			sendNow(getId(), MobileEvents.STOP_SIMULATION);
+		}
 	}
 
 	protected boolean activateMobileUser(MobileDevice mobileDevice) {
@@ -428,11 +492,7 @@ public class MobileController extends SimEntity {
 
 	}
 
-	private void checkNewStep() {
-		for (MobileDevice st : getSmartThings()) {
-			if (st.getTravelTimeId() == -1) {
-				continue;
-			}
+	protected void checkNewStep(MobileDevice st) {
 			MyStatistics.getInstance().getEnergyHistory()
 				.put(st.getMyId(), st.getEnergyConsumption());
 			MyStatistics.getInstance().getPowerHistory().put(st.getMyId(), st.getHost().getPower());
@@ -549,7 +609,6 @@ public class MobileController extends SimEntity {
 			else {
 				activateMobileUser(st);
 			}
-		}
 	}
 
 	private static void saveHandOff(MobileDevice st) {

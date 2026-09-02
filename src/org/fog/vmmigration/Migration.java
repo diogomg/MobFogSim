@@ -8,11 +8,14 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
+import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.entities.*;
 import org.fog.localization.Coordinate;
 import org.fog.localization.DiscoverLocalization;
 import org.fog.localization.Distances;
+import org.fog.localization.MobilitySample;
+import org.fog.localization.MobilityTimeline;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.constants.*;
 
@@ -110,17 +113,14 @@ public class Migration {
 
 		Coordinate coord_real = smartThing.getCoord();
 
-		ArrayList<String[]> path = smartThing.getPath();
-		// related to the eighth parameter - User Mobility prediction, in seconds
-		int travelTimeId = smartThing.getTravelTimeId() + smartThing.getTravelPredicTime();
-		if (travelTimeId >= path.size()) {
-			travelTimeId = path.size() - 1;
-		}
+		List<MobilitySample> path = smartThing.getMobilityPath();
+		// The prediction parameter is elapsed trace time, not a number of rows.
+		double targetTime = MobilityTimeline.toTraceTime(CloudSim.clock())
+			+ smartThing.getTravelPredicTime();
+		MobilitySample predictedSample = MobilityTimeline.sampleAtOrBefore(path, targetTime);
 
-		String[] coodinates = path.get(travelTimeId);
-
-		int x = (int) Double.parseDouble(coodinates[2]);
-		int y = (int) Double.parseDouble(coodinates[3]);
+		int x = (int) predictedSample.getX();
+		int y = (int) predictedSample.getY();
 		Coordinate coord_prev = new Coordinate();
 		coord_prev.setCoordX(x);
 		coord_prev.setCoordY(y);

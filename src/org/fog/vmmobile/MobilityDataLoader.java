@@ -12,6 +12,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
+import org.fog.localization.MobilitySample;
+
 /** Loads and validates ordered SUMO mobility traces. */
 final class MobilityDataLoader {
 
@@ -147,8 +149,8 @@ final class MobilityDataLoader {
 		return order;
 	}
 
-	private static List<String[]> readTrace(Path traceFile) {
-		List<String[]> rows = new ArrayList<String[]>();
+	private static List<MobilitySample> readTrace(Path traceFile) {
+		List<MobilitySample> samples = new ArrayList<MobilitySample>();
 		try (BufferedReader reader = Files.newBufferedReader(traceFile,
 			StandardCharsets.UTF_8)) {
 			String line;
@@ -179,7 +181,6 @@ final class MobilityDataLoader {
 							+ traceFile + " at line " + lineNumber + ", column "
 							+ (column + 1));
 					}
-					columns[column] = value;
 				}
 
 				if (numericValues[0] < 0.0 || numericValues[0] < previousTime) {
@@ -192,17 +193,18 @@ final class MobilityDataLoader {
 						+ traceFile + " at line " + lineNumber);
 				}
 				previousTime = numericValues[0];
-				rows.add(columns);
+				samples.add(new MobilitySample(numericValues[0], numericValues[1],
+					numericValues[2], numericValues[3], numericValues[4]));
 			}
 		} catch (IOException error) {
 			throw new MobilityInputException(
 				"Unable to read mobility trace " + traceFile, error);
 		}
 
-		if (rows.isEmpty()) {
+		if (samples.isEmpty()) {
 			throw new MobilityInputException("Mobility trace is empty: " + traceFile);
 		}
-		return rows;
+		return samples;
 	}
 
 	private static boolean hasCsvExtension(Path path) {
@@ -211,27 +213,20 @@ final class MobilityDataLoader {
 
 	static final class MobilityTrace {
 		private final Path source;
-		private final List<String[]> rows;
+		private final List<MobilitySample> samples;
 
-		private MobilityTrace(Path source, List<String[]> rows) {
+		private MobilityTrace(Path source, List<MobilitySample> samples) {
 			this.source = source;
-			this.rows = copyRows(rows);
+			this.samples = Collections.unmodifiableList(
+				new ArrayList<MobilitySample>(samples));
 		}
 
 		Path getSource() {
 			return source;
 		}
 
-		ArrayList<String[]> getRows() {
-			return new ArrayList<String[]>(copyRows(rows));
-		}
-
-		private static List<String[]> copyRows(List<String[]> sourceRows) {
-			List<String[]> copy = new ArrayList<String[]>(sourceRows.size());
-			for (String[] row : sourceRows) {
-				copy.add(row.clone());
-			}
-			return copy;
+		List<MobilitySample> getSamples() {
+			return samples;
 		}
 	}
 }

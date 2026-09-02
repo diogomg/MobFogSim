@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
@@ -22,9 +23,11 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileSensor;
 import org.fog.localization.Coordinate;
+import org.fog.localization.MobilitySample;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,6 +38,7 @@ public class MobileControllerDelayedEntryTest {
 	private static final int CHECK_AFTER_ENTRY = 8802;
 	private static final int STOP = 8803;
 	private static final int ACTIVATE_SENSOR = 8804;
+	private static final int CHECK_BEFORE_SECOND_TRACE_TIME = 8805;
 	private static final double DELTA = 0.000001;
 
 	@Before
@@ -129,6 +133,32 @@ public class MobileControllerDelayedEntryTest {
 		assertTrue(brokers.isEmpty());
 	}
 
+	@Test
+	public void replaysIrregularTraceAtExactTimestampsWithoutReplayingInitialRow() {
+		MobileDevice user = new MobileDevice("irregularUser", 0, 0, 9, 0, 0);
+		user.setMobilityPath(Arrays.asList(
+			new MobilitySample(2.5, 0, 10, 10, 1),
+			new MobilitySample(5.0, 0, 20, 20, 1),
+			new MobilitySample(5.0, 0, 30, 30, 1),
+			new MobilitySample(11.75, 0, 40, 40, 1)));
+		new Coordinate().setInitialCoordinate(user);
+		MobileUserRegistration.preparePendingUser(user);
+		TimelineRecordingController controller = new TimelineRecordingController(user);
+		PositionProbe probe = new PositionProbe(user);
+
+		CloudSim.startSimulation();
+
+		assertEquals(2500.0, controller.getActivationTime(), DELTA);
+		assertEquals(10, controller.getActivationX());
+		assertEquals(10, probe.getPositionBeforeSecondTimestamp());
+		assertEquals(Arrays.asList(5000.0, 11750.0), controller.getUpdateTimes());
+		assertEquals(Arrays.asList(30, 40), controller.getUpdatePositions());
+		assertEquals(11750.0, controller.getStopTime(), DELTA);
+		assertEquals(4, user.getTravelTimeId());
+		assertEquals(-1, user.getCoord().getCoordX());
+		assertTrue(MobileController.getSmartThings().isEmpty());
+	}
+
 	private static void configureAppExample(List<FogDevice> servers,
 		List<ApDevice> accessPoints, List<MobileDevice> users) {
 		AppExample.setServerCloudlets(servers);
@@ -162,6 +192,103 @@ public class MobileControllerDelayedEntryTest {
 
 		private double getActivationTime() {
 			return activationTime;
+		}
+	}
+
+	private static final class TimelineRecordingController extends MobileController {
+		private double activationTime = -1.0;
+		private int activationX = -1;
+		private double stopTime = -1.0;
+		private final List<Double> updateTimes = new ArrayList<Double>();
+		private final List<Integer> updatePositions = new ArrayList<Integer>();
+
+		private TimelineRecordingController(MobileDevice mobileDevice) {
+			super("timelineController", Collections.<FogDevice>emptyList(),
+				Collections.<ApDevice>emptyList(),
+				new ArrayList<MobileDevice>(Collections.singletonList(mobileDevice)),
+				new ArrayList<FogBroker>(), ModuleMapping.createModuleMapping(),
+				0, 0, 1, new Coordinate(), 1, false);
+		}
+
+		@Override
+		protected boolean activateMobileUser(MobileDevice mobileDevice) {
+			activationTime = CloudSim.clock();
+			activationX = mobileDevice.getCoord().getCoordX();
+			mobileDevice.setStatus(true);
+			return true;
+		}
+
+		@Override
+		protected boolean processCurrentMobilityPosition(MobileDevice mobileDevice) {
+			return true;
+		}
+
+		@Override
+		protected void onMobilityPositionUpdated(MobileDevice mobileDevice) {
+			updateTimes.add(CloudSim.clock());
+			updatePositions.add(mobileDevice.getCoord().getCoordX());
+		}
+
+		@Override
+		protected void checkNewStep(MobileDevice mobileDevice) {
+		}
+
+		@Override
+		public void processEvent(SimEvent event) {
+			if (event.getTag() == MobileEvents.STOP_SIMULATION) {
+				stopTime = CloudSim.clock();
+				CloudSim.terminateSimulation();
+				return;
+			}
+			super.processEvent(event);
+		}
+
+		private double getActivationTime() {
+			return activationTime;
+		}
+
+		private int getActivationX() {
+			return activationX;
+		}
+
+		private double getStopTime() {
+			return stopTime;
+		}
+
+		private List<Double> getUpdateTimes() {
+			return updateTimes;
+		}
+
+		private List<Integer> getUpdatePositions() {
+			return updatePositions;
+		}
+	}
+
+	private static final class PositionProbe extends SimEntity {
+		private final MobileDevice mobileDevice;
+		private int positionBeforeSecondTimestamp = -1;
+
+		private PositionProbe(MobileDevice mobileDevice) {
+			super("irregularPositionProbe");
+			this.mobileDevice = mobileDevice;
+		}
+
+		@Override
+		public void startEntity() {
+			schedule(getId(), 4999.0, CHECK_BEFORE_SECOND_TRACE_TIME);
+		}
+
+		@Override
+		public void processEvent(SimEvent event) {
+			positionBeforeSecondTimestamp = mobileDevice.getCoord().getCoordX();
+		}
+
+		@Override
+		public void shutdownEntity() {
+		}
+
+		private int getPositionBeforeSecondTimestamp() {
+			return positionBeforeSecondTimestamp;
 		}
 	}
 

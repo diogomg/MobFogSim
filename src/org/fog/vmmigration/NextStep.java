@@ -11,8 +11,6 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
 import org.fog.placement.MobileController;
 import org.fog.vmmobile.LogMobile;
-import org.fog.vmmobile.constants.Directions;
-import org.fog.vmmobile.constants.Policies;
 
 public class NextStep {
 
@@ -28,15 +26,22 @@ public class NextStep {
 				+ " Apps: " + st.getDestinationServerCloudlet().getActiveApplications()
 				+ " Map " + st.getDestinationServerCloudlet().getApplicationMap();
 
+		String host = st.getCharacteristics() == null || st.getHostList().isEmpty()
+			? "null" : Integer.toString(st.getHost().getId());
+		FogDevice localServer = st.getVmLocalServerCloudlet();
+		String localServerDescription = localServer == null
+			? "Local server: null Apps: null Map: null"
+			: "Local server: " + localServer.getName() + " Apps "
+				+ localServer.getActiveApplications() + " Map "
+				+ localServer.getApplicationMap();
+
 		BufferedFileManager.writeLines(st.getMyId() + "out.txt",
 			CloudSim.clock() + " " + st.getMyId() + " Position: "
 				+ st.getCoord().getCoordX() + ", " + st.getCoord().getCoordY() + " Direction: "
 				+ st.getDirection() + " Speed: " + st.getSpeed(),
 			"Source AP: " + st.getSourceAp() + " Dest AP: " + st.getDestinationAp()
-				+ " Host: " + st.getHost().getId(),
-			"Local server: " + st.getVmLocalServerCloudlet().getName() + " Apps "
-				+ st.getVmLocalServerCloudlet().getActiveApplications() + " Map "
-				+ st.getVmLocalServerCloudlet().getApplicationMap(),
+				+ " Host: " + host,
+			localServerDescription,
 			sourceServer, destinationServer);
 
 		BufferedFileManager.writeLine(st.getMyId() + "route.txt",
@@ -80,61 +85,42 @@ public class NextStep {
 			if (st.getTravelTimeId() == -1) {
 				continue;
 			}
-			if ((st.getDirection() != Directions.NONE)) {
-				coordinate.newCoordinate(st);
-			}
-			if (st.getCoord().getCoordX() == -1) {
-
-				if (st.getSourceServerCloudlet() != null) {
-					int j = 0, indexCloud = 0;
-					for (FogDevice sc : serverCloudlets) {
-						if (st.getSourceServerCloudlet().equals(sc)) {
-							indexCloud = j;
-							break;
-						}
-						j++;
-					}
-
-					serverCloudlets.get(indexCloud).getSmartThings().remove(st);
-
-					j = 0;
-					int indexAp = 0;
-					for (ApDevice ap : apDevices) {
-						if (st.getSourceAp().equals(ap)) {
-							indexAp = j;
-							break;
-						}
-						j++;
-					}
-					apDevices.get(indexAp).getSmartThings().remove(st);
-
-					st.setSourceAp(null);
-					st.setSourceServerCloudlet(null);
-
-					st.setMigStatus(false);
-
-				}
-				if (st.getSourceAp() == null) {
-					MobileController.removeSmartThing(st);
-					LogMobile.debug("NextStep.java", st.getName() + " was removed!");
-				}
-				else {
-					if (st.getSourceServerCloudlet() != null) {
-						// it'll remove the smartThing from serverCloudlets-smartThing's set
-						st.getSourceServerCloudlet().setSmartThings(st, Policies.REMOVE);
-					}
-					// it'll remove the smartThing from ap-smartThing's set
-					st.getSourceAp().setSmartThings(st, Policies.REMOVE);
-					LogMobile.debug("NextStep.java", st.getName() + " was removed!");
-					MobileController.removeSmartThing(st);
-				}
-			}
-			else {
-				System.out.println(st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t"
-					+ st.getCoord().getCoordY() + "\t" + CloudSim.clock() + "\t"
-					+ Calendar.getInstance().getTime());
-				saveMobility(st);
-			}
+			coordinate.newCoordinate(st);
+			processCurrentPosition(st);
 		}
+	}
+
+	/** Records a valid current position or removes a device outside the map. */
+	public static boolean processCurrentPosition(MobileDevice smartThing) {
+		if (smartThing.getCoord().getCoordX() == -1) {
+			removeFromSimulation(smartThing);
+			return false;
+		}
+		System.out.println(smartThing.getMyId() + "\t"
+			+ smartThing.getCoord().getCoordX() + "\t"
+			+ smartThing.getCoord().getCoordY() + "\t" + CloudSim.clock() + "\t"
+			+ Calendar.getInstance().getTime());
+		saveMobility(smartThing);
+		return true;
+	}
+
+	/** Ends a trace after its final timestamp has been observed. */
+	public static void finishMobility(MobileDevice smartThing) {
+		new Coordinate().desableSmartThing(smartThing);
+		removeFromSimulation(smartThing);
+	}
+
+	private static void removeFromSimulation(MobileDevice smartThing) {
+		ApDevice sourceAp = smartThing.getSourceAp();
+		FogDevice sourceServer = smartThing.getSourceServerCloudlet();
+		if (sourceAp != null) {
+			sourceAp.desconnectApSmartThing(smartThing);
+		}
+		if (sourceServer != null) {
+			sourceServer.desconnectServerCloudletSmartThing(smartThing);
+		}
+		smartThing.setMigStatus(false);
+		MobileController.removeSmartThing(smartThing);
+		LogMobile.debug("NextStep.java", smartThing.getName() + " was removed!");
 	}
 }

@@ -1,6 +1,6 @@
 package org.fog.localization;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.fog.entities.MobileDevice;
 import org.fog.vmmobile.constants.Directions;
@@ -61,63 +61,69 @@ public class Coordinate { // extends Map {
 	}
 
 	public void newCoordinate(MobileDevice smartThing) {
-
-		ArrayList<String[]> path = smartThing.getPath();
+		List<MobilitySample> path = smartThing.getMobilityPath();
 		if (smartThing.getTravelTimeId() < path.size()) {
-			String[] coodinates = path.get(smartThing.getTravelTimeId());
-
+			MobilitySample sample = path.get(smartThing.getTravelTimeId());
 			smartThing.setTravelTimeId(smartThing.getTravelTimeId() + 1);
-
-			int direction = convertDirection(Double.parseDouble(coodinates[1]));
-			int x = (int) Double.parseDouble(coodinates[2]);
-			int y = (int) Double.parseDouble(coodinates[3]);
-			int speed = (int) Double.parseDouble(coodinates[4]);
-
-			// It checks the CoordDevices limits.
-			if (x < 0 || y < 0 || x >= MaxAndMin.MAX_X || y >= MaxAndMin.MAX_Y) {
-				desableSmartThing(smartThing);
-			}
-			else {
-				smartThing.setDirection(direction);
-				smartThing.getCoord().setCoordX(x);
-				smartThing.getCoord().setCoordY(y);
-				smartThing.setSpeed(speed);
-			}
+			applySample(smartThing, sample);
 		}
 		else {
 			desableSmartThing(smartThing);
 		}
 	}
 
+	/** Applies every unconsumed sample due at the supplied absolute trace time. */
+	public int advanceToTime(MobileDevice smartThing, double traceTimeSeconds) {
+		if (!Double.isFinite(traceTimeSeconds)) {
+			throw new IllegalArgumentException("Mobility replay time must be finite");
+		}
+		List<MobilitySample> path = smartThing.getMobilityPath();
+		int cursor = smartThing.getTravelTimeId();
+		if (cursor < 0) {
+			throw new IllegalStateException(
+				"A pending mobile device cannot advance its mobility timeline");
+		}
+
+		int applied = 0;
+		while (cursor < path.size()
+			&& MobilityTimeline.isDue(path.get(cursor), traceTimeSeconds)) {
+			applySample(smartThing, path.get(cursor));
+			cursor++;
+			applied++;
+			if (smartThing.getCoord().getCoordX() == -1) {
+				break;
+			}
+		}
+		smartThing.setTravelTimeId(cursor);
+		return applied;
+	}
+
 	public void setInitialCoordinate(MobileDevice smartThing) {
 
-		ArrayList<String[]> path = smartThing.getPath();
+		List<MobilitySample> path = smartThing.getMobilityPath();
 		if (!path.isEmpty()) {
-			String[] coodinates = path.get(0);
+			MobilitySample sample = path.get(0);
 
 			smartThing.setTravelTimeId(-1);
-
-			double time = Double.parseDouble(coodinates[0]);
-			int direction = convertDirection(Double.parseDouble(coodinates[1]));
-			int x = (int) Double.parseDouble(coodinates[2]);
-			int y = (int) Double.parseDouble(coodinates[3]);
-			int speed = (int) Double.parseDouble(coodinates[4]);
-
-			// It checks the CoordDevices limits.
-			if (x < 0 || y < 0 || x >= MaxAndMin.MAX_X || y >= MaxAndMin.MAX_Y) {
-				desableSmartThing(smartThing);
-			}
-			else {
-				smartThing.setStartTravelTime(time);
-				smartThing.setDirection(direction);
-				smartThing.getCoord().setCoordX(x);
-				smartThing.getCoord().setCoordY(y);
-				smartThing.setSpeed(speed);
-			}
+			smartThing.setStartTravelTime(sample.getTimeSeconds());
+			applySample(smartThing, sample);
 		}
 		else {
 			desableSmartThing(smartThing);
 		}
+	}
+
+	private void applySample(MobileDevice smartThing, MobilitySample sample) {
+		int x = (int) sample.getX();
+		int y = (int) sample.getY();
+		if (x < 0 || y < 0 || x >= MaxAndMin.MAX_X || y >= MaxAndMin.MAX_Y) {
+			desableSmartThing(smartThing);
+			return;
+		}
+		smartThing.setDirection(convertDirection(sample.getDirectionRadians()));
+		smartThing.getCoord().setCoordX(x);
+		smartThing.getCoord().setCoordY(y);
+		smartThing.setSpeed((int) sample.getSpeed());
 	}
 
 	public void newCoordinate(MobileDevice smartThing, int add, Coordinate coordDevices) {

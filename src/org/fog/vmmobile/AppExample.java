@@ -364,7 +364,7 @@ public class AppExample {
 
 		for (int i = 0; i < getSmartThings().size(); i++) {
 			MobileDevice smartThing = getSmartThings().get(i);
-			smartThing.setPath(traces.get(i).getRows());
+			smartThing.setMobilityPath(traces.get(i).getSamples());
 			Coordinate coordinate = new Coordinate();
 			coordinate.setInitialCoordinate(smartThing);
 			saveMobility(smartThing);

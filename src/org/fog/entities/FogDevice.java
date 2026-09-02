@@ -3,6 +3,7 @@ package org.fog.entities;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -35,6 +36,8 @@ import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.localization.Coordinate;// myiFogSim
 import org.fog.localization.Distances;
+import org.fog.localization.MobilitySample;
+import org.fog.localization.MobilityTimeline;
 import org.fog.placement.MobileController;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
@@ -62,7 +65,7 @@ public class FogDevice extends PowerDatacenter {
 	protected Queue<Pair<Tuple, Integer>> southTupleQueue;
 
 	protected List<String> activeApplications;
-	protected ArrayList<String[]> path;
+	protected List<MobilitySample> mobilityPath = new ArrayList<MobilitySample>();
 
 	protected Map<String, Application> applicationMap;
 	protected Map<String, List<String>> appToModulesMap;
@@ -298,7 +301,7 @@ public class FogDevice extends PowerDatacenter {
 			host.setDatacenter(this);
 		}
 		setActiveApplications(new ArrayList<String>());
-		setPath(new ArrayList<String[]>());
+		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
 		setTravelPredicTime(0);
 		setMobilityPredictionError(0);
@@ -372,7 +375,7 @@ public class FogDevice extends PowerDatacenter {
 			host.setDatacenter(this);
 		}
 		setActiveApplications(new ArrayList<String>());
-		setPath(new ArrayList<String[]>());
+		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
 		setTravelPredicTime(0);
 		setMobilityPredictionError(0);
@@ -431,7 +434,7 @@ public class FogDevice extends PowerDatacenter {
 			host.setDatacenter(this);
 		}
 		setActiveApplications(new ArrayList<String>());
-		setPath(new ArrayList<String[]>());
+		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
 		setTravelPredicTime(0);
 		setMobilityPredictionError(0);
@@ -513,7 +516,7 @@ public class FogDevice extends PowerDatacenter {
 			host1.setDatacenter(this);
 		}
 		setActiveApplications(new ArrayList<String>());
-		setPath(new ArrayList<String[]>());
+		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
 		setTravelPredicTime(0);
 		setMobilityPredictionError(0);
@@ -1843,12 +1846,36 @@ public class FogDevice extends PowerDatacenter {
 		this.activeApplications = activeApplications;
 	}
 
-	public ArrayList<String[]> getPath() {
-		return path;
+	public List<MobilitySample> getMobilityPath() {
+		return Collections.unmodifiableList(mobilityPath);
 	}
 
+	public void setMobilityPath(List<MobilitySample> mobilityPath) {
+		MobilityTimeline.validateOrdered(mobilityPath);
+		this.mobilityPath = new ArrayList<MobilitySample>(mobilityPath);
+	}
+
+	/** @deprecated Use {@link #getMobilityPath()} for typed mobility samples. */
+	@Deprecated
+	public ArrayList<String[]> getPath() {
+		ArrayList<String[]> rows = new ArrayList<String[]>(mobilityPath.size());
+		for (MobilitySample sample : mobilityPath) {
+			rows.add(sample.toColumns());
+		}
+		return rows;
+	}
+
+	/** @deprecated Use {@link #setMobilityPath(List)} for typed mobility samples. */
+	@Deprecated
 	public void setPath(ArrayList<String[]> path) {
-		this.path = path;
+		if (path == null) {
+			throw new IllegalArgumentException("Mobility path cannot be null");
+		}
+		List<MobilitySample> samples = new ArrayList<MobilitySample>(path.size());
+		for (String[] row : path) {
+			samples.add(MobilitySample.fromColumns(row));
+		}
+		setMobilityPath(samples);
 	}
 
 	public Map<Integer, List<String>> getChildToOperatorsMap() {
