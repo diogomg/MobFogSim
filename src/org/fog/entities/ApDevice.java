@@ -43,14 +43,23 @@ public class ApDevice extends FogDevice {
 	}
 
 	private void unLockedHandoff(SimEvent ev) {
-		// TODO Auto-generated method stub
 		MobileDevice smartThing = (MobileDevice) ev.getData();
+		if (smartThing == null
+			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
+			return;
+		}
 		smartThing.setLockedToHandoff(false);
 		LogMobile.debug("ApDevice.java", smartThing.getName() + " has the handoff unlocked");
 	}
 
 	private void handoff(SimEvent ev, double delay) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
+		if (smartThing == null
+			|| smartThing.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
+			|| smartThing.getSourceAp() == null
+			|| smartThing.getDestinationAp() == null) {
+			return;
+		}
 
 		if (getSmartThings().contains(smartThing)) {
 			// it'll remove the smartThing from ap-smartThing's set
@@ -94,17 +103,30 @@ public class ApDevice extends FogDevice {
 
 	}
 
-	public void desconnectApSmartThing(MobileDevice st) {
-		setSmartThings(st, Policies.REMOVE);
+	public boolean desconnectApSmartThing(MobileDevice st) {
+		if (st == null || st.getSourceAp() != this) {
+			return false;
+		}
+		boolean removed = getSmartThings().remove(st);
 		st.setSourceAp(null);
-		setUplinkLatency(getUplinkLatency() - 0.002);
+		if (removed) {
+			setUplinkLatency(getUplinkLatency() - 0.002);
+		}
 		LogMobile.debug("ApDevice.java", st.getName() + " was desconnected to " + getName());
 		// remove link
 		NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
+		return removed;
 	}
 
 	public static boolean connectApSmartThing(List<ApDevice> apDevices, MobileDevice st,
 		double delay) {
+		if (apDevices == null || st == null) {
+			throw new IllegalArgumentException(
+				"Access-point list and mobile device cannot be null");
+		}
+		if (st.getSourceAp() != null) {
+			return st.getSourceAp().getSmartThings().contains(st);
+		}
 		Optional<ApDevice> closestAp = Distances.findClosestAp(apDevices, st);
 		if (!closestAp.isPresent()) {
 			return false;

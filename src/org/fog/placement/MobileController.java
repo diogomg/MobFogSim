@@ -27,6 +27,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.Sensor;
 import org.fog.localization.Coordinate;
 import org.fog.localization.Distances;
@@ -184,8 +185,10 @@ public class MobileController extends SimEntity {
 		}
 
 		for (MobileDevice st : getSmartThings()) {
-			send(getId(), MobilityTimeline.toSimulationTime(st.getStartTravelTime()),
-				MobileEvents.CREATE_NEW_SMARTTHING, st);
+			if (st.getLifecycleState() == MobileDeviceLifecycle.SCHEDULED) {
+				send(getId(), MobilityTimeline.toSimulationTime(st.getStartTravelTime()),
+					MobileEvents.CREATE_NEW_SMARTTHING, st);
+			}
 		}
 
 		send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
@@ -323,27 +326,35 @@ public class MobileController extends SimEntity {
 
 	private void createNewSmartThing(SimEvent ev) {
 		MobileDevice st = (MobileDevice) ev.getData();
-		if (st.getTravelTimeId() != -1) {
+		if (st == null
+			|| st.getLifecycleState() != MobileDeviceLifecycle.SCHEDULED
+			|| !getSmartThings().contains(st)) {
 			return;
 		}
+		MobileUserRegistration.beginEntry(st);
 		List<MobilitySample> path = st.getMobilityPath();
 		if (path.isEmpty()) {
 			// Compatibility for programmatically-created users without trace data.
 			st.setTravelTimeId(0);
-			activateMobileUser(st);
+			if (!activateMobileUser(st)) {
+				finishMobileUser(st);
+				requestStopIfNoMobiles();
+			}
 			return;
 		}
 
 		// Row zero already established the pending user's initial position.
-		st.setTravelTimeId(1);
+		if (st.getTravelTimeId() < 1) {
+			st.setTravelTimeId(1);
+		}
 		getCoordDevices().advanceToTime(st, st.getStartTravelTime());
 		if (st.getCoord().getCoordX() == -1) {
-			NextStep.finishMobility(st);
+			finishMobileUser(st);
 			requestStopIfNoMobiles();
 			return;
 		}
 		if (st.getTravelTimeId() >= path.size()) {
-			NextStep.finishMobility(st);
+			finishMobileUser(st);
 			requestStopIfNoMobiles();
 			return;
 		}
@@ -353,26 +364,33 @@ public class MobileController extends SimEntity {
 
 	private void processMobilityUpdate(SimEvent event) {
 		MobileDevice smartThing = (MobileDevice) event.getData();
-		if (!getSmartThings().contains(smartThing)
-			|| smartThing.getTravelTimeId() < 0) {
+		if (smartThing == null || !getSmartThings().contains(smartThing)
+			|| !smartThing.getLifecycleState().acceptsMobilityUpdates()) {
 			return;
 		}
 
 		getCoordDevices().advanceToTime(smartThing,
 			MobilityTimeline.toTraceTime(CloudSim.clock()));
 		if (!processCurrentMobilityPosition(smartThing)) {
+			finishMobileUser(smartThing);
 			requestStopIfNoMobiles();
 			return;
 		}
 		onMobilityPositionUpdated(smartThing);
 		if (smartThing.getTravelTimeId() >= smartThing.getMobilityPath().size()) {
-			NextStep.finishMobility(smartThing);
+			finishMobileUser(smartThing);
 			requestStopIfNoMobiles();
 			return;
 		}
-		checkNewStep(smartThing);
+		if (smartThing.getLifecycleState() == MobileDeviceLifecycle.ACTIVE) {
+			checkNewStep(smartThing);
+		}
+		else {
+			activateMobileUser(smartThing);
+		}
 
-		if (!getSmartThings().contains(smartThing)) {
+		if (!getSmartThings().contains(smartThing)
+			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
 			requestStopIfNoMobiles();
 			return;
 		}
@@ -380,6 +398,9 @@ public class MobileController extends SimEntity {
 	}
 
 	private void scheduleNextMobilityUpdate(MobileDevice smartThing) {
+		if (!smartThing.getLifecycleState().acceptsMobilityUpdates()) {
+			return;
+		}
 		MobilitySample next = smartThing.getMobilityPath()
 			.get(smartThing.getTravelTimeId());
 		double delay = MobilityTimeline.toSimulationTime(next.getTimeSeconds())
@@ -407,10 +428,27 @@ public class MobileController extends SimEntity {
 	}
 
 	protected boolean activateMobileUser(MobileDevice mobileDevice) {
+		if (mobileDevice == null
+			|| mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
+			return false;
+		}
+		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.SCHEDULED) {
+			MobileUserRegistration.beginEntry(mobileDevice);
+		}
+		MobileDeviceLifecycle previousState = mobileDevice.getLifecycleState();
+		if (mobileDevice.getSourceAp() != null
+			&& !mobileDevice.getSourceAp().getSmartThings().contains(mobileDevice)) {
+			MobileUserRegistration.disconnectNetwork(mobileDevice);
+		}
+		if (mobileDevice.getSourceAp() == null
+			&& mobileDevice.getSourceServerCloudlet() != null) {
+			MobileUserRegistration.disconnectNetwork(mobileDevice);
+		}
 		if (mobileDevice.getSourceAp() == null
 			&& (getApDevices() == null || getApDevices().isEmpty()
 				|| !ApDevice.connectApSmartThing(getApDevices(), mobileDevice,
 					getRand().nextDouble()))) {
+			MobileUserRegistration.awaitAssociation(mobileDevice);
 			LogMobile.debug("MobileController.java", mobileDevice.getName()
 				+ " entered the simulation outside access-point coverage");
 			return false;
@@ -418,8 +456,15 @@ public class MobileController extends SimEntity {
 
 		ApDevice sourceAp = mobileDevice.getSourceAp();
 		if (sourceAp.getServerCloudlet() == null) {
+			MobileUserRegistration.disconnectNetwork(mobileDevice);
+			MobileUserRegistration.awaitAssociation(mobileDevice);
 			throw new IllegalStateException("Access point " + sourceAp.getName()
 				+ " has no server cloudlet for entering user " + mobileDevice.getName());
+		}
+		if (mobileDevice.getSourceServerCloudlet() != null
+			&& mobileDevice.getSourceServerCloudlet() != sourceAp.getServerCloudlet()) {
+			mobileDevice.getSourceServerCloudlet()
+				.desconnectServerCloudletSmartThing(mobileDevice);
 		}
 		if (mobileDevice.getSourceServerCloudlet() == null) {
 			sourceAp.getServerCloudlet().connectServerCloudletSmartThing(mobileDevice);
@@ -431,7 +476,42 @@ public class MobileController extends SimEntity {
 		if (mobileDevice.getVmMobileDevice() == null) {
 			registerMobileUser(mobileDevice);
 		}
+		MobileUserRegistration.activatePeripherals(mobileDevice);
+		if (previousState == MobileDeviceLifecycle.DISCONNECTED) {
+			MyStatistics.getInstance().finalWithoutConnection(
+				mobileDevice.getMyId(), CloudSim.clock());
+		}
 		return true;
+	}
+
+	private void disconnectMobileUser(MobileDevice mobileDevice) {
+		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
+			return;
+		}
+		boolean wasActive = mobileDevice.getLifecycleState()
+			== MobileDeviceLifecycle.ACTIVE;
+		MobileUserRegistration.disconnectNetwork(mobileDevice);
+		MobileUserRegistration.awaitAssociation(mobileDevice);
+		if (wasActive) {
+			MyStatistics.getInstance().startWithoutConnetion(
+				mobileDevice.getMyId(), CloudSim.clock());
+		}
+	}
+
+	private void finishMobileUser(MobileDevice mobileDevice) {
+		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
+			return;
+		}
+		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.DISCONNECTED) {
+			MyStatistics.getInstance().finalWithoutConnection(
+				mobileDevice.getMyId(), CloudSim.clock());
+		}
+		NetworkSlicing.releaseBandwidth(mobileDevice);
+		mobileDevice.setMigStatus(false);
+		mobileDevice.setMigStatusLive(false);
+		mobileDevice.setPostCopyStatus(false);
+		mobileDevice.setLockedToMigration(false);
+		NextStep.finishMobility(mobileDevice);
 	}
 
 	private void registerMobileUser(MobileDevice mobileDevice) {
@@ -493,9 +573,18 @@ public class MobileController extends SimEntity {
 	}
 
 	protected void checkNewStep(MobileDevice st) {
+			if (st.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
+				|| st.getSourceAp() == null
+				|| st.getSourceServerCloudlet() == null) {
+				disconnectMobileUser(st);
+				return;
+			}
 			MyStatistics.getInstance().getEnergyHistory()
 				.put(st.getMyId(), st.getEnergyConsumption());
-			MyStatistics.getInstance().getPowerHistory().put(st.getMyId(), st.getHost().getPower());
+			if (st.getCharacteristics() != null && !st.getHostList().isEmpty()) {
+				MyStatistics.getInstance().getPowerHistory()
+					.put(st.getMyId(), st.getHost().getPower());
+			}
 
 			if (st.getSourceAp() != null) {
 				System.out.println(st.getName() + "\t" + st.getCoord().getCoordX() + "\t"
@@ -593,11 +682,12 @@ public class MobileController extends SimEntity {
 						}
 					}
 					else if (distance >= MaxAndMin.AP_COVERAGE) {
-						st.getSourceAp().desconnectApSmartThing(st);
-						st.getSourceServerCloudlet().desconnectServerCloudletSmartThing(st);
+						disconnectMobileUser(st);
 						if (st.isLockedToMigration() || st.isMigStatus()) {
-							sendNow(st.getVmLocalServerCloudlet().getId(),
-								MobileEvents.ABORT_MIGRATION, st);
+							if (st.getVmLocalServerCloudlet() != null) {
+								sendNow(st.getVmLocalServerCloudlet().getId(),
+									MobileEvents.ABORT_MIGRATION, st);
+							}
 						}
 						LogMobile.debug("MobileController.java", st.getName()
 							+ " desconnected by AP_COVERAGE - Distance: " + distance);

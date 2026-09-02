@@ -151,7 +151,8 @@ public class Actuator extends SimEntity {
 
 	private boolean isActiveMobileDevice(MobileDevice mobileDevice) {
 		return mobileDevice != null && MobileController.getSmartThings() != null
-			&& MobileController.getSmartThings().contains(mobileDevice);
+			&& MobileController.getSmartThings().contains(mobileDevice)
+			&& mobileDevice.getLifecycleState() == MobileDeviceLifecycle.ACTIVE;
 	}
 
 	private double addMobilePathLatency(double delay, MobileDevice mobileDevice) {

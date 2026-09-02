@@ -62,7 +62,8 @@ public class Coordinate { // extends Map {
 
 	public void newCoordinate(MobileDevice smartThing) {
 		List<MobilitySample> path = smartThing.getMobilityPath();
-		if (smartThing.getTravelTimeId() < path.size()) {
+		if (smartThing.getTravelTimeId() >= 0
+			&& smartThing.getTravelTimeId() < path.size()) {
 			MobilitySample sample = path.get(smartThing.getTravelTimeId());
 			smartThing.setTravelTimeId(smartThing.getTravelTimeId() + 1);
 			applySample(smartThing, sample);
@@ -81,7 +82,7 @@ public class Coordinate { // extends Map {
 		int cursor = smartThing.getTravelTimeId();
 		if (cursor < 0) {
 			throw new IllegalStateException(
-				"A pending mobile device cannot advance its mobility timeline");
+				"A mobile-device mobility cursor cannot be negative");
 		}
 
 		int applied = 0;
@@ -104,11 +105,14 @@ public class Coordinate { // extends Map {
 		if (!path.isEmpty()) {
 			MobilitySample sample = path.get(0);
 
-			smartThing.setTravelTimeId(-1);
+			// The cursor always identifies the next unconsumed row. Lifecycle state,
+			// rather than a sentinel cursor value, controls when replay may begin.
+			smartThing.setTravelTimeId(1);
 			smartThing.setStartTravelTime(sample.getTimeSeconds());
 			applySample(smartThing, sample);
 		}
 		else {
+			smartThing.setTravelTimeId(0);
 			desableSmartThing(smartThing);
 		}
 	}

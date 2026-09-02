@@ -59,6 +59,7 @@ public class MobileDevice extends FogDevice {
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
 	private int networkSliceId;
+	private MobileDeviceLifecycle lifecycleState = MobileDeviceLifecycle.ACTIVE;
 
 	@Override
 	protected double getUplinkBandwidthForTuple(Tuple tuple) {
@@ -566,6 +567,22 @@ public class MobileDevice extends FogDevice {
 
 	public void setStatus(boolean status) {
 		this.status = status;
+	}
+
+	public MobileDeviceLifecycle getLifecycleState() {
+		return lifecycleState;
+	}
+
+	public void setLifecycleState(MobileDeviceLifecycle lifecycleState) {
+		if (lifecycleState == null) {
+			throw new IllegalArgumentException("Mobile-device lifecycle state cannot be null");
+		}
+		if (this.lifecycleState == MobileDeviceLifecycle.FINISHED
+			&& lifecycleState != MobileDeviceLifecycle.FINISHED) {
+			throw new IllegalStateException("Finished mobile device " + getName()
+				+ " cannot return to " + lifecycleState);
+		}
+		this.lifecycleState = lifecycleState;
 	}
 
 	public boolean isLockedToHandoff() {

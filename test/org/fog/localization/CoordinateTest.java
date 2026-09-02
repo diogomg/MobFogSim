@@ -51,7 +51,7 @@ public class CoordinateTest {
 		new Coordinate().setInitialCoordinate(mobileDevice);
 
 		assertEquals(150.25, mobileDevice.getStartTravelTime(), 0.0);
-		assertEquals(-1, mobileDevice.getTravelTimeId());
+		assertEquals(1, mobileDevice.getTravelTimeId());
 	}
 
 	@Test

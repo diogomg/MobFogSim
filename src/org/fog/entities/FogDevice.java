@@ -708,14 +708,28 @@ public class FogDevice extends PowerDatacenter {
 
 	private void desconnectServerCloudletSmartThing(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
-		desconnectServerCloudletSmartThing(smartThing);
-		MyStatistics.getInstance().startWithoutConnetion(smartThing.getMyId(), CloudSim.clock());
+		if (smartThing == null
+			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
+			return;
+		}
+		if (desconnectServerCloudletSmartThing(smartThing)) {
+			MyStatistics.getInstance().startWithoutConnetion(
+				smartThing.getMyId(), CloudSim.clock());
+		}
 	}
 
 	private void connectServerCloudletSmartThing(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
-		connectServerCloudletSmartThing(smartThing);
+		if (smartThing == null
+			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED
+			|| !connectServerCloudletSmartThing(smartThing)) {
+			return;
+		}
 		MyStatistics.getInstance().finalWithoutConnection(smartThing.getMyId(), CloudSim.clock());
+		if (smartThing.getVmLocalServerCloudlet() == null
+			|| smartThing.getVmMobileDevice() == null) {
+			return;
+		}
 
 		if (smartThing.getTimeFinishDeliveryVm() == -1) {
 			MyStatistics.getInstance().startDelayAfterNewConnection(smartThing.getMyId(),
@@ -766,6 +780,17 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public boolean connectServerCloudletSmartThing(MobileDevice st) {
+		if (st == null) {
+			throw new IllegalArgumentException("Mobile device cannot be null");
+		}
+		if (st.getSourceServerCloudlet() == this) {
+			return false;
+		}
+		if (st.getSourceServerCloudlet() != null) {
+			throw new IllegalStateException("Mobile device " + st.getName()
+				+ " is already connected to "
+				+ st.getSourceServerCloudlet().getName());
+		}
 
 		st.setSourceServerCloudlet(this);
 
@@ -782,13 +807,21 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public boolean desconnectServerCloudletSmartThing(MobileDevice st) {
-		setSmartThings(st, Policies.REMOVE); // it'll remove the smartThing from serverCloudlets-smartThing's set
+		if (st == null || st.getSourceServerCloudlet() != this) {
+			return false;
+		}
+		boolean removed = getSmartThings().remove(st);
 		st.setSourceServerCloudlet(null);
+		if (st.getParentId() == getId()) {
+			st.setParentId(-1);
+		}
 		// NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
-		setUplinkLatency(getUplinkLatency() - 0.123812950236);
+		if (removed) {
+			setUplinkLatency(getUplinkLatency() - 0.123812950236);
+		}
 		removeChild(st.getId());
 		LogMobile.debug("FogDevice.java", st.getName() + " was desconnected to " + getName());
-		return true;
+		return removed;
 
 	}
 

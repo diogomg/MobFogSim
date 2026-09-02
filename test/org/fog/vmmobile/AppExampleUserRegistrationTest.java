@@ -18,6 +18,7 @@ import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
+import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.MobileSensor;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.junit.Before;
@@ -41,12 +42,12 @@ public class AppExampleUserRegistrationTest {
 		pending.setSensors(new HashSet<MobileSensor>(Arrays.asList(sensor)));
 		pending.setActuators(new HashSet<MobileActuator>(Arrays.asList(actuator)));
 		pending.setStartTravelTime(150);
-		pending.setTravelTimeId(-1);
 
 		MobileUserRegistration.preparePendingUsers(Arrays.asList(pending));
 
 		assertEquals(150.0, pending.getStartTravelTime(), 0.0);
-		assertEquals(-1, pending.getTravelTimeId());
+		assertEquals(0, pending.getTravelTimeId());
+		assertSame(MobileDeviceLifecycle.SCHEDULED, pending.getLifecycleState());
 		assertFalse(pending.isStatus());
 		assertFalse(sensor.isEnabled());
 		assertFalse(actuator.isEnabled());

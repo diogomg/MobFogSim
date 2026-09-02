@@ -8,9 +8,11 @@ import org.cloudbus.cloudsim.util.BufferedFileManager;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.localization.Coordinate;
 import org.fog.placement.MobileController;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.MobileUserRegistration;
 
 public class NextStep {
 
@@ -82,18 +84,19 @@ public class NextStep {
 		// It makes the new position according direction and speed
 		for (int i = smartThings.size() - 1; i >= 0; i--) {
 			st = smartThings.get(i);
-			if (st.getTravelTimeId() == -1) {
+			if (!st.getLifecycleState().acceptsMobilityUpdates()) {
 				continue;
 			}
 			coordinate.newCoordinate(st);
-			processCurrentPosition(st);
+			if (!processCurrentPosition(st)) {
+				finishMobility(st);
+			}
 		}
 	}
 
 	/** Records a valid current position or removes a device outside the map. */
 	public static boolean processCurrentPosition(MobileDevice smartThing) {
 		if (smartThing.getCoord().getCoordX() == -1) {
-			removeFromSimulation(smartThing);
 			return false;
 		}
 		System.out.println(smartThing.getMyId() + "\t"
@@ -111,16 +114,10 @@ public class NextStep {
 	}
 
 	private static void removeFromSimulation(MobileDevice smartThing) {
-		ApDevice sourceAp = smartThing.getSourceAp();
-		FogDevice sourceServer = smartThing.getSourceServerCloudlet();
-		if (sourceAp != null) {
-			sourceAp.desconnectApSmartThing(smartThing);
-		}
-		if (sourceServer != null) {
-			sourceServer.desconnectServerCloudletSmartThing(smartThing);
-		}
+		MobileUserRegistration.disconnectNetwork(smartThing);
 		smartThing.setMigStatus(false);
 		MobileController.removeSmartThing(smartThing);
+		MobileUserRegistration.finishUser(smartThing);
 		LogMobile.debug("NextStep.java", smartThing.getName() + " was removed!");
 	}
 }
