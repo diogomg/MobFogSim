@@ -46,6 +46,7 @@ import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
 import org.fog.utils.ModuleLaunchConfig;
+import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
@@ -1009,17 +1010,21 @@ public class FogDevice extends PowerDatacenter {
 						MyStatistics.getInstance().startWithoutVmTime(smartThing.getMyId(),
 							CloudSim.clock());
 						smartThing.setTimeFinishDeliveryVm(-1.0);
-						NetworkSlicing.MigrationTransferRequest transferRequest =
-							new NetworkSlicing.MigrationTransferRequest(
+						MigrationTransferSpec transferSpec =
+							new MigrationTransferSpec(
 								smartThing.getVmLocalServerCloudlet(),
 								smartThing.getDestinationServerCloudlet(), smartThing,
-								smartThing.getMigTime(),
+								smartThing.getMigrationTechnique().getTransferSizeBytes(
+									smartThing.getVmMobileDevice().getSize()),
+								smartThing.getMigrationTechnique().getFixedDelayMillis(
+									smartThing), delayProcess,
 								smartThing.getVmLocalServerCloudlet().getId(),
 								MobileEvents.START_MIGRATION);
 						// Data preparation occurs before the transfer starts consuming
 						// physical-link capacity.
-						send(smartThing.getVmLocalServerCloudlet().getId(), delayProcess,
-							MobileEvents.START_MIGRATION_TRANSFER, transferRequest);
+						send(smartThing.getVmLocalServerCloudlet().getId(),
+							transferSpec.getPreparationDelayMillis(),
+							MobileEvents.START_MIGRATION_TRANSFER, transferSpec);
 					}
 					smartThing.setLockedToMigration(true);
 				}
@@ -1056,23 +1061,32 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void startMigrationTransfer(SimEvent ev) {
-		NetworkSlicing.MigrationTransferRequest request =
-			(NetworkSlicing.MigrationTransferRequest) ev.getData();
-		MobileDevice smartThing = request.getMobileDevice();
+		MigrationTransferSpec transferSpec = (MigrationTransferSpec) ev.getData();
+		MobileDevice smartThing = transferSpec.getMobileDevice();
 		if (!MobileController.getSmartThings().contains(smartThing)
 			|| smartThing.isAbortMigration()
 			|| (!smartThing.isMigStatus() && !smartThing.isMigStatusLive())) {
 			NetworkSlicing.releaseBandwidth(smartThing);
 			return;
 		}
-		NetworkSlicing.startMigrationTransfer(request);
+		NetworkSlicing.startMigrationTransfer(transferSpec);
 	}
 
 	private MobileDevice completeMigrationTransfer(SimEvent ev) {
 		Object data = ev.getData();
 		if (data instanceof NetworkSlicing.MigrationTransferCompletion) {
-			return NetworkSlicing.completeMigrationTransfer(
+			NetworkSlicing.MigrationTransferResult result =
+				NetworkSlicing.completeMigrationTransfer(
 				(NetworkSlicing.MigrationTransferCompletion) data);
+			if (result == null) {
+				return null;
+			}
+			if (result.getFixedDelayMillis() > 0.0) {
+				send(getId(), result.getFixedDelayMillis(), ev.getTag(),
+					result.getMobileDevice());
+				return null;
+			}
+			return result.getMobileDevice();
 		}
 
 		MobileDevice smartThing = (MobileDevice) data;
@@ -1106,7 +1120,7 @@ public class FogDevice extends PowerDatacenter {
 							.remove(st.getMyId());
 						st.setLockedToMigration(true);
 						st.setTimeFinishDeliveryVm(-1.0);
-						saveMigration(st);
+						saveMigrationDecision(st);
 					}
 					else {
 						sendNow(getId(), MobileEvents.NO_MIGRATION, st);
@@ -1123,7 +1137,7 @@ public class FogDevice extends PowerDatacenter {
 		}
 	}
 
-	private static void saveMigration(MobileDevice st) {
+	private static void saveMigrationDecision(MobileDevice st) {
 		System.out.println("MIGRATION " + st.getMyId() + " Position: " + st.getCoord().getCoordX()
 			+ ", " + st.getCoord().getCoordY() + " Direction: " + st.getDirection() + " Speed: "
 			+ st.getSpeed());
@@ -1131,9 +1145,6 @@ public class FogDevice extends PowerDatacenter {
 			+ st.getSourceAp().getName() + ": " +
 			Distances.checkDistance(st.getCoord(), st.getSourceAp().getCoord())
 			+ " Migration time: " + st.getMigTime());
-		NetworkUsageMonitor.migrationTrafficUsage(st.getVmLocalServerCloudlet()
-			.getUplinkBandwidth(), st.getVmMobileDevice().getSize());
-		NetworkUsageMonitor.migrationVMTransferredData(st.getVmMobileDevice().getSize());
 		try (PrintWriter out = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(st.getMyId() + "migration.txt", true))
 		{

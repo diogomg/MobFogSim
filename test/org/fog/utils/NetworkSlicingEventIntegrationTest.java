@@ -22,7 +22,10 @@ public class NetworkSlicingEventIntegrationTest {
 	private static final int START_FIRST = 7001;
 	private static final int START_SECOND = 7002;
 	private static final int TRANSFER_COMPLETE = 7003;
+	private static final int FIXED_DELAY_COMPLETE = 7004;
 	private static final double DELTA = 0.000001;
+	private static final double TRANSFER_BYTES = 7.0;
+	private static final double FIXED_DELAY_MILLIS = 25.0;
 
 	private FogDevice source;
 	private FogDevice destination;
@@ -36,6 +39,7 @@ public class NetworkSlicingEventIntegrationTest {
 		NetworkSlicing.configure("70,30");
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkUsageMonitor.reset();
 
 		source = cloudlet("source", 1000.0, 1000.0);
 		destination = cloudlet("destination", 1000.0, 800.0);
@@ -58,12 +62,33 @@ public class NetworkSlicingEventIntegrationTest {
 
 		CloudSim.startSimulation();
 
-		assertEquals(105.0, harness.getCompletionTime(first), DELTA);
-		assertEquals(140.0, harness.getCompletionTime(second), DELTA);
-		assertEquals(105.0, first.getMigTime(), DELTA);
-		assertEquals(105.0, second.getMigTime(), DELTA);
+		assertEquals(105.0, harness.getTransferCompletionTime(first), DELTA);
+		assertEquals(140.0, harness.getTransferCompletionTime(second), DELTA);
+		assertEquals(130.0, harness.getCompletionTime(first), DELTA);
+		assertEquals(165.0, harness.getCompletionTime(second), DELTA);
+		assertEquals(130.0, first.getMigTime(), DELTA);
+		assertEquals(130.0, second.getMigTime(), DELTA);
+		assertEquals(TRANSFER_BYTES * 2.0,
+			NetworkUsageMonitor.getMigrationTransferredBytes(), DELTA);
+		assertEquals(TRANSFER_BYTES * 105.0 * 2.0,
+			NetworkUsageMonitor.getMigrationUsageByteMilliseconds(), DELTA);
 		assertFalse(NetworkSlicing.hasActiveMigrationTransfer(first));
 		assertFalse(NetworkSlicing.hasActiveMigrationTransfer(second));
+	}
+
+	@Test
+	public void abortedTransferDoesNotRecordACompletedMigration() {
+		AbortHarness harness = new AbortHarness("abortHarness", source, destination,
+			first);
+		CloudSim.terminateSimulation(100.0);
+
+		CloudSim.startSimulation();
+
+		assertFalse(NetworkSlicing.hasActiveMigrationTransfer(first));
+		assertEquals(0.0,
+			NetworkUsageMonitor.getMigrationTransferredBytes(), DELTA);
+		assertEquals(0.0,
+			NetworkUsageMonitor.getMigrationUsageByteMilliseconds(), DELTA);
 	}
 
 	private static final class TransferHarness extends SimEntity {
@@ -71,6 +96,8 @@ public class NetworkSlicingEventIntegrationTest {
 		private final FogDevice destination;
 		private final MobileDevice first;
 		private final MobileDevice second;
+		private final Map<Integer, Double> transferCompletionTimes =
+			new HashMap<Integer, Double>();
 		private final Map<Integer, Double> completionTimes =
 			new HashMap<Integer, Double>();
 
@@ -99,11 +126,19 @@ public class NetworkSlicingEventIntegrationTest {
 				start(second);
 				break;
 			case TRANSFER_COMPLETE:
-				MobileDevice completed = NetworkSlicing.completeMigrationTransfer(
+				NetworkSlicing.MigrationTransferResult result =
+					NetworkSlicing.completeMigrationTransfer(
 					(NetworkSlicing.MigrationTransferCompletion) event.getData());
-				if (completed != null) {
-					completionTimes.put(completed.getId(), CloudSim.clock());
+				if (result != null) {
+					MobileDevice completed = result.getMobileDevice();
+					transferCompletionTimes.put(completed.getId(), CloudSim.clock());
+					schedule(getId(), result.getFixedDelayMillis(),
+						FIXED_DELAY_COMPLETE, completed);
 				}
+				break;
+			case FIXED_DELAY_COMPLETE:
+				MobileDevice completed = (MobileDevice) event.getData();
+				completionTimes.put(completed.getId(), CloudSim.clock());
 				break;
 			default:
 				break;
@@ -116,12 +151,50 @@ public class NetworkSlicingEventIntegrationTest {
 
 		private void start(MobileDevice mobileDevice) {
 			NetworkSlicing.startMigrationTransfer(
-				new NetworkSlicing.MigrationTransferRequest(source, destination,
-					mobileDevice, 100.0, getId(), TRANSFER_COMPLETE));
+				new MigrationTransferSpec(source, destination, mobileDevice,
+					TRANSFER_BYTES, FIXED_DELAY_MILLIS, 0.0, getId(),
+					TRANSFER_COMPLETE));
+		}
+
+		private double getTransferCompletionTime(MobileDevice mobileDevice) {
+			return transferCompletionTimes.get(mobileDevice.getId());
 		}
 
 		private double getCompletionTime(MobileDevice mobileDevice) {
 			return completionTimes.get(mobileDevice.getId());
+		}
+	}
+
+	private static final class AbortHarness extends SimEntity {
+		private final FogDevice source;
+		private final FogDevice destination;
+		private final MobileDevice mobileDevice;
+
+		private AbortHarness(String name, FogDevice source, FogDevice destination,
+			MobileDevice mobileDevice) {
+			super(name);
+			this.source = source;
+			this.destination = destination;
+			this.mobileDevice = mobileDevice;
+		}
+
+		@Override
+		public void startEntity() {
+			NetworkSlicing.startMigrationTransfer(new MigrationTransferSpec(source,
+				destination, mobileDevice, TRANSFER_BYTES, FIXED_DELAY_MILLIS,
+				0.0, getId(), TRANSFER_COMPLETE));
+			schedule(getId(), 35.0, START_FIRST);
+		}
+
+		@Override
+		public void processEvent(SimEvent event) {
+			if (event.getTag() == START_FIRST) {
+				NetworkSlicing.releaseBandwidth(mobileDevice);
+			}
+		}
+
+		@Override
+		public void shutdownEntity() {
 		}
 	}
 

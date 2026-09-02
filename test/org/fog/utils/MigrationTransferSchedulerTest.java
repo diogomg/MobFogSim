@@ -18,12 +18,12 @@ public class MigrationTransferSchedulerTest {
 		MigrationTransferScheduler scheduler = dynamicScheduler();
 
 		MigrationTransferScheduler.Schedule first = only(
-			scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0));
+			scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0));
 		assertEquals(800.0, first.getBandwidth(), DELTA);
 		assertEquals(70.0, first.getDelay(), DELTA);
 
 		List<MigrationTransferScheduler.Schedule> overlap =
-			scheduler.start(2, LINK, 0, 56000.0, 800.0, 35.0);
+			scheduler.start(2, LINK, 0, 7.0, 800.0, 35.0);
 		MigrationTransferScheduler.Schedule rescheduledFirst = find(overlap, 1);
 		MigrationTransferScheduler.Schedule second = find(overlap, 2);
 		assertEquals(400.0, rescheduledFirst.getBandwidth(), DELTA);
@@ -35,6 +35,7 @@ public class MigrationTransferSchedulerTest {
 			rescheduledFirst.getGeneration(), 105.0);
 		assertTrue(completion.isAccepted());
 		assertEquals(105.0, completion.getDuration(), DELTA);
+		assertEquals(7.0, completion.getTransferredBytes(), DELTA);
 		MigrationTransferScheduler.Schedule acceleratedSecond =
 			only(completion.getSchedules());
 		assertEquals(800.0, acceleratedSecond.getBandwidth(), DELTA);
@@ -46,9 +47,9 @@ public class MigrationTransferSchedulerTest {
 	public void obsoleteCompletionIsRejectedAfterARebalance() {
 		MigrationTransferScheduler scheduler = dynamicScheduler();
 		MigrationTransferScheduler.Schedule original = only(
-			scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0));
+			scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0));
 
-		scheduler.start(2, LINK, 0, 56000.0, 800.0, 35.0);
+		scheduler.start(2, LINK, 0, 7.0, 800.0, 35.0);
 		MigrationTransferScheduler.Completion stale = scheduler.complete(1,
 			original.getGeneration(), 70.0);
 
@@ -61,9 +62,9 @@ public class MigrationTransferSchedulerTest {
 	public void dynamicActiveSlicesTogetherUseExactlyThePhysicalCapacity() {
 		MigrationTransferScheduler scheduler = dynamicScheduler();
 
-		scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0);
+		scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0);
 		List<MigrationTransferScheduler.Schedule> schedules =
-			scheduler.start(2, LINK, 1, 24000.0, 800.0, 0.0);
+			scheduler.start(2, LINK, 1, 3.0, 800.0, 0.0);
 
 		assertEquals(560.0, find(schedules, 1).getBandwidth(), DELTA);
 		assertEquals(240.0, find(schedules, 2).getBandwidth(), DELTA);
@@ -78,11 +79,11 @@ public class MigrationTransferSchedulerTest {
 			new double[] { 70.0, 30.0 }, true, false);
 
 		MigrationTransferScheduler.Schedule first = only(
-			scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0));
+			scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0));
 		assertEquals(560.0, first.getBandwidth(), DELTA);
 
 		List<MigrationTransferScheduler.Schedule> overlap =
-			scheduler.start(2, LINK, 0, 56000.0, 800.0, 50.0);
+			scheduler.start(2, LINK, 0, 7.0, 800.0, 50.0);
 		MigrationTransferScheduler.Schedule rescheduledFirst = find(overlap, 1);
 		MigrationTransferScheduler.Schedule second = find(overlap, 2);
 		assertEquals(280.0, rescheduledFirst.getBandwidth(), DELTA);
@@ -101,9 +102,9 @@ public class MigrationTransferSchedulerTest {
 		MigrationTransferScheduler scheduler = new MigrationTransferScheduler(
 			new double[] { 70.0, 30.0 }, true, false);
 
-		scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0);
+		scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0);
 		List<MigrationTransferScheduler.Schedule> schedules =
-			scheduler.start(2, LINK, 1, 24000.0, 800.0, 0.0);
+			scheduler.start(2, LINK, 1, 3.0, 800.0, 0.0);
 
 		assertEquals(560.0, find(schedules, 1).getBandwidth(), DELTA);
 		assertEquals(240.0, find(schedules, 2).getBandwidth(), DELTA);
@@ -115,9 +116,9 @@ public class MigrationTransferSchedulerTest {
 		MigrationTransferScheduler scheduler = new MigrationTransferScheduler(
 			new double[] { 70.0, 30.0 }, false, true);
 
-		scheduler.start(1, LINK, 0, 80000.0, 800.0, 0.0);
+		scheduler.start(1, LINK, 0, 10.0, 800.0, 0.0);
 		List<MigrationTransferScheduler.Schedule> schedules =
-			scheduler.start(2, LINK, 1, 80000.0, 800.0, 0.0);
+			scheduler.start(2, LINK, 1, 10.0, 800.0, 0.0);
 
 		assertEquals(400.0, find(schedules, 1).getBandwidth(), DELTA);
 		assertEquals(400.0, find(schedules, 2).getBandwidth(), DELTA);
@@ -127,8 +128,8 @@ public class MigrationTransferSchedulerTest {
 	@Test
 	public void cancellingATransferImmediatelyReallocatesItsCapacity() {
 		MigrationTransferScheduler scheduler = dynamicScheduler();
-		scheduler.start(1, LINK, 0, 56000.0, 800.0, 0.0);
-		scheduler.start(2, LINK, 0, 56000.0, 800.0, 35.0);
+		scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0);
+		scheduler.start(2, LINK, 0, 7.0, 800.0, 35.0);
 
 		MigrationTransferScheduler.Schedule remaining =
 			only(scheduler.cancel(1, 55.0));

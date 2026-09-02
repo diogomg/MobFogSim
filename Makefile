@@ -32,9 +32,10 @@ TEST_SUITES := \
 	org.fog.utils.UserAllocationNetworkSlicingTest \
 	org.fog.utils.NetworkSlicingScopeTest \
 	org.fog.utils.AccessPointNetworkSlicingTest \
-	org.fog.utils.DynamicNetworkSlicingTest \
+	org.fog.utils.MigrationTransferSpecTest \
 	org.fog.utils.MigrationTransferSchedulerTest \
-	org.fog.utils.NetworkSlicingEventIntegrationTest
+	org.fog.utils.NetworkSlicingEventIntegrationTest \
+	org.fog.utils.NetworkUsageMonitorTest
 
 .PHONY: compile run test clean
 
@@ -50,6 +51,7 @@ run: compile
 	java -Xmx10g -Dfile.encoding=UTF-8 -classpath '$(MAIN_CLASSPATH)' org.fog.vmmobile.AppExample $(RUN_ARGS)
 
 test:
+	rm -rf $(TEST_CLASSES)
 	mkdir -p $(TEST_CLASSES)
 	find src test -name '*.java' -print > $(BUILD_DIR)/test-sources.list
 	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(TEST_CLASSES) @$(BUILD_DIR)/test-sources.list

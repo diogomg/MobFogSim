@@ -37,6 +37,7 @@ import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
+import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
@@ -560,16 +561,15 @@ public class MobileController extends SimEntity {
 		registerActiveSensors(mobileDevice);
 	}
 
-	private double migrationTimeToLiveMigration(MobileDevice smartThing) {
-		double runTime = CloudSim.clock() - smartThing.getTimeStartLiveMigration();
-		if (smartThing.getMigTime() > runTime) {
-			runTime = smartThing.getMigTime() - runTime;
-			return runTime;
-		}
-		else {
-			return 0;
-		}
-
+	private double remainingLiveMigrationBytes(MobileDevice smartThing,
+		double baselineBandwidthBitsPerSecond) {
+		double elapsedMillis = Math.max(0.0,
+			CloudSim.clock() - smartThing.getTimeStartLiveMigration());
+		double copiedBytes = baselineBandwidthBitsPerSecond * elapsedMillis
+			/ (8.0 * 1000.0);
+		double totalBytes = smartThing.getMigrationTechnique()
+			.getTransferSizeBytes(smartThing.getVmMobileDevice().getSize());
+		return Math.max(0.0, totalBytes - copiedBytes);
 	}
 
 	protected void checkNewStep(MobileDevice st) {
@@ -633,14 +633,15 @@ public class MobileController extends SimEntity {
 								if (st.isPostCopyStatus() && !st.isMigStatus()) {
 									if (!st.isMigStatusLive()) {
 										st.setMigStatusLive(true);
-										double newMigTime = migrationTimeToLiveMigration(st);
 										double baselineBandwidth = NetworkSlicing.getSliceBandwidth(
 											st.getVmLocalServerCloudlet(),
 											st.getDestinationServerCloudlet(), st.getNetworkSliceId());
-										if (newMigTime == 0) {
-											newMigTime = ((st.getVmMobileDevice().getHost()
-												.getRamProvisioner().getUsedRam() * 8 * 1024 * 1024)
-												/ baselineBandwidth) * 1000.0;
+										double remainingTransferBytes =
+											remainingLiveMigrationBytes(st, baselineBandwidth);
+										if (remainingTransferBytes == 0.0) {
+											remainingTransferBytes = MigrationTransferSpec
+												.mebibytesToBytes(st.getVmMobileDevice().getHost()
+													.getRamProvisioner().getUsedRam());
 										}
 										double delayProcess = st.getVmLocalServerCloudlet()
 											.getCharacteristics().getCpuTime((st.getVmMobileDevice()
@@ -648,14 +649,18 @@ public class MobileController extends SimEntity {
 										st.setTimeFinishDeliveryVm(-1.0);
 										MyStatistics.getInstance().startWithoutVmTime(
 											st.getMyId(),CloudSim.clock());
-										NetworkSlicing.MigrationTransferRequest transferRequest =
-											new NetworkSlicing.MigrationTransferRequest(
+										MigrationTransferSpec transferSpec =
+											new MigrationTransferSpec(
 												st.getVmLocalServerCloudlet(),
-												st.getDestinationServerCloudlet(), st, newMigTime,
+												st.getDestinationServerCloudlet(), st,
+												remainingTransferBytes,
+												st.getMigrationTechnique().getFixedDelayMillis(st),
+												delayProcess,
 												st.getVmLocalServerCloudlet().getId(),
 												MobileEvents.SET_MIG_STATUS_TRUE);
-										send(st.getVmLocalServerCloudlet().getId(), delayProcess,
-											MobileEvents.START_MIGRATION_TRANSFER, transferRequest);
+										send(st.getVmLocalServerCloudlet().getId(),
+											transferSpec.getPreparationDelayMillis(),
+											MobileEvents.START_MIGRATION_TRANSFER, transferSpec);
 									}
 								}
 							}
@@ -859,19 +864,21 @@ public class MobileController extends SimEntity {
 		System.out.println("=========================================");
 		System.out.println("=============NETWORK USAGE===============");
 		System.out.println("=========================================");
-		double deviceNetworkUsage = NetworkUsageMonitor.getNetworkUsage()
-			- NetworkUsageMonitor.getNetWorkUsageInMigration();
-		System.out.println("VM data transferred in migration = "
-			+ NetworkUsageMonitor.getVMTransferredData());
+		double transferredMebibytes = NetworkUsageMonitor.getMigrationTransferredBytes()
+			/ (1024.0 * 1024.0);
+		double deviceNetworkUsage = NetworkUsageMonitor
+			.getTupleUsageByteMilliseconds();
+		System.out.println("VM data transferred in migration (MiB) = "
+			+ transferredMebibytes);
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getVMTransferredData() / CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getVMTransferredData()) + '\t'
+			String.valueOf(transferredMebibytes / CloudSim.clock()) + '\t'
+				+ String.valueOf(transferredMebibytes) + '\t'
 				+ CloudSim.clock(), "results.txt");
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getVMTransferredData() / CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getVMTransferredData()) + '\t'
+			String.valueOf(transferredMebibytes / CloudSim.clock()) + '\t'
+				+ String.valueOf(transferredMebibytes) + '\t'
 				+ CloudSim.clock(), "vmsizesended.txt");
-		System.out.println("Device's network usage = " + deviceNetworkUsage);
+		System.out.println("Device network usage (byte-ms) = " + deviceNetworkUsage);
 		printResults(
 			String.valueOf(deviceNetworkUsage / CloudSim.clock()) + '\t'
 				+ String.valueOf(deviceNetworkUsage) + '\t' + CloudSim.clock(), "results.txt");
@@ -879,27 +886,38 @@ public class MobileController extends SimEntity {
 			String.valueOf(deviceNetworkUsage / CloudSim.clock()) + '\t'
 				+ String.valueOf(deviceNetworkUsage) + '\t' + CloudSim.clock(),
 			"deviceNetworkUsage.txt");
-		System.out.println("Migration' network usage (total)= "
-			+ NetworkUsageMonitor.getNetWorkUsageInMigration());
-		System.out.println("Migration' network usage (mean)= "
-			+ NetworkUsageMonitor.getNetWorkUsageInMigration()
-			/ MyStatistics.getInstance().getTotalMigrations());
+		System.out.println("Migration network usage (total byte-ms) = "
+			+ NetworkUsageMonitor.getMigrationUsageByteMilliseconds());
+		double meanMigrationUsage = MyStatistics.getInstance().getTotalMigrations() == 0
+			? 0.0 : NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
+				/ MyStatistics.getInstance().getTotalMigrations();
+		System.out.println("Migration network usage (mean byte-ms) = "
+			+ meanMigrationUsage);
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getNetWorkUsageInMigration() / CloudSim.clock())
-				+ '\t' + String.valueOf(NetworkUsageMonitor.getNetWorkUsageInMigration()) + '\t'
+			String.valueOf(NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
+				/ CloudSim.clock())
+				+ '\t' + String.valueOf(
+					NetworkUsageMonitor.getMigrationUsageByteMilliseconds()) + '\t'
 				+ CloudSim.clock(), "results.txt");
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getNetWorkUsageInMigration() / CloudSim.clock())
-				+ '\t' + String.valueOf(NetworkUsageMonitor.getNetWorkUsageInMigration()) + '\t'
+			String.valueOf(NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
+				/ CloudSim.clock())
+				+ '\t' + String.valueOf(
+					NetworkUsageMonitor.getMigrationUsageByteMilliseconds()) + '\t'
 				+ CloudSim.clock(), "cloudletNetworkUsage.txt");
-		System.out.println("Total network usage = " + NetworkUsageMonitor.getNetworkUsage());
+		System.out.println("Total network usage (byte-ms) = "
+			+ NetworkUsageMonitor.getTotalUsageByteMilliseconds());
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getNetworkUsage() / CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getNetworkUsage()) + '\t' + CloudSim.clock(),
+			String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds()
+				/ CloudSim.clock()) + '\t'
+				+ String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds())
+				+ '\t' + CloudSim.clock(),
 			"results.txt");
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getNetworkUsage() / CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getNetworkUsage()) + '\t' + CloudSim.clock(),
+			String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds()
+				/ CloudSim.clock()) + '\t'
+				+ String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds())
+				+ '\t' + CloudSim.clock(),
 			"totalNetworkUsage.txt");
 	}
 

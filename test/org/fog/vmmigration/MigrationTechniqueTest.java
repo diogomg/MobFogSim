@@ -34,13 +34,28 @@ public class MigrationTechniqueTest {
 	}
 
 	@Test
-	public void liveMigrationBaseTransferMatchesCompleteVm() {
+	public void liveMigrationIncludesItsThirtyPercentTransferOverhead() {
 		CompleteVM complete = new CompleteVM(Policies.FIXED_MIGRATION_POINT);
 		LiveMigration live = new LiveMigration(Policies.FIXED_MIGRATION_POINT);
 		double bandwidth = 8.0 * 1024 * 1024;
 
-		assertEquals(complete.migrationTimeFunction(128, bandwidth),
+		assertEquals(complete.migrationTimeFunction(128, bandwidth) * 1.3,
 			live.migrationTimeFunction(128, bandwidth), DELTA);
+	}
+
+	@Test
+	public void techniquesExposeTheirActualTransferSizesInBytes() {
+		double completeBytes = 128.0 * 1024.0 * 1024.0;
+
+		assertEquals(completeBytes,
+			new CompleteVM(Policies.FIXED_MIGRATION_POINT)
+				.getTransferSizeBytes(128.0), DELTA);
+		assertEquals(completeBytes * MaxAndMin.SIZE_CONTAINER,
+			new ContainerVM(Policies.FIXED_MIGRATION_POINT)
+				.getTransferSizeBytes(128.0), DELTA);
+		assertEquals(completeBytes * 1.3,
+			new LiveMigration(Policies.FIXED_MIGRATION_POINT)
+				.getTransferSizeBytes(128.0), DELTA);
 	}
 
 	@Test
@@ -136,4 +151,3 @@ public class MigrationTechniqueTest {
 		};
 	}
 }
-

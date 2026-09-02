@@ -10,14 +10,16 @@ import java.util.Set;
 /**
  * Fluid-share scheduler for migration transfers on directed physical links.
  *
- * Transfer work is expressed in bandwidth-milliseconds. Whenever the active
- * transfer set changes, the scheduler first accounts for work completed at the
- * previous rates and then returns replacement completion schedules using the
- * new rates.
+ * Transfer work is expressed in bytes and allocated bandwidth in bits per
+ * second. Whenever the active transfer set changes, the scheduler first
+ * accounts for bytes completed at the previous rates and then returns
+ * replacement completion schedules using the new rates.
  */
 final class MigrationTransferScheduler {
 
 	private static final double TIME_EPSILON = 0.000001;
+	private static final double BITS_PER_BYTE = 8.0;
+	private static final double MILLISECONDS_PER_SECOND = 1000.0;
 
 	static final class Schedule {
 		private final int transferId;
@@ -60,13 +62,15 @@ final class MigrationTransferScheduler {
 		private final boolean accepted;
 		private final int transferId;
 		private final double duration;
+		private final double transferredBytes;
 		private final List<Schedule> schedules;
 
 		private Completion(boolean accepted, int transferId, double duration,
-			List<Schedule> schedules) {
+			double transferredBytes, List<Schedule> schedules) {
 			this.accepted = accepted;
 			this.transferId = transferId;
 			this.duration = duration;
+			this.transferredBytes = transferredBytes;
 			this.schedules = schedules;
 		}
 
@@ -82,6 +86,10 @@ final class MigrationTransferScheduler {
 			return duration;
 		}
 
+		double getTransferredBytes() {
+			return transferredBytes;
+		}
+
 		List<Schedule> getSchedules() {
 			return schedules;
 		}
@@ -92,17 +100,19 @@ final class MigrationTransferScheduler {
 		private final String link;
 		private final int sliceId;
 		private final double startedAt;
-		private double remainingWork;
+		private final double transferBytes;
+		private double remainingBytes;
 		private double bandwidth;
 		private long generation;
 		private double completionTime;
 
-		private Transfer(int id, String link, int sliceId, double work,
+		private Transfer(int id, String link, int sliceId, double transferBytes,
 			double startedAt) {
 			this.id = id;
 			this.link = link;
 			this.sliceId = sliceId;
-			this.remainingWork = work;
+			this.transferBytes = transferBytes;
+			this.remainingBytes = transferBytes;
 			this.startedAt = startedAt;
 		}
 	}
@@ -133,9 +143,11 @@ final class MigrationTransferScheduler {
 		this.dynamicBorrowing = dynamicBorrowing;
 	}
 
-	List<Schedule> start(int transferId, String link, int sliceId, double work,
+	List<Schedule> start(int transferId, String link, int sliceId,
+		double transferBytes,
 		double physicalBandwidth, double now) {
-		validateStart(transferId, link, sliceId, work, physicalBandwidth, now);
+		validateStart(transferId, link, sliceId, transferBytes,
+			physicalBandwidth, now);
 
 		Set<String> affectedLinks = new LinkedHashSet<String>();
 		Transfer previous = transfers.remove(transferId);
@@ -159,7 +171,8 @@ final class MigrationTransferScheduler {
 				physicalBandwidth);
 		}
 
-		Transfer transfer = new Transfer(transferId, link, sliceId, work, now);
+		Transfer transfer = new Transfer(transferId, link, sliceId, transferBytes,
+			now);
 		linkState.transfers.put(transferId, transfer);
 		transfers.put(transferId, transfer);
 		affectedLinks.add(link);
@@ -171,7 +184,7 @@ final class MigrationTransferScheduler {
 		Transfer transfer = transfers.get(transferId);
 		if (transfer == null || transfer.generation != generation
 			|| now + TIME_EPSILON < transfer.completionTime) {
-			return new Completion(false, transferId, 0.0,
+			return new Completion(false, transferId, 0.0, 0.0,
 				new ArrayList<Schedule>());
 		}
 
@@ -184,6 +197,7 @@ final class MigrationTransferScheduler {
 		Set<String> affectedLinks = new LinkedHashSet<String>();
 		affectedLinks.add(transfer.link);
 		return new Completion(true, transferId, duration,
+			transfer.transferBytes,
 			rebalance(affectedLinks, now));
 	}
 
@@ -226,7 +240,8 @@ final class MigrationTransferScheduler {
 					throw new IllegalStateException(
 						"An active migration received no transport bandwidth");
 				}
-				double delay = transfer.remainingWork / transfer.bandwidth;
+				double delay = transferTimeMillis(transfer.remainingBytes,
+					transfer.bandwidth);
 				transfer.generation = nextGeneration++;
 				transfer.completionTime = now + delay;
 				schedules.add(new Schedule(transfer.id, transfer.generation, delay,
@@ -285,14 +300,15 @@ final class MigrationTransferScheduler {
 
 		double elapsed = Math.max(0.0, now - linkState.lastUpdated);
 		for (Transfer transfer : linkState.transfers.values()) {
-			transfer.remainingWork = Math.max(0.0,
-				transfer.remainingWork - transfer.bandwidth * elapsed);
+			transfer.remainingBytes = Math.max(0.0,
+				transfer.remainingBytes - bytesTransferred(transfer.bandwidth,
+					elapsed));
 		}
 		linkState.lastUpdated = now;
 	}
 
 	private void validateStart(int transferId, String link, int sliceId,
-		double work, double physicalBandwidth, double now) {
+		double transferBytes, double physicalBandwidth, double now) {
 		if (transferId < 0) {
 			throw new IllegalArgumentException("Transfer ID cannot be negative");
 		}
@@ -302,8 +318,9 @@ final class MigrationTransferScheduler {
 		if (sliceId < 0 || sliceId >= percentages.length) {
 			throw new IllegalArgumentException("Unknown network slice: " + sliceId);
 		}
-		if (!isFinite(work) || work < 0.0) {
-			throw new IllegalArgumentException("Transfer work must be finite and non-negative");
+		if (!isFinite(transferBytes) || transferBytes < 0.0) {
+			throw new IllegalArgumentException(
+				"Transfer bytes must be finite and non-negative");
 		}
 		if (!isFinite(physicalBandwidth) || physicalBandwidth <= 0.0) {
 			throw new IllegalArgumentException(
@@ -312,6 +329,18 @@ final class MigrationTransferScheduler {
 		if (!isFinite(now) || now < 0.0) {
 			throw new IllegalArgumentException("Simulation time must be finite and non-negative");
 		}
+	}
+
+	private static double bytesTransferred(double bandwidthBitsPerSecond,
+		double elapsedMillis) {
+		return bandwidthBitsPerSecond * elapsedMillis
+			/ (BITS_PER_BYTE * MILLISECONDS_PER_SECOND);
+	}
+
+	private static double transferTimeMillis(double transferBytes,
+		double bandwidthBitsPerSecond) {
+		return transferBytes * BITS_PER_BYTE * MILLISECONDS_PER_SECOND
+			/ bandwidthBitsPerSecond;
 	}
 
 	private static boolean isFinite(double value) {

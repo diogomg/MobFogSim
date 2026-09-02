@@ -69,8 +69,6 @@ public class NetworkSlicingScopeTest {
 
 		assertEquals(800.0,
 			NetworkSlicing.getSliceBandwidth(source, destination, 0), DELTA);
-		assertEquals(800.0,
-			NetworkSlicing.reserveBandwidth(source, destination, largeSlice), DELTA);
 		assertEquals(700.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, largeSlice), DELTA);
 		assertEquals(300.0,
@@ -103,14 +101,15 @@ public class NetworkSlicingScopeTest {
 	}
 
 	@Test
-	public void changingScopeClearsTransportReservations() {
+	public void changingScopeClearsActiveTransportTransfers() {
 		NetworkSlicing.setDynamicBorrowing(true);
-		NetworkSlicing.reserveBandwidth(source, destination, largeSlice);
+		NetworkSlicing.startMigrationTransfer(new MigrationTransferSpec(source,
+			destination, largeSlice, 10.0, 0.0, 0.0, source.getId(), 1));
+		assertTrue(NetworkSlicing.hasActiveMigrationTransfer(largeSlice));
 		NetworkSlicing.setScope(NetworkSlicing.WIRELESS_NETWORK);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
 
-		assertEquals(800.0,
-			NetworkSlicing.reserveBandwidth(source, destination, smallSlice), DELTA);
+		assertFalse(NetworkSlicing.hasActiveMigrationTransfer(largeSlice));
 	}
 
 	@Test(expected = IllegalArgumentException.class)

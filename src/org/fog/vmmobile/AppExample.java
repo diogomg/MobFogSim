@@ -48,6 +48,7 @@ import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.FogUtils;
 
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.fog.vmmigration.BeforeMigration;
@@ -155,6 +156,7 @@ public class AppExample {
 		Calendar calendar = Calendar.getInstance();
 		boolean traceFlag = false; // mean trace events
 		CloudSim.init(numUser, calendar, traceFlag);
+		NetworkUsageMonitor.reset();
 
 		setPositionApPolicy(Policies.FIXED_AP_LOCATION);
 		setPositionScPolicy(Policies.FIXED_SC_LOCATION);

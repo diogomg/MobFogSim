@@ -8,6 +8,12 @@ public interface VmMigrationTechnique {
 
 	public double migrationTimeFunction(double vmSize, double bandwidth);
 
+	/** Returns the bytes placed on the transport network by this technique. */
+	public double getTransferSizeBytes(double vmSizeMebibytes);
+
+	/** Returns propagation/setup delay in milliseconds, excluding preparation. */
+	public double getFixedDelayMillis(MobileDevice smartThing);
+
 	public boolean migPointPolicyFunction(int policy, MobileDevice smartThing);
 
 	public boolean migrationPointFunction(double distance, double migTime, int speed);

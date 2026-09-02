@@ -123,7 +123,8 @@ public class Controller extends SimEntity {
 	}
 
 	private void printNetworkUsageDetails() {
-		System.out.println("Total network usage = " + NetworkUsageMonitor.getNetworkUsage()
+		System.out.println("Total network usage (byte-ms) = "
+			+ NetworkUsageMonitor.getTotalUsageByteMilliseconds()
 			/ Config.MAX_SIMULATION_TIME);
 
 	}

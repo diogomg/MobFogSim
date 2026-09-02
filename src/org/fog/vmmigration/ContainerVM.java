@@ -1,8 +1,8 @@
 package org.fog.vmmigration;
 
-import org.cloudbus.cloudsim.NetworkTopology;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
+import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
@@ -26,7 +26,19 @@ public class ContainerVM implements VmMigrationTechnique {
 
 	@Override
 	public double migrationTimeFunction(double vmSize, double bandwidth) {
-		return ((double) ((vmSize * 8 * 1024 * 1024) * MaxAndMin.SIZE_CONTAINER) / bandwidth) * 1000.0;
+		return MigrationTransferSpec.transferTimeMillis(
+			getTransferSizeBytes(vmSize), bandwidth);
+	}
+
+	@Override
+	public double getTransferSizeBytes(double vmSizeMebibytes) {
+		return MigrationTransferSpec.mebibytesToBytes(vmSizeMebibytes)
+			* MaxAndMin.SIZE_CONTAINER;
+	}
+
+	@Override
+	public double getFixedDelayMillis(MobileDevice smartThing) {
+		return MigrationFixedDelay.calculateMillis(smartThing);
 	}
 
 	@Override
@@ -37,24 +49,16 @@ public class ContainerVM implements VmMigrationTechnique {
 			smartThing.getVmLocalServerCloudlet(), smartThing.getDestinationServerCloudlet(),
 			smartThing.getNetworkSliceId());
 
-		smartThing
-			.setMigTime(migrationTimeFunction(smartThing.getVmMobileDevice().getSize()// vmSize
-				, bandwidth)
-				+ smartThing.getVmLocalServerCloudlet().getUplinkLatency() // Link Latency
-				+ NetworkTopology.getDelay(smartThing.getId(), smartThing
-					.getVmLocalServerCloudlet().getId())
-				+ LatencyByDistance.latencyConnection(smartThing.getVmLocalServerCloudlet(),
-					smartThing));
+		double transferTimeMillis = migrationTimeFunction(
+			smartThing.getVmMobileDevice().getSize(), bandwidth);
+		double fixedDelayMillis = getFixedDelayMillis(smartThing);
+		smartThing.setMigTime(transferTimeMillis + fixedDelayMillis);
 
 		System.out.println("Container VM " + smartThing.getMigTime() + " size: "
 				+ smartThing.getVmMobileDevice().getSize() + " bandwidth: " + bandwidth
-				+ " tempo " + migrationTimeFunction(smartThing.getVmMobileDevice().getSize(), bandwidth)
+				+ " tempo " + transferTimeMillis
 				+ " cloudlet uplink latency " + smartThing.getVmLocalServerCloudlet().getUplinkLatency()
-				+ " delay st cloudlet " + NetworkTopology.getDelay(smartThing.getId(), smartThing
-					.getVmLocalServerCloudlet().getId())
-				+ " latency distance cloud st "
-				+ LatencyByDistance.latencyConnection(smartThing.getVmLocalServerCloudlet(),
-					smartThing));
+				+ " fixed migration delay " + fixedDelayMillis);
 
 		if (policy == Policies.FIXED_MIGRATION_POINT) {
 			return migrationPointFunction(distance);
