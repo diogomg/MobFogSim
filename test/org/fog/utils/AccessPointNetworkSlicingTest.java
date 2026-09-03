@@ -77,38 +77,38 @@ public class AccessPointNetworkSlicingTest {
 	}
 
 	@Test
-	public void connectedSlicesReturnToTheirConfiguredShares() {
+	public void associatedUsersDoNotConsumeDynamicCapacityWithoutAFlow() {
 		MobileDevice largeSlice = connect("largeSlice", 0, 2000.0, 2000.0);
 		MobileDevice smallSlice = connect("smallSlice", 1, 2000.0, 2000.0);
 
-		assertEquals(700.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, largeSlice), DELTA);
-		assertEquals(300.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, smallSlice), DELTA);
 	}
 
 	@Test
-	public void usersInOneSliceShareItsCurrentAccessPointCapacity() {
+	public void prospectiveRateIsNotPreDividedByAssociatedUsers() {
 		MobileDevice first = connect("first", 0, 2000.0, 2000.0);
 		MobileDevice second = connect("second", 0, 2000.0, 2000.0);
 
-		assertEquals(500.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, first), DELTA);
-		assertEquals(500.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, second), DELTA);
-		assertEquals(400.0,
+		assertEquals(800.0,
 			NetworkSlicing.getAccessPointDownlinkBandwidth(accessPoint, first), DELTA);
 	}
 
 	@Test
-	public void idleAccessPointCapacityIsSharedBetweenConnectedSlices() {
+	public void dynamicProspectiveRateCanUseTheWholeAccessPoint() {
 		NetworkSlicing.configure("50,30,20");
 		MobileDevice first = connect("first", 0, 2000.0, 2000.0);
 		MobileDevice second = connect("second", 1, 2000.0, 2000.0);
 
-		assertEquals(600.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, first), DELTA);
-		assertEquals(400.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, second), DELTA);
 	}
 

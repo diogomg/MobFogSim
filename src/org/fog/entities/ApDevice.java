@@ -62,6 +62,7 @@ public class ApDevice extends FogDevice {
 		}
 
 		if (getSmartThings().contains(smartThing)) {
+			NetworkSlicing.cancelWirelessTransfers(smartThing);
 			// it'll remove the smartThing from ap-smartThing's set
 			smartThing.getSourceAp().setSmartThings(smartThing, Policies.REMOVE);
 			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() - delay);
@@ -107,6 +108,7 @@ public class ApDevice extends FogDevice {
 		if (st == null || st.getSourceAp() != this) {
 			return false;
 		}
+		NetworkSlicing.cancelWirelessTransfers(st);
 		boolean removed = getSmartThings().remove(st);
 		st.setSourceAp(null);
 		if (removed) {

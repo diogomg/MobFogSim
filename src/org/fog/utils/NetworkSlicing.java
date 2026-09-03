@@ -1,5 +1,7 @@
 package org.fog.utils;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import org.cloudbus.cloudsim.core.predicates.Predicate;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.entities.Tuple;
 
 /**
  * Bandwidth slices for transport links and wireless access points.
@@ -17,10 +20,10 @@ import org.fog.entities.MobileDevice;
  * A slice reserves its configured percentage of every cloudlet-to-cloudlet
  * link and each access point's uplink and downlink capacity. While a slice has
  * no active migration on a transport link, its reservation can be borrowed by
- * migrations in the active slices on that link. On an access point, the users
- * associated with one slice share its capacity and, in dynamic mode, slices
- * with associated users share the capacity of slices that have no users on
- * that access point.
+ * migrations in the active slices on that link. Wireless capacity is allocated
+ * independently for each AP direction from active tuple transfers. Idle
+ * associated users consume no capacity; in dynamic mode, active slices borrow
+ * reservations belonging to slices with no active flow on that AP direction.
  */
 public final class NetworkSlicing {
 
@@ -36,6 +39,21 @@ public final class NetworkSlicing {
 		new HashMap<Integer, MigrationTransferMetadata>();
 	private static MigrationTransferScheduler migrationScheduler =
 		new MigrationTransferScheduler(percentages, true, dynamicBorrowing);
+	private static final Map<Long, WirelessTransferMetadata> wirelessTransfers =
+		new HashMap<Long, WirelessTransferMetadata>();
+	private static final Map<String, Long> activeWirelessTransfers =
+		new HashMap<String, Long>();
+	private static final Map<String, ArrayDeque<Long>> queuedWirelessTransfers =
+		new HashMap<String, ArrayDeque<Long>>();
+	private static AccessPointTransferScheduler wirelessScheduler =
+		new AccessPointTransferScheduler(percentages, true, dynamicBorrowing);
+	private static long nextWirelessTransferId = 1L;
+
+	/** AP channel direction. Uplink and downlink capacity are independent. */
+	public enum WirelessDirection {
+		UPLINK,
+		DOWNLINK
+	}
 
 	/** Immutable, fully validated slicing settings for one simulation run. */
 	public static final class Configuration {
@@ -61,6 +79,49 @@ public final class NetworkSlicing {
 		private MigrationTransferCompletion(int transferId, long generation) {
 			this.transferId = transferId;
 			this.generation = generation;
+		}
+	}
+
+	/** Versioned internal event used to complete an active wireless transfer. */
+	public static final class WirelessTransferCompletion {
+		private final long transferId;
+		private final long generation;
+
+		private WirelessTransferCompletion(long transferId, long generation) {
+			this.transferId = transferId;
+			this.generation = generation;
+		}
+	}
+
+	/** Tuple delivery released after an accepted AP byte-transfer completion. */
+	public static final class WirelessTransferResult {
+		private final Tuple tuple;
+		private final int destinationEntityId;
+		private final double propagationDelayMillis;
+		private final double transferDurationMillis;
+
+		private WirelessTransferResult(WirelessTransferMetadata metadata,
+			AccessPointTransferScheduler.Completion completion) {
+			this.tuple = metadata.tuple;
+			this.destinationEntityId = metadata.destinationEntityId;
+			this.propagationDelayMillis = metadata.propagationDelayMillis;
+			this.transferDurationMillis = completion.getDurationMillis();
+		}
+
+		public Tuple getTuple() {
+			return tuple;
+		}
+
+		public int getDestinationEntityId() {
+			return destinationEntityId;
+		}
+
+		public double getPropagationDelayMillis() {
+			return propagationDelayMillis;
+		}
+
+		public double getTransferDurationMillis() {
+			return transferDurationMillis;
 		}
 	}
 
@@ -117,6 +178,34 @@ public final class NetworkSlicing {
 		}
 	}
 
+	private static final class WirelessTransferMetadata {
+		private final long transferId;
+		private final ApDevice accessPoint;
+		private final MobileDevice mobileDevice;
+		private final WirelessDirection direction;
+		private final Tuple tuple;
+		private final int eventSourceId;
+		private final int destinationEntityId;
+		private final double propagationDelayMillis;
+		private final String mobileDirectionKey;
+		private boolean active;
+
+		private WirelessTransferMetadata(long transferId, ApDevice accessPoint,
+			MobileDevice mobileDevice, WirelessDirection direction, Tuple tuple,
+			int eventSourceId, int destinationEntityId,
+			double propagationDelayMillis) {
+			this.transferId = transferId;
+			this.accessPoint = accessPoint;
+			this.mobileDevice = mobileDevice;
+			this.direction = direction;
+			this.tuple = tuple;
+			this.eventSourceId = eventSourceId;
+			this.destinationEntityId = destinationEntityId;
+			this.propagationDelayMillis = propagationDelayMillis;
+			this.mobileDirectionKey = mobileDirectionKey(mobileDevice, direction);
+		}
+	}
+
 	private static final class MigrationCompletionPredicate extends Predicate {
 		private final int transferId;
 
@@ -129,6 +218,21 @@ public final class NetworkSlicing {
 			Object data = event.getData();
 			return data instanceof MigrationTransferCompletion
 				&& ((MigrationTransferCompletion) data).transferId == transferId;
+		}
+	}
+
+	private static final class WirelessCompletionPredicate extends Predicate {
+		private final long transferId;
+
+		private WirelessCompletionPredicate(long transferId) {
+			this.transferId = transferId;
+		}
+
+		@Override
+		public boolean match(SimEvent event) {
+			Object data = event.getData();
+			return data instanceof WirelessTransferCompletion
+				&& ((WirelessTransferCompletion) data).transferId == transferId;
 		}
 	}
 
@@ -329,9 +433,8 @@ public final class NetworkSlicing {
 	}
 
 	/**
-	 * Returns the wireless uplink bandwidth available to a mobile device. The
-	 * access point's slice share is divided equally among the connected users
-	 * in that slice, then capped by the mobile device's own uplink capability.
+	 * Returns the maximum uplink rate for a prospective single active flow. The
+	 * event-level scheduler calculates the actual rate from all active flows.
 	 */
 	public static double getAccessPointUplinkBandwidth(ApDevice accessPoint,
 		MobileDevice mobileDevice) {
@@ -341,15 +444,139 @@ public final class NetworkSlicing {
 	}
 
 	/**
-	 * Returns the wireless downlink bandwidth available to a mobile device. The
-	 * access point's slice share is divided equally among the connected users
-	 * in that slice, then capped by the mobile device's own downlink capability.
+	 * Returns the maximum downlink rate for a prospective single active flow. The
+	 * event-level scheduler calculates the actual rate from all active flows.
 	 */
 	public static double getAccessPointDownlinkBandwidth(ApDevice accessPoint,
 		MobileDevice mobileDevice) {
 		return getAccessPointBandwidth(accessPoint, mobileDevice,
 			accessPoint == null ? 0.0 : accessPoint.getDownlinkBandwidth(),
 			mobileDevice == null ? 0.0 : mobileDevice.getDownlinkBandwidth());
+	}
+
+	/**
+	 * Adds a tuple to one AP direction. Each mobile can have one active transfer
+	 * in a direction; further tuples wait in FIFO order without consuming AP
+	 * capacity. Returns the internal transfer ID used for diagnostics and tests.
+	 */
+	public static synchronized long startWirelessTupleTransfer(
+		ApDevice accessPoint, MobileDevice mobileDevice,
+		WirelessDirection direction, Tuple tuple, int eventSourceId,
+		int destinationEntityId, double propagationDelayMillis) {
+		validateWirelessTransfer(accessPoint, mobileDevice, direction, tuple,
+			eventSourceId, destinationEntityId, propagationDelayMillis);
+		long transferId = nextWirelessTransferId++;
+		WirelessTransferMetadata metadata = new WirelessTransferMetadata(
+			transferId, accessPoint, mobileDevice, direction, tuple, eventSourceId,
+			destinationEntityId, propagationDelayMillis);
+		wirelessTransfers.put(transferId, metadata);
+
+		if (!activeWirelessTransfers.containsKey(metadata.mobileDirectionKey)) {
+			activeWirelessTransfers.put(metadata.mobileDirectionKey, transferId);
+			startWirelessTransfer(metadata);
+		}
+		else {
+			ArrayDeque<Long> queue = queuedWirelessTransfers.get(
+				metadata.mobileDirectionKey);
+			if (queue == null) {
+				queue = new ArrayDeque<Long>();
+				queuedWirelessTransfers.put(metadata.mobileDirectionKey, queue);
+			}
+			queue.addLast(transferId);
+		}
+		return transferId;
+	}
+
+	/** Accepts a current AP completion event and releases its tuple for delivery. */
+	public static synchronized WirelessTransferResult completeWirelessTransfer(
+		WirelessTransferCompletion completion) {
+		if (completion == null) {
+			throw new IllegalArgumentException(
+				"Wireless completion cannot be null");
+		}
+		AccessPointTransferScheduler.Completion schedulerCompletion =
+			wirelessScheduler.complete(completion.transferId,
+				completion.generation, CloudSim.clock());
+		if (!schedulerCompletion.isAccepted()) {
+			return null;
+		}
+
+		WirelessTransferMetadata metadata = wirelessTransfers.remove(
+			schedulerCompletion.getTransferId());
+		if (metadata == null || !metadata.active) {
+			return null;
+		}
+		activeWirelessTransfers.remove(metadata.mobileDirectionKey);
+		NetworkUsageMonitor.sendingTuple(metadata.propagationDelayMillis,
+			metadata.tuple.getCloudletFileSize());
+		WirelessTransferResult result = new WirelessTransferResult(metadata,
+			schedulerCompletion);
+
+		WirelessTransferMetadata next = nextQueuedWirelessTransfer(
+			metadata.mobileDirectionKey);
+		if (next == null) {
+			applyWirelessSchedules(schedulerCompletion.getSchedules());
+		}
+		else {
+			activeWirelessTransfers.put(next.mobileDirectionKey, next.transferId);
+			startWirelessTransfer(next);
+		}
+		return result;
+	}
+
+	/** Drops every active and queued wireless tuple for a disconnected user. */
+	public static synchronized void cancelWirelessTransfers(
+		MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			return;
+		}
+		List<Long> matchingTransfers = new ArrayList<Long>();
+		for (Map.Entry<Long, WirelessTransferMetadata> entry
+			: wirelessTransfers.entrySet()) {
+			if (entry.getValue().mobileDevice == mobileDevice) {
+				matchingTransfers.add(entry.getKey());
+			}
+		}
+
+		for (Long transferId : matchingTransfers) {
+			WirelessTransferMetadata metadata = wirelessTransfers.remove(transferId);
+			if (metadata == null) {
+				continue;
+			}
+			ArrayDeque<Long> queue = queuedWirelessTransfers.get(
+				metadata.mobileDirectionKey);
+			if (queue != null) {
+				queue.remove(transferId);
+				if (queue.isEmpty()) {
+					queuedWirelessTransfers.remove(metadata.mobileDirectionKey);
+				}
+			}
+			if (!metadata.active) {
+				continue;
+			}
+			activeWirelessTransfers.remove(metadata.mobileDirectionKey);
+			cancelWirelessCompletionEvent(metadata);
+			applyWirelessSchedules(wirelessScheduler.cancel(transferId,
+				CloudSim.clock()));
+		}
+	}
+
+	/** Returns the number of active flows on one AP direction. */
+	public static synchronized int getActiveWirelessTransferCount(
+		ApDevice accessPoint, WirelessDirection direction) {
+		if (accessPoint == null || direction == null) {
+			return 0;
+		}
+		return wirelessScheduler.activeCount(
+			wirelessChannelKey(accessPoint, direction));
+	}
+
+	/** Returns whether this user owns an active flow in the supplied direction. */
+	public static synchronized boolean hasActiveWirelessTransfer(
+		MobileDevice mobileDevice, WirelessDirection direction) {
+		return mobileDevice != null && direction != null
+			&& activeWirelessTransfers.containsKey(
+				mobileDirectionKey(mobileDevice, direction));
 	}
 
 	/** Cancels an active migration transfer when it is aborted. */
@@ -434,43 +661,11 @@ public final class NetworkSlicing {
 			"Mobile-device bandwidth");
 
 		int requestedSlice = validateSliceId(mobileDevice.getNetworkSliceId());
-		if (!coversWirelessNetwork()) {
-			int connectedUsers = accessPoint.getSmartThings().size();
-			if (!accessPoint.getSmartThings().contains(mobileDevice)) {
-				connectedUsers++;
-			}
-			return Math.min(mobileDeviceBandwidth,
-				accessPointBandwidth / connectedUsers);
+		double maximumAccessPointRate = accessPointBandwidth;
+		if (coversWirelessNetwork() && !dynamicBorrowing) {
+			maximumAccessPointRate *= percentages[requestedSlice] / 100.0;
 		}
-
-		int[] usersBySlice = new int[percentages.length];
-		for (MobileDevice connectedDevice : accessPoint.getSmartThings()) {
-			usersBySlice[validateSliceId(connectedDevice.getNetworkSliceId())]++;
-		}
-
-		// Also support calculating a prospective association before it is added.
-		if (!accessPoint.getSmartThings().contains(mobileDevice)) {
-			usersBySlice[requestedSlice]++;
-		}
-
-		double slicePercentage = percentages[requestedSlice];
-		if (dynamicBorrowing) {
-			int activeSlices = 0;
-			double idlePercentage = 0.0;
-			for (int sliceId = 0; sliceId < usersBySlice.length; sliceId++) {
-				if (usersBySlice[sliceId] == 0) {
-					idlePercentage += percentages[sliceId];
-				}
-				else {
-					activeSlices++;
-				}
-			}
-			slicePercentage += idlePercentage / activeSlices;
-		}
-
-		double sharedAccessPointBandwidth = accessPointBandwidth
-			* slicePercentage / 100.0 / usersBySlice[requestedSlice];
-		return Math.min(mobileDeviceBandwidth, sharedAccessPointBandwidth);
+		return Math.min(mobileDeviceBandwidth, maximumAccessPointRate);
 	}
 
 	private static double getPhysicalBandwidth(FogDevice source,
@@ -542,6 +737,121 @@ public final class NetworkSlicing {
 		return selectedScope;
 	}
 
+	private static void validateWirelessTransfer(ApDevice accessPoint,
+		MobileDevice mobileDevice, WirelessDirection direction, Tuple tuple,
+		int eventSourceId, int destinationEntityId,
+		double propagationDelayMillis) {
+		if (accessPoint == null || mobileDevice == null || direction == null
+			|| tuple == null) {
+			throw new IllegalArgumentException(
+				"A wireless transfer requires an AP, mobile device, direction, and tuple");
+		}
+		if (mobileDevice.getSourceAp() != accessPoint
+			|| !accessPoint.getSmartThings().contains(mobileDevice)) {
+			throw new IllegalStateException(
+				"A wireless transfer requires an active AP association");
+		}
+		if (eventSourceId < 0 || destinationEntityId < 0) {
+			throw new IllegalArgumentException(
+				"Wireless transfer endpoints must be valid entity IDs");
+		}
+		if (direction == WirelessDirection.UPLINK
+			&& eventSourceId != mobileDevice.getId()) {
+			throw new IllegalArgumentException(
+				"A wireless uplink must originate at its mobile device");
+		}
+		if (direction == WirelessDirection.DOWNLINK
+			&& destinationEntityId != mobileDevice.getId()) {
+			throw new IllegalArgumentException(
+				"A wireless downlink must terminate at its mobile device");
+		}
+		validateSliceId(mobileDevice.getNetworkSliceId());
+		validateNonNegativeFinite(propagationDelayMillis,
+			"Wireless propagation delay");
+		if (tuple.getCloudletFileSize() < 0L) {
+			throw new IllegalArgumentException(
+				"Wireless tuple size cannot be negative");
+		}
+		double accessPointBandwidth = direction == WirelessDirection.UPLINK
+			? accessPoint.getUplinkBandwidth() : accessPoint.getDownlinkBandwidth();
+		double mobileBandwidth = direction == WirelessDirection.UPLINK
+			? mobileDevice.getUplinkBandwidth() : mobileDevice.getDownlinkBandwidth();
+		if (!Double.isFinite(accessPointBandwidth) || accessPointBandwidth <= 0.0
+			|| !Double.isFinite(mobileBandwidth) || mobileBandwidth <= 0.0) {
+			throw new IllegalArgumentException(
+				"Wireless endpoint bandwidth must be finite and positive");
+		}
+	}
+
+	private static void startWirelessTransfer(
+		WirelessTransferMetadata metadata) {
+		metadata.active = true;
+		double accessPointBandwidth = metadata.direction == WirelessDirection.UPLINK
+			? metadata.accessPoint.getUplinkBandwidth()
+			: metadata.accessPoint.getDownlinkBandwidth();
+		double mobileBandwidth = metadata.direction == WirelessDirection.UPLINK
+			? metadata.mobileDevice.getUplinkBandwidth()
+			: metadata.mobileDevice.getDownlinkBandwidth();
+		applyWirelessSchedules(wirelessScheduler.start(metadata.transferId,
+			wirelessChannelKey(metadata.accessPoint, metadata.direction),
+			metadata.mobileDevice.getNetworkSliceId(),
+			metadata.tuple.getCloudletFileSize(), accessPointBandwidth,
+			mobileBandwidth, CloudSim.clock()));
+	}
+
+	private static WirelessTransferMetadata nextQueuedWirelessTransfer(
+		String mobileDirection) {
+		ArrayDeque<Long> queue = queuedWirelessTransfers.get(mobileDirection);
+		while (queue != null && !queue.isEmpty()) {
+			Long transferId = queue.removeFirst();
+			WirelessTransferMetadata metadata = wirelessTransfers.get(transferId);
+			if (metadata != null) {
+				if (queue.isEmpty()) {
+					queuedWirelessTransfers.remove(mobileDirection);
+				}
+				return metadata;
+			}
+		}
+		queuedWirelessTransfers.remove(mobileDirection);
+		return null;
+	}
+
+	private static void applyWirelessSchedules(
+		List<AccessPointTransferScheduler.Schedule> schedules) {
+		for (AccessPointTransferScheduler.Schedule schedule : schedules) {
+			WirelessTransferMetadata metadata = wirelessTransfers.get(
+				schedule.getTransferId());
+			if (metadata == null || !metadata.active) {
+				continue;
+			}
+			cancelWirelessCompletionEvent(metadata);
+			if (CloudSim.running()) {
+				CloudSim.send(metadata.eventSourceId, metadata.eventSourceId,
+					schedule.getDelayMillis(), FogEvents.WIRELESS_TRANSFER_COMPLETE,
+					new WirelessTransferCompletion(schedule.getTransferId(),
+						schedule.getGeneration()));
+			}
+		}
+	}
+
+	private static void cancelWirelessCompletionEvent(
+		WirelessTransferMetadata metadata) {
+		if (metadata != null && metadata.active && CloudSim.running()) {
+			CloudSim.cancelAll(metadata.eventSourceId,
+				new WirelessCompletionPredicate(metadata.transferId));
+		}
+	}
+
+	private static String wirelessChannelKey(ApDevice accessPoint,
+		WirelessDirection direction) {
+		return accessPoint.getId() + ":" + direction.name();
+	}
+
+	private static String mobileDirectionKey(MobileDevice mobileDevice,
+		WirelessDirection direction) {
+		return mobileDevice.getId() + ":" + direction.name();
+	}
+
 	private static double validateNonNegativeFinite(double value,
 		String description) {
 		if (!Double.isFinite(value) || value < 0.0) {
@@ -557,10 +867,19 @@ public final class NetworkSlicing {
 				: migrationTransfers.entrySet()) {
 				cancelCompletionEvent(entry.getKey(), entry.getValue());
 			}
+			for (WirelessTransferMetadata metadata : wirelessTransfers.values()) {
+				cancelWirelessCompletionEvent(metadata);
+			}
 		}
 		migrationTransfers.clear();
 		migrationScheduler = new MigrationTransferScheduler(percentages,
 			coversTransportNetwork(), dynamicBorrowing);
+		wirelessTransfers.clear();
+		activeWirelessTransfers.clear();
+		queuedWirelessTransfers.clear();
+		wirelessScheduler = new AccessPointTransferScheduler(percentages,
+			coversWirelessNetwork(), dynamicBorrowing);
+		nextWirelessTransferId = 1L;
 	}
 
 	private static void cancelMigrationTransfer(MobileDevice mobileDevice) {

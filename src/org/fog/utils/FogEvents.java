@@ -28,4 +28,5 @@ public class FogEvents {
 	public static final int RESOURCE_MGMT = BASE + 24;
 	public static final int INITIALIZE_SENSOR = BASE + 24;
 	public static final int EMIT_TUPLE = BASE + 25;
+	public static final int WIRELESS_TRANSFER_COMPLETE = BASE + 26;
 }

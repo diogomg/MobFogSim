@@ -57,9 +57,9 @@ public class NetworkSlicingScopeTest {
 			NetworkSlicing.getSliceBandwidth(source, destination, 0), DELTA);
 		assertEquals(240.0,
 			NetworkSlicing.getSliceBandwidth(source, destination, 1), DELTA);
-		assertEquals(500.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, largeSlice), DELTA);
-		assertEquals(500.0,
+		assertEquals(1000.0,
 			NetworkSlicing.getAccessPointUplinkBandwidth(accessPoint, smallSlice), DELTA);
 	}
 

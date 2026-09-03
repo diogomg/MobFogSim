@@ -70,6 +70,18 @@ public class MobileDevice extends FogDevice {
 	}
 
 	@Override
+	protected void sendUp(Tuple tuple) {
+		if (getParentId() > 0 && getSourceAp() != null
+			&& getSourceAp().getSmartThings().contains(this)) {
+			NetworkSlicing.startWirelessTupleTransfer(getSourceAp(), this,
+				NetworkSlicing.WirelessDirection.UPLINK, tuple, getId(),
+				getParentId(), getUplinkLatency());
+			return;
+		}
+		super.sendUp(tuple);
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
@@ -233,6 +245,9 @@ public class MobileDevice extends FogDevice {
 			break;
 		case FogEvents.UPDATE_SOUTH_TUPLE_QUEUE:
 			updateSouthTupleQueue();
+			break;
+		case FogEvents.WIRELESS_TRANSFER_COMPLETE:
+			completeWirelessTupleTransfer(ev);
 			break;
 		case FogEvents.ACTIVE_APP_UPDATE:
 			updateActiveApplications(ev);

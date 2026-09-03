@@ -9,6 +9,7 @@ TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
 	org.cloudbus.cloudsim.util.RunOutputManagerTest \
 	org.fog.entities.ActuatorTest \
+	org.fog.entities.AccessPointContentionEventTest \
 	org.fog.entities.FogDeviceChildStateTest \
 	org.fog.entities.SensorTest \
 	org.fog.localization.CoordinateTest \
@@ -33,6 +34,7 @@ TEST_SUITES := \
 	org.fog.utils.UserAllocationNetworkSlicingTest \
 	org.fog.utils.NetworkSlicingScopeTest \
 	org.fog.utils.AccessPointNetworkSlicingTest \
+	org.fog.utils.AccessPointTransferSchedulerTest \
 	org.fog.utils.MigrationTransferSpecTest \
 	org.fog.utils.MigrationTransferSchedulerTest \
 	org.fog.utils.NetworkSlicingEventIntegrationTest \

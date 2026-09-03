@@ -179,9 +179,9 @@ users while receiving a larger bandwidth share.
 
 The **slice mode** controls whether unused reservations can be reused. Value
 `1` enables dynamic slicing, allowing a slice with active migrations to borrow
-capacity from slices that are idle on the same directed transport link. Value
-`0` would keep every slice limited to its configured share. Concurrent
-migrations still share the total capacity available to their slice.
+capacity from slices that are idle on the same directed transport link. Value `0` keeps
+every slice limited to its configured share. Concurrent transfers within a
+slice share that capacity.
 
 The **VM destinations** setting limits the types of hosts considered after the
 migration strategy selects a destination server region. Value `2` enables

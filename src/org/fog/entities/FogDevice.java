@@ -589,6 +589,9 @@ public class FogDevice extends PowerDatacenter {
 		case FogEvents.UPDATE_SOUTH_TUPLE_QUEUE:
 			updateSouthTupleQueue();
 			break;
+		case FogEvents.WIRELESS_TRANSFER_COMPLETE:
+			completeWirelessTupleTransfer(ev);
+			break;
 		case FogEvents.ACTIVE_APP_UPDATE:
 			updateActiveApplications(ev);
 			break;
@@ -1529,7 +1532,23 @@ public class FogDevice extends PowerDatacenter {
 
 		FogDevice vmHost = getVmHostForTuple(tuple);
 		if (vmHost != null && vmHost != this) {
-			send(vmHost.getId(), 0.0, FogEvents.TUPLE_ARRIVAL, tuple);
+			if (vmHost instanceof MobileDevice) {
+				MobileDevice mobileHost = (MobileDevice) vmHost;
+				FogDevice accessServer = mobileHost.getSourceServerCloudlet();
+				if (accessServer == this) {
+					sendDown(tuple, mobileHost.getId());
+				}
+				else if (accessServer != null) {
+					send(accessServer.getId(), 0.0, FogEvents.TUPLE_ARRIVAL,
+						tuple);
+				}
+				else {
+					MyStatistics.getInstance().incrementLostTupleCount();
+				}
+			}
+			else {
+				send(vmHost.getId(), 0.0, FogEvents.TUPLE_ARRIVAL, tuple);
+			}
 			return;
 		}
 
@@ -1810,11 +1829,45 @@ public class FogDevice extends PowerDatacenter {
 
 	protected void sendDown(Tuple tuple, int childId) {
 		if (getChildrenIds().contains(childId)) {
+			Object childDevice = CloudSim.getEntity(childId);
+			if (childDevice instanceof MobileDevice) {
+				MobileDevice mobileDevice = (MobileDevice) childDevice;
+				if (mobileDevice.getSourceAp() != null
+					&& mobileDevice.getSourceServerCloudlet() == this
+					&& mobileDevice.getSourceAp().getSmartThings()
+						.contains(mobileDevice)) {
+					Double latency = getChildToLatencyMap().get(childId);
+					if (latency == null) {
+						throw new IllegalStateException(
+							"Wireless child has no propagation latency: " + childId);
+					}
+					NetworkSlicing.startWirelessTupleTransfer(
+						mobileDevice.getSourceAp(), mobileDevice,
+						NetworkSlicing.WirelessDirection.DOWNLINK, tuple,
+						getId(), childId, latency);
+					return;
+				}
+			}
 			if (!isSouthLinkBusy()) {
 				sendDownFreeLink(tuple, childId);
 			} else {
 				southTupleQueue.add(new Pair<Tuple, Integer>(tuple, childId));
 			}
+		}
+	}
+
+	protected void completeWirelessTupleTransfer(SimEvent event) {
+		Object payload = event.getData();
+		if (!(payload instanceof NetworkSlicing.WirelessTransferCompletion)) {
+			return;
+		}
+		NetworkSlicing.WirelessTransferResult result =
+			NetworkSlicing.completeWirelessTransfer(
+				(NetworkSlicing.WirelessTransferCompletion) payload);
+		if (result != null) {
+			send(result.getDestinationEntityId(),
+				result.getPropagationDelayMillis(), FogEvents.TUPLE_ARRIVAL,
+				result.getTuple());
 		}
 	}
 
