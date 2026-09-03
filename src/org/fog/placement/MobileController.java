@@ -7,7 +7,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
 
@@ -18,7 +17,6 @@ import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppEdge;
-import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.application.selectivity.SelectivityModel;
@@ -30,9 +28,8 @@ import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.Sensor;
 import org.fog.localization.Coordinate;
-import org.fog.localization.Distances;
-import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
+import org.fog.localization.Distances;
 import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
@@ -41,6 +38,7 @@ import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
+import org.fog.vmmigration.MigrationCoordinator;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
@@ -76,6 +74,10 @@ public class MobileController extends SimEntity {
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
 	private boolean shutdownRequested;
+	private final SimulationResultsService resultsService;
+	private final MobilityService mobilityService;
+	private final MobileAssociationService associationService;
+	private final MigrationCoordinator migrationCoordinator;
 
 	static final int numOfDepts = 1;
 	static final int numOfMobilesPerDept = 4;
@@ -99,7 +101,11 @@ public class MobileController extends SimEntity {
 	}
 
 	public MobileController() {
-
+		this.resultsService = new SimulationResultsService(
+			RunOutputManager.getInstance());
+		this.mobilityService = new MobilityService();
+		this.associationService = new MobileAssociationService();
+		this.migrationCoordinator = new MigrationCoordinator();
 	}
 
 	public MobileController(String name, List<FogDevice> serverCloudlets, List<ApDevice> apDevices,
@@ -107,6 +113,11 @@ public class MobileController extends SimEntity {
 		, int migPointPolicy, int migStrategyPolicy, int stepPolicy, Coordinate coordDevices,
 		int seed, boolean migrationAble) {
 		super(name);
+		this.resultsService = new SimulationResultsService(
+			RunOutputManager.getInstance());
+		this.mobilityService = new MobilityService();
+		this.associationService = new MobileAssociationService();
+		this.migrationCoordinator = new MigrationCoordinator();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
@@ -137,6 +148,11 @@ public class MobileController extends SimEntity {
 		int migPointPolicy, int migStrategyPolicy, int stepPolicy,
 		Coordinate coordDevices, int seed) {
 		super(name);
+		this.resultsService = new SimulationResultsService(
+			RunOutputManager.getInstance());
+		this.mobilityService = new MobilityService();
+		this.associationService = new MobileAssociationService();
+		this.migrationCoordinator = new MigrationCoordinator();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
@@ -350,11 +366,7 @@ public class MobileController extends SimEntity {
 		if (context != null) {
 			context.recordMetrics(metrics);
 		}
-		printTimeDetails(metrics);
-		printPowerDetails(metrics);
-		printCostDetails();
-		printNetworkUsageDetails(metrics);
-		printMigrationDetails(metrics);
+		resultsService.write(metrics, getApplications());
 		CloudSim.terminateSimulation();
 	}
 
@@ -365,29 +377,17 @@ public class MobileController extends SimEntity {
 			|| !getSmartThings().contains(st)) {
 			return;
 		}
-		MobileUserRegistration.beginEntry(st);
-		List<MobilitySample> path = st.getMobilityPath();
-		if (path.isEmpty()) {
+		MobilityService.EntryOutcome entry = mobilityService.enter(st,
+			getCoordDevices());
+		if (entry == MobilityService.EntryOutcome.NO_TRACE) {
 			// Compatibility for programmatically-created users without trace data.
-			st.setTravelTimeId(0);
 			if (!activateMobileUser(st)) {
 				finishMobileUser(st);
 				requestStopIfNoMobiles();
 			}
 			return;
 		}
-
-		// Row zero already established the pending user's initial position.
-		if (st.getTravelTimeId() < 1) {
-			st.setTravelTimeId(1);
-		}
-		getCoordDevices().advanceToTime(st, st.getStartTravelTime());
-		if (st.getCoord().getCoordX() == -1) {
-			finishMobileUser(st);
-			requestStopIfNoMobiles();
-			return;
-		}
-		if (st.getTravelTimeId() >= path.size()) {
+		if (entry == MobilityService.EntryOutcome.FINISHED) {
 			finishMobileUser(st);
 			requestStopIfNoMobiles();
 			return;
@@ -403,15 +403,14 @@ public class MobileController extends SimEntity {
 			return;
 		}
 
-		getCoordDevices().advanceToTime(smartThing,
-			MobilityTimeline.toTraceTime(CloudSim.clock()));
+		mobilityService.advance(smartThing, getCoordDevices(), CloudSim.clock());
 		if (!processCurrentMobilityPosition(smartThing)) {
 			finishMobileUser(smartThing);
 			requestStopIfNoMobiles();
 			return;
 		}
 		onMobilityPositionUpdated(smartThing);
-		if (smartThing.getTravelTimeId() >= smartThing.getMobilityPath().size()) {
+		if (mobilityService.isFinished(smartThing)) {
 			finishMobileUser(smartThing);
 			requestStopIfNoMobiles();
 			return;
@@ -435,14 +434,7 @@ public class MobileController extends SimEntity {
 		if (!smartThing.getLifecycleState().acceptsMobilityUpdates()) {
 			return;
 		}
-		MobilitySample next = smartThing.getMobilityPath()
-			.get(smartThing.getTravelTimeId());
-		double delay = MobilityTimeline.toSimulationTime(next.getTimeSeconds())
-			- CloudSim.clock();
-		if (delay < 0.0) {
-			throw new IllegalStateException("Mobility timeline for " + smartThing.getName()
-				+ " moved backwards at sample " + smartThing.getTravelTimeId());
-		}
+		double delay = mobilityService.nextUpdateDelay(smartThing, CloudSim.clock());
 		send(getId(), delay, MobileEvents.MOBILITY_UPDATE, smartThing);
 	}
 
@@ -466,43 +458,14 @@ public class MobileController extends SimEntity {
 			|| mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
 			return false;
 		}
-		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.SCHEDULED) {
-			MobileUserRegistration.beginEntry(mobileDevice);
-		}
-		MobileDeviceLifecycle previousState = mobileDevice.getLifecycleState();
-		if (mobileDevice.getSourceAp() != null
-			&& !mobileDevice.getSourceAp().getSmartThings().contains(mobileDevice)) {
-			MobileUserRegistration.disconnectNetwork(mobileDevice);
-		}
-		if (mobileDevice.getSourceAp() == null
-			&& mobileDevice.getSourceServerCloudlet() != null) {
-			MobileUserRegistration.disconnectNetwork(mobileDevice);
-		}
-		if (mobileDevice.getSourceAp() == null
-			&& (getApDevices() == null || getApDevices().isEmpty()
-				|| !ApDevice.connectApSmartThing(getApDevices(), mobileDevice,
-					getRand().nextDouble()))) {
-			MobileUserRegistration.awaitAssociation(mobileDevice);
+		MobileDeviceLifecycle previousState = associationService.associate(
+			mobileDevice, getApDevices(), getRand());
+		if (mobileDevice.getSourceAp() == null) {
 			LogMobile.debug("MobileController.java", mobileDevice.getName()
 				+ " entered the simulation outside access-point coverage");
 			return false;
 		}
-
 		ApDevice sourceAp = mobileDevice.getSourceAp();
-		if (sourceAp.getServerCloudlet() == null) {
-			MobileUserRegistration.disconnectNetwork(mobileDevice);
-			MobileUserRegistration.awaitAssociation(mobileDevice);
-			throw new IllegalStateException("Access point " + sourceAp.getName()
-				+ " has no server cloudlet for entering user " + mobileDevice.getName());
-		}
-		if (mobileDevice.getSourceServerCloudlet() != null
-			&& mobileDevice.getSourceServerCloudlet() != sourceAp.getServerCloudlet()) {
-			mobileDevice.getSourceServerCloudlet()
-				.desconnectServerCloudletSmartThing(mobileDevice);
-		}
-		if (mobileDevice.getSourceServerCloudlet() == null) {
-			sourceAp.getServerCloudlet().connectServerCloudletSmartThing(mobileDevice);
-		}
 		LogMobile.debug("MobileController.java", mobileDevice.getName()
 			+ " connected to access point " + sourceAp.getName()
 			+ " and server cloudlet "
@@ -510,42 +473,16 @@ public class MobileController extends SimEntity {
 		if (mobileDevice.getVmMobileDevice() == null) {
 			registerMobileUser(mobileDevice);
 		}
-		MobileUserRegistration.activatePeripherals(mobileDevice);
-		if (previousState == MobileDeviceLifecycle.DISCONNECTED) {
-			MyStatistics.getInstance().finalWithoutConnection(
-				mobileDevice.getMyId(), CloudSim.clock());
-		}
+		associationService.activate(mobileDevice, previousState);
 		return true;
 	}
 
 	private void disconnectMobileUser(MobileDevice mobileDevice) {
-		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
-			return;
-		}
-		boolean wasActive = mobileDevice.getLifecycleState()
-			== MobileDeviceLifecycle.ACTIVE;
-		MobileUserRegistration.disconnectNetwork(mobileDevice);
-		MobileUserRegistration.awaitAssociation(mobileDevice);
-		if (wasActive) {
-			MyStatistics.getInstance().startWithoutConnetion(
-				mobileDevice.getMyId(), CloudSim.clock());
-		}
+		associationService.disconnect(mobileDevice);
 	}
 
 	private void finishMobileUser(MobileDevice mobileDevice) {
-		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
-			return;
-		}
-		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.DISCONNECTED) {
-			MyStatistics.getInstance().finalWithoutConnection(
-				mobileDevice.getMyId(), CloudSim.clock());
-		}
-		NetworkSlicing.releaseBandwidth(mobileDevice);
-		mobileDevice.setMigStatus(false);
-		mobileDevice.setMigStatusLive(false);
-		mobileDevice.setPostCopyStatus(false);
-		mobileDevice.setLockedToMigration(false);
-		NextStep.finishMobility(mobileDevice);
+		associationService.finish(mobileDevice);
 	}
 
 	private void registerMobileUser(MobileDevice mobileDevice) {
@@ -592,17 +529,6 @@ public class MobileController extends SimEntity {
 		processAppSubmit(application);
 		MobileUserRegistration.activatePeripherals(mobileDevice);
 		registerActiveSensors(mobileDevice);
-	}
-
-	private double remainingLiveMigrationBytes(MobileDevice smartThing,
-		double baselineBandwidthBitsPerSecond) {
-		double elapsedMillis = Math.max(0.0,
-			CloudSim.clock() - smartThing.getTimeStartLiveMigration());
-		double copiedBytes = baselineBandwidthBitsPerSecond * elapsedMillis
-			/ (8.0 * 1000.0);
-		double totalBytes = smartThing.getMigrationTechnique()
-			.getTransferSizeBytes(smartThing.getVmMobileDevice().getSize());
-		return Math.max(0.0, totalBytes - copiedBytes);
 	}
 
 	protected void checkNewStep(MobileDevice st) {
@@ -668,7 +594,8 @@ public class MobileController extends SimEntity {
 											st.getVmLocalServerCloudlet(),
 											st.getDestinationServerCloudlet(), st.getNetworkSliceId());
 										double remainingTransferBytes =
-											remainingLiveMigrationBytes(st, baselineBandwidth);
+										migrationCoordinator.remainingLiveMigrationBytes(
+											st, baselineBandwidth, CloudSim.clock());
 										if (remainingTransferBytes == 0.0) {
 											remainingTransferBytes = MigrationTransferSpec
 												.mebibytesToBytes(st.getVmMobileDevice().getHost()
@@ -756,333 +683,8 @@ public class MobileController extends SimEntity {
 	public void shutdownEntity() {
 	}
 
-	private void printCostDetails() {
-	}
-
-	private FogDevice getCloud() {
-		for (FogDevice dev : getServerCloudlets())
-			if (dev.getName().equals("cloud"))
-				return dev;
-		return null;
-	}
-
 	public void printResults(String a, String filename) {
-		try (PrintWriter out1 = RunOutputManager.getInstance()
-			.newSummaryPrintWriter(filename, true))
-		{
-			out1.println(a);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	private void printPowerDetails(SimulationMetricsSnapshot metrics) {
-		System.out.println("=========================================");
-		System.out.println("CLOUDLETS ENERGY CONSUMPTION");
-		System.out.println("=========================================");
-		for (SimulationMetricsSnapshot.DeviceEnergy cloudlet : metrics.getCloudlets()) {
-			System.out.println(cloudlet.getName() + ": Power = "
-				+ cloudlet.getPower());
-			System.out.println(cloudlet.getName() + ": Energy Consumed = "
-				+ cloudlet.getEnergy());
-		}
-		System.out.println("Total cloudlet energy: " + metrics.getTotalCloudletEnergy()
-			+ " Mean: " + metrics.getAverageCloudletEnergy());
-		printResults(String.valueOf(metrics.getAverageCloudletEnergy()),
-			"averageEnergyHistoryDevice.txt");
-		printResults(
-			String.valueOf(metrics.getTotalCloudletEnergy()) + "\t"
-				+ String.valueOf(metrics.getAverageCloudletEnergy()),
-			"results.txt");
-		System.out.println("=========================================");
-		System.out.println("AP DEVICES ENERGY CONSUMPTION");
-		System.out.println("=========================================");
-		for (SimulationMetricsSnapshot.DeviceEnergy accessPoint
-			: metrics.getAccessPoints()) {
-			System.out.println(accessPoint.getName() + ": Energy Consumed = "
-				+ accessPoint.getEnergy());
-		}
-		System.out.println("Total AP energy: " + metrics.getTotalAccessPointEnergy()
-			+ " Mean: " + metrics.getAverageAccessPointEnergy());
-		System.out.println("=========================================");
-		System.out.println("SMARTTHINGS ENERGY CONSUMPTION");
-		System.out.println("=========================================");
-		for (SimulationMetricsSnapshot.DeviceEnergy mobileDevice
-			: metrics.getMobileDevices()) {
-			System.out.println(mobileDevice.getName() + ": Power = "
-				+ mobileDevice.getPower());
-			System.out.println(mobileDevice.getName() + ": Energy Consumed = "
-				+ mobileDevice.getEnergy());
-		}
-		for (Entry<Integer, Double> power : metrics.getMobilePowerHistory().entrySet()) {
-			System.out.println("SmartThing" + power.getKey() + ": Power = "
-				+ power.getValue());
-		}
-		for (Entry<Integer, Double> energy : metrics.getMobileEnergyHistory().entrySet()) {
-			System.out.println("SmartThing" + energy.getKey() + ": Energy Consumed = "
-				+ energy.getValue());
-			printResults(String.valueOf(energy.getValue()),
-				"results.txt");
-		}
-	}
-
-	private String getStringForLoopId(int loopId) {
-		for (String appId : getApplications().keySet()) {
-			Application app = getApplications().get(appId);
-			for (AppLoop loop : app.getLoops()) {
-				if (loop.getLoopId() == loopId)
-					return loop.getModules().toString();
-			}
-		}
-		return "Loop " + loopId;
-	}
-
-	private void printTimeDetails(SimulationMetricsSnapshot metrics) {
-
-		System.out.println("=========================================");
-		System.out.println("============== RESULTS ==================");
-		System.out.println("=========================================");
-		System.out.println("EXECUTION TIME : "
-			+ metrics.getExecutionTimeMillis());
-		System.out.println("=========================================");
-		System.out.println("APPLICATION LOOP DELAYS");
-		System.out.println("=========================================");
-		for (SimulationMetricsSnapshot.LoopTiming loop
-			: metrics.getLoopTimings().values()) {
-			System.out.println(getStringForLoopId(loop.getLoopId()) + " ---> "
-				+ loop.getAverage()
-				+ " MaxExecutionTime: "
-				+ loop.getMaximum());
-			printResults(String.valueOf(loop.getAverage()),
-				"results.txt");
-			printResults(String.valueOf(loop.getMaximum()),
-				"results.txt");
-		}
-		printResults(String.valueOf(metrics.getAverageLoopDelay()),
-			"averageLoopIdToCurrentAverage.txt");
-		printResults(String.valueOf(metrics.getAverageMaximumLoopDelay()),
-			"averageMaxLoopExecutionTime.txt");
-		System.out.println("=========================================");
-		System.out.println("TUPLE CPU EXECUTION DELAY");
-		System.out.println("=========================================");
-
-		for (Entry<String, Double> tupleCpuTime
-			: metrics.getTupleCpuTimes().entrySet()) {
-			System.out.println(tupleCpuTime.getKey() + " ---> "
-				+ tupleCpuTime.getValue());
-		}
-
-		System.out.println("=========================================");
-	}
-
-	private void printNetworkUsageDetails(SimulationMetricsSnapshot metrics) {
-		System.out.println("=========================================");
-		System.out.println("=============NETWORK USAGE===============");
-		System.out.println("=========================================");
-		double transferredMebibytes = metrics.getMigrationTransferredMebibytes();
-		double deviceNetworkUsage = metrics.getTupleUsageByteMilliseconds();
-		System.out.println("VM data transferred in migration (MiB) = "
-			+ transferredMebibytes);
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(transferredMebibytes)) + '\t'
-				+ String.valueOf(transferredMebibytes) + '\t'
-				+ metrics.getSimulationTimeMillis(), "results.txt");
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(transferredMebibytes)) + '\t'
-				+ String.valueOf(transferredMebibytes) + '\t'
-				+ metrics.getSimulationTimeMillis(), "vmsizesended.txt");
-		System.out.println("Device network usage (byte-ms) = " + deviceNetworkUsage);
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(deviceNetworkUsage)) + '\t'
-				+ String.valueOf(deviceNetworkUsage) + '\t'
-				+ metrics.getSimulationTimeMillis(), "results.txt");
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(deviceNetworkUsage)) + '\t'
-				+ String.valueOf(deviceNetworkUsage) + '\t'
-				+ metrics.getSimulationTimeMillis(),
-			"deviceNetworkUsage.txt");
-		System.out.println("Migration network usage (total byte-ms) = "
-			+ metrics.getMigrationUsageByteMilliseconds());
-		System.out.println("Migration network usage (mean byte-ms) = "
-			+ metrics.getMeanMigrationUsageByteMilliseconds());
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(
-				metrics.getMigrationUsageByteMilliseconds()))
-				+ '\t' + String.valueOf(
-					metrics.getMigrationUsageByteMilliseconds()) + '\t'
-				+ metrics.getSimulationTimeMillis(), "results.txt");
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(
-				metrics.getMigrationUsageByteMilliseconds()))
-				+ '\t' + String.valueOf(
-					metrics.getMigrationUsageByteMilliseconds()) + '\t'
-				+ metrics.getSimulationTimeMillis(), "cloudletNetworkUsage.txt");
-		System.out.println("Total network usage (byte-ms) = "
-			+ metrics.getTotalUsageByteMilliseconds());
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(
-				metrics.getTotalUsageByteMilliseconds())) + '\t'
-				+ String.valueOf(metrics.getTotalUsageByteMilliseconds())
-				+ '\t' + metrics.getSimulationTimeMillis(),
-			"results.txt");
-		printResults(
-			String.valueOf(metrics.perSimulationMillisecond(
-				metrics.getTotalUsageByteMilliseconds())) + '\t'
-				+ String.valueOf(metrics.getTotalUsageByteMilliseconds())
-				+ '\t' + metrics.getSimulationTimeMillis(),
-			"totalNetworkUsage.txt");
-	}
-
-	private void printMigrationDetails(SimulationMetricsSnapshot metrics) {
-		SimulationMetricsSnapshot.Statistics statistics = metrics.getStatistics();
-		System.out.println("=========================================");
-		System.out.println("==============MIGRATIONS=================");
-		System.out.println("=========================================");
-		System.out.println("Total of migrations: "
-			+ statistics.getTotalMigrations());
-		System.out.println("Total of handoff: " + statistics.getTotalHandoffs());
-		System.out.println("Different Cloudlets reached along the user's path: "
-			+ statistics.getDistinctCloudletsReached());
-
-		printResults(String.valueOf(statistics.getTotalMigrations()),
-			"results.txt");
-		printResults(String.valueOf(statistics.getTotalHandoffs()), "results.txt");
-
-		printResults(String.valueOf(statistics.getTotalMigrations()),
-			"totalMigrations.txt");
-		printResults(String.valueOf(statistics.getDistinctCloudletsReached()),
-			"totalMyCountLowestLatency.txt");
-		printResults(String.valueOf(statistics.getTotalHandoffs()),
-			"totalHandoff.txt");
-
-		printStatisticsAverages(statistics);
-		System.out.println("***Last time without connection***");
-
-		for (Entry<Integer, Double> observation : statistics.getWithoutConnection()
-			.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + observation.getKey() + ": "
-				+ observation.getValue() + " - Max: "
-				+ statistics.getWithoutConnection()
-					.getMaximumForUser(observation.getKey()));
-		}
-
-		System.out.println("Average of without connection: "
-			+ statistics.getWithoutConnection().getAverage());
-
-		printResults(String.valueOf(statistics.getWithoutConnection().getAverage()),
-			"results.txt");
-
-		System.out.println("***Last time without Vm***");
-
-		for (Entry<Integer, Double> observation : statistics.getWithoutVm()
-			.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + observation.getKey() + ": "
-				+ observation.getValue() + " - Max: "
-				+ statistics.getWithoutVm().getMaximumForUser(observation.getKey()));
-		}
-
-		System.out.println("Average of without Vm: "
-			+ statistics.getWithoutVm().getAverage());
-		printResults(String.valueOf(statistics.getWithoutVm().getAverage()),
-			"results.txt");
-		printResults(String.valueOf(statistics.getWithoutVm().getAverage()),
-			"averageWithoutVmTime.txt");
-
-		System.out.println("===Last delay after connection===");
-		for (Entry<Integer, Double> observation : statistics.getDelayAfterConnection()
-			.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + observation.getKey() + ": "
-				+ observation.getValue() + " - Max: "
-				+ statistics.getDelayAfterConnection()
-					.getMaximumForUser(observation.getKey()));
-		}
-		System.out.println("Average of delay after new Connection: "
-			+ statistics.getDelayAfterConnection().getAverage());
-		printResults(String.valueOf(statistics.getDelayAfterConnection().getAverage()),
-			"results.txt");
-		printResults(String.valueOf(statistics.getDelayAfterConnection().getAverage()),
-			"averageDelayAfterNewConnection.txt");
-
-		System.out.println("---Average of Time of Migrations---");
-		for (Entry<Integer, Double> observation : statistics.getMigrationTime()
-			.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + observation.getKey() + ": "
-				+ observation.getValue() + " - Max: "
-				+ statistics.getMigrationTime()
-					.getMaximumForUser(observation.getKey()));
-		}
-		System.out.println("Average of Time of Migrations: "
-			+ statistics.getMigrationTime().getAverage());
-		printResults(String.valueOf(statistics.getMigrationTime().getAverage()),
-			"results.txt");
-		printResults(String.valueOf(statistics.getMigrationTime().getAverage()),
-			"averageMigrationTime.txt");
-		System.out.println("Highest Time of Migrations: "
-			+ statistics.getMigrationTime().getMaximum());
-		printResults(String.valueOf(statistics.getMigrationTime().getMaximum()),
-			"averageMigrationMaxTime.txt");
-		System.out.println("---Average of Downtime---");
-		for (Entry<Integer, Double> observation : statistics.getDowntime()
-			.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + observation.getKey() + ": "
-				+ observation.getValue() + " - Max: "
-				+ statistics.getDowntime().getMaximumForUser(observation.getKey()));
-		}
-		System.out.println("Average of Downtime: "
-			+ statistics.getDowntime().getAverage());
-		printResults(String.valueOf(statistics.getDowntime().getAverage()),
-			"results.txt");
-		printResults(String.valueOf(statistics.getDowntime().getAverage()),
-			"averageDowntime.txt");
-		System.out.println("Max Downtime: " + statistics.getDowntime().getMaximum());
-		printResults(String.valueOf(statistics.getDowntime().getMaximum()),
-			"averageDowntimeMax.txt");
-		System.out.println("Tuple lost: " + statistics.getLostTuplePercentage() + "%");
-		System.out.println("Tuple lost: " + statistics.getLostTuples());
-		System.out.println("Total tuple: " + statistics.getTotalTuples());
-		printResults(statistics.getLostTuples() + "\t" + statistics.getTotalTuples()
-			+ "\t" + statistics.getLostTuplePercentage(),
-			"tupleLoss.txt");
-
-	}
-
-	private void printStatisticsAverages(
-		SimulationMetricsSnapshot.Statistics statistics) {
-		String suffix = statistics.getOutputLabel();
-		RunOutputManager output = RunOutputManager.getInstance();
-		try (PrintWriter withoutConnection = output.newSummaryPrintWriter(
-			"averages/withoutConnection_" + suffix, true);
-			PrintWriter withoutVm = output.newSummaryPrintWriter(
-				"averages/withoutVM_" + suffix, true);
-			PrintWriter delayAfterConnection = output.newSummaryPrintWriter(
-				"averages/delayAfterConnection_" + suffix, true);
-			PrintWriter migrationTime = output.newSummaryPrintWriter(
-				"averages/timeOfMigration_" + suffix, true);
-			PrintWriter downtime = output.newSummaryPrintWriter(
-				"averages/downtime_" + suffix, true);
-			PrintWriter all = output.newSummaryPrintWriter(
-				"averages/all_" + suffix, true)) {
-			int seedValue = statistics.getSeed();
-			withoutConnection.println(
-				statistics.getWithoutConnection().getAverage() + " " + seedValue);
-			withoutVm.println(statistics.getWithoutVm().getAverage() + " "
-				+ seedValue);
-			delayAfterConnection.println(
-				statistics.getDelayAfterConnection().getAverage() + " " + seedValue);
-			migrationTime.println(statistics.getMigrationTime().getAverage() + " "
-				+ seedValue);
-			downtime.println(statistics.getDowntime().getAverage() + " " + seedValue);
-			all.println(statistics.getWithoutConnection().getAverage() + " "
-				+ statistics.getWithoutVm().getAverage() + " "
-				+ statistics.getDelayAfterConnection().getAverage() + " "
-				+ statistics.getMigrationTime().getAverage() + " "
-				+ statistics.getDowntime().getAverage() + " "
-				+ statistics.getTotalMigrations() + " "
-				+ statistics.getTotalHandoffs() + " " + seedValue);
-		} catch (IOException error) {
-			throw new IllegalStateException(
-				"Could not write simulation statistics averages", error);
-		}
+		resultsService.appendSummary(a, filename);
 	}
 
 	public void submitApplication(Application application, int delay) {

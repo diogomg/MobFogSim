@@ -1,13 +1,10 @@
 package org.fog.vmmobile;
 
-import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -24,8 +21,8 @@ import org.cloudbus.cloudsim.power.PowerHost;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
-import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.cloudbus.cloudsim.util.RunOutputMode;
+import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
@@ -39,7 +36,6 @@ import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileSensor;
 import org.fog.entities.Tuple;
 import org.fog.localization.Coordinate;
-import org.fog.localization.Distances;
 import org.fog.placement.MobileController;
 import org.fog.placement.ModuleMapping;
 import org.fog.policy.AppModuleAllocationPolicy;
@@ -98,6 +94,7 @@ public class AppExample {
 	private static Coordinate coordDevices;
 	private static int seed;
 	private static Random rand;
+	private static final TopologyService TOPOLOGY_SERVICE = new TopologyService();
 	static final boolean CLOUD = true;
 
 	static final int numOfDepts = 1;
@@ -204,7 +201,8 @@ public class AppExample {
 				addServerCloudlet(serverCloudlets, coordDevices, i);
 			}
 		}
-		createServerCloudletsNetwork(getServerCloudlets());
+		TOPOLOGY_SERVICE.createTransportNetwork(getServerCloudlets(),
+			getLatencyBetweenCloudlets(), getRand());
 		for (FogDevice sc : getServerCloudlets()) {
 			for (FogDevice sc1 : getServerCloudlets()) {
 				if (sc.equals(sc1)) {
@@ -226,10 +224,11 @@ public class AppExample {
 			smartThings.get(i).setNetworkSliceId(userSliceAssignments[i]);
 		}
 
-		readMobilityData();
+		TOPOLOGY_SERVICE.loadMobility(getMobilityDirectory(),
+			getMobilityOrderManifest(), getSmartThings());
 		MobileUserRegistration.preparePendingUsers(getSmartThings());
 
-		connectAccessPointsToClosestServerCloudlets(getServerCloudlets(),
+		TOPOLOGY_SERVICE.connectAccessPoints(getServerCloudlets(),
 			getApDevices(), getRand());
 
 		/**
@@ -401,53 +400,6 @@ public class AppExample {
 		setApplicationList(new ArrayList<Application>());
 		setCoordDevices(null);
 		rand = null;
-	}
-
-	private static void readMobilityData() {
-		List<MobilityDataLoader.MobilityTrace> traces = MobilityDataLoader.load(
-			getMobilityDirectory(), getMobilityOrderManifest(), getSmartThings().size());
-
-		for (int i = 0; i < getSmartThings().size(); i++) {
-			MobileDevice smartThing = getSmartThings().get(i);
-			smartThing.setMobilityPath(traces.get(i).getSamples());
-			Coordinate coordinate = new Coordinate();
-			coordinate.setInitialCoordinate(smartThing);
-			saveMobility(smartThing);
-		}
-	}
-
-	private static void saveMobility(MobileDevice st) {
-
-		try (PrintWriter out1 = RunOutputManager.getInstance()
-			.newDetailedPrintWriter(st.getMyId() + "out.txt", true))
-		{
-			out1.println(st.getMyId() + " Position: " + st.getCoord().getCoordX() + ", "
-				+ st.getCoord().getCoordY() + " Direction: " + st.getDirection() + " Speed: "
-				+ st.getSpeed());
-			out1.println("Source AP: " + st.getSourceAp() + " Dest AP: " + st.getDestinationAp()
-				+ " Host: " + st.getHost().getId());
-			out1.println("Local server: null  Apps null Map null");
-			if (st.getDestinationServerCloudlet() == null) {
-				out1.println("Dest server: null Apps: null Map: null");
-			}
-			else {
-				out1.println("Dest server: " + st.getDestinationServerCloudlet().getName()
-					+ " Apps: " + st.getDestinationServerCloudlet().getActiveApplications()
-					+ " Map " + st.getDestinationServerCloudlet().getApplicationMap());
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		try (PrintWriter out = RunOutputManager.getInstance()
-			.newDetailedPrintWriter(st.getMyId() + "route.txt", true))
-		{
-			out.println(st.getMyId() + "\t" + st.getCoord().getCoordX() + "\t"
-				+ st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t" + st.getSpeed()
-				+ "\t" + CloudSim.clock());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	private static void addApDevicesFixed(List<ApDevice> apDevices,
@@ -809,94 +761,6 @@ public class AppExample {
 			}
 		}
 		LogMobile.debug("AppExample.java", "Total of serverCloudlets: " + i);
-	}
-
-	private static void createServerCloudletsNetwork(List<FogDevice> serverCloudlets) {
-		createServerCloudletAdjacency(serverCloudlets);
-
-		// CloudSim models these links as undirected. Register each pair once,
-		// retaining the original lower-triangle order so seeded latency values
-		// remain reproducible.
-		for (int sourceIndex = 0; sourceIndex < serverCloudlets.size(); sourceIndex++) {
-			FogDevice source = serverCloudlets.get(sourceIndex);
-			for (int destinationIndex = 0; destinationIndex < sourceIndex;
-				destinationIndex++) {
-				FogDevice destination = serverCloudlets.get(destinationIndex);
-				int rowDistance = Math.abs(destinationIndex / 12 - sourceIndex / 12);
-				int columnDistance = Math.abs(destinationIndex % 12 - sourceIndex % 12);
-				double bandwidth = Math.min(source.getUplinkBandwidth(),
-					destination.getDownlinkBandwidth());
-				double latency = Math.max(rowDistance, columnDistance)
-					* getLatencyBetweenCloudlets() + getRand().nextDouble();
-				NetworkTopology.addLink(source.getId(), destination.getId(), bandwidth,
-					latency);
-			}
-		}
-	}
-
-	static void connectAccessPointsToClosestServerCloudlets(
-		List<FogDevice> serverCloudlets, List<ApDevice> accessPoints, Random random) {
-		validateServerCloudlets(serverCloudlets);
-		if (accessPoints == null) {
-			throw new IllegalArgumentException("Access point list cannot be null");
-		}
-		if (random == null) {
-			throw new IllegalArgumentException("Random generator cannot be null");
-		}
-
-		for (ApDevice accessPoint : accessPoints) {
-			if (accessPoint == null) {
-				throw new IllegalArgumentException(
-					"Access point list cannot contain null entries");
-			}
-			FogDevice closestServerCloudlet = Distances
-				.findClosestServerCloudletToAp(serverCloudlets, accessPoint)
-				.orElseThrow(() -> new IllegalStateException(
-					"Cannot connect access point without a server cloudlet"));
-			accessPoint.setServerCloudlet(closestServerCloudlet);
-			accessPoint.setParentId(closestServerCloudlet.getId());
-			closestServerCloudlet.setApDevices(accessPoint, Policies.ADD);
-			NetworkTopology.addLink(closestServerCloudlet.getId(),
-				accessPoint.getId(), accessPoint.getDownlinkBandwidth(),
-				random.nextDouble());
-		}
-	}
-
-	/**
-	 * Creates a complete directed adjacency map for every server cloudlet.
-	 * Every source owns a different map and contains every other cloudlet once.
-	 */
-	static void createServerCloudletAdjacency(List<FogDevice> serverCloudlets) {
-		validateServerCloudlets(serverCloudlets);
-		for (FogDevice source : serverCloudlets) {
-			HashMap<FogDevice, Double> adjacency =
-				new HashMap<FogDevice, Double>();
-			for (FogDevice destination : serverCloudlets) {
-				if (source == destination) {
-					continue;
-				}
-				adjacency.put(destination, Math.min(source.getUplinkBandwidth(),
-					destination.getDownlinkBandwidth()));
-			}
-			source.setNetServerCloudlets(adjacency);
-		}
-	}
-
-	private static void validateServerCloudlets(List<FogDevice> serverCloudlets) {
-		if (serverCloudlets == null) {
-			throw new IllegalArgumentException("Server cloudlet list cannot be null");
-		}
-		Set<FogDevice> uniqueCloudlets = new HashSet<FogDevice>();
-		for (FogDevice serverCloudlet : serverCloudlets) {
-			if (serverCloudlet == null) {
-				throw new IllegalArgumentException(
-					"Server cloudlet list cannot contain null entries");
-			}
-			if (!uniqueCloudlets.add(serverCloudlet)) {
-				throw new IllegalArgumentException(
-					"Server cloudlet list cannot contain duplicate devices");
-			}
-		}
 	}
 
 	@SuppressWarnings("unused")

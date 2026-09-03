@@ -24,6 +24,7 @@ import org.junit.Test;
 public class ServerCloudletNetworkTest {
 
 	private static final double DELTA = 0.000001;
+	private final TopologyService topologyService = new TopologyService();
 
 	@Before
 	public void setUp() {
@@ -38,7 +39,7 @@ public class ServerCloudletNetworkTest {
 		FogDevice third = cloudlet("third", 300.0, 250.0);
 		List<FogDevice> cloudlets = Arrays.asList(first, second, third);
 
-		AppExample.createServerCloudletAdjacency(cloudlets);
+		topologyService.createServerCloudletAdjacency(cloudlets);
 
 		assertNotSame(first.getNetServerCloudlets(), second.getNetServerCloudlets());
 		assertNotSame(first.getNetServerCloudlets(), third.getNetServerCloudlets());
@@ -62,7 +63,7 @@ public class ServerCloudletNetworkTest {
 		FogDevice first = cloudlet("first", 100.0, 100.0);
 		FogDevice second = cloudlet("second", 100.0, 100.0);
 		FogDevice third = cloudlet("third", 100.0, 100.0);
-		AppExample.createServerCloudletAdjacency(
+		topologyService.createServerCloudletAdjacency(
 			Arrays.asList(first, second, third));
 
 		first.getNetServerCloudlets().remove(third);
@@ -93,7 +94,7 @@ public class ServerCloudletNetworkTest {
 	public void oneCloudletHasAnEmptyAdjacencyMap() {
 		FogDevice only = cloudlet("only", 100.0, 100.0);
 
-		AppExample.createServerCloudletAdjacency(Arrays.asList(only));
+		topologyService.createServerCloudletAdjacency(Arrays.asList(only));
 
 		assertTrue(only.getNetServerCloudlets().isEmpty());
 	}
@@ -101,7 +102,7 @@ public class ServerCloudletNetworkTest {
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsDuplicateCloudlets() {
 		FogDevice duplicate = cloudlet("duplicate", 100.0, 100.0);
-		AppExample.createServerCloudletAdjacency(
+		topologyService.createServerCloudletAdjacency(
 			Arrays.asList(duplicate, duplicate));
 	}
 
@@ -111,12 +112,12 @@ public class ServerCloudletNetworkTest {
 		cloudlets.add(cloudlet("valid", 100.0, 100.0));
 		cloudlets.add(null);
 
-		AppExample.createServerCloudletAdjacency(cloudlets);
+		topologyService.createServerCloudletAdjacency(cloudlets);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsNullCloudletLists() {
-		AppExample.createServerCloudletAdjacency(null);
+		topologyService.createServerCloudletAdjacency(null);
 	}
 
 	@Test
@@ -126,7 +127,7 @@ public class ServerCloudletNetworkTest {
 		ApDevice accessPoint = new ApDevice("accessPoint", 0, 0, 1800);
 		accessPoint.setDownlinkBandwidth(1000.0);
 
-		AppExample.connectAccessPointsToClosestServerCloudlets(
+		topologyService.connectAccessPoints(
 			Arrays.asList(farther, closest), Arrays.asList(accessPoint),
 			new Random(1));
 
