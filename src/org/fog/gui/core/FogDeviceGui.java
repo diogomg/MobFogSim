@@ -18,7 +18,7 @@ public class FogDeviceGui extends Node {
 
 	public FogDeviceGui(String name, long mips, int ram, long upBw, long downBw, int level,
 		double rate) {
-		super(name, "FOG_DEVICE");
+		super(name, NodeType.FOG_DEVICE);
 		this.name = name;
 		this.mips = mips;
 		this.ram = ram;

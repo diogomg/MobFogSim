@@ -57,19 +57,21 @@ public class GraphView extends JPanel {
 	private Map<Node, List<Node>> createChildrenMap() {
 		Map<Node, List<Node>> childrenMap = new HashMap<Node, List<Node>>();
 		for (Node node : graph.getAdjacencyList().keySet()) {
-			if (node.getType().equals("FOG_DEVICE") && !childrenMap.containsKey(node))
+			if (node.getNodeType() == NodeType.FOG_DEVICE
+				&& !childrenMap.containsKey(node))
 				childrenMap.put(node, new ArrayList<Node>());
 			List<Edge> edgeList = graph.getAdjacencyList().get(node);
 
 			for (Edge edge : edgeList) {
 				Node neighbour = edge.getNode();
-				if (node.getType().equals("SENSOR") || node.getType().equals("ACTUATOR")) {
+				if (node.getNodeType() == NodeType.SENSOR
+					|| node.getNodeType() == NodeType.ACTUATOR) {
 					if (!childrenMap.containsKey(neighbour)) {
 						childrenMap.put(neighbour, new ArrayList<Node>());
 					}
 					childrenMap.get(neighbour).add(node);
-				} else if (neighbour.getType().equals("SENSOR")
-					|| neighbour.getType().equals("ACTUATOR")) {
+				} else if (neighbour.getNodeType() == NodeType.SENSOR
+					|| neighbour.getNodeType() == NodeType.ACTUATOR) {
 					if (!childrenMap.containsKey(node)) {
 						childrenMap.put(node, new ArrayList<Node>());
 					}
@@ -112,7 +114,7 @@ public class GraphView extends JPanel {
 				Map<Integer, List<Node>> levelMap = new HashMap<Integer, List<Node>>();
 				List<Node> endpoints = new ArrayList<Node>();
 				for (Node node : graph.getAdjacencyList().keySet()) {
-					if (node.getType().equals("FOG_DEVICE")) {
+					if (node.getNodeType() == NodeType.FOG_DEVICE) {
 						int level = ((FogDeviceGui) node).getLevel();
 						if (!levelMap.containsKey(level))
 							levelMap.put(level, new ArrayList<Node>());
@@ -122,7 +124,8 @@ public class GraphView extends JPanel {
 							maxLevel = level;
 						if (level < minLevel)
 							minLevel = level;
-					} else if (node.getType().equals("SENSOR") || node.getType().equals("ACTUATOR")) {
+					} else if (node.getNodeType() == NodeType.SENSOR
+						|| node.getNodeType() == NodeType.ACTUATOR) {
 						endpoints.add(node);
 					}
 				}
@@ -158,8 +161,9 @@ public class GraphView extends JPanel {
 				}
 
 				for (Node node : graph.getAdjacencyList().keySet()) {
-					if (node.getType().equals("FOG_DEVICE") || node.getType().equals("SENSOR")
-						|| node.getType().equals("ACTUATOR"))
+					if (node.getNodeType() == NodeType.FOG_DEVICE
+						|| node.getNodeType() == NodeType.SENSOR
+						|| node.getNodeType() == NodeType.ACTUATOR)
 						continue;
 				}
 
@@ -175,47 +179,47 @@ public class GraphView extends JPanel {
 
 					Coordinates wrapper = entry.getValue();
 					String nodeName = entry.getKey().getName();
-					switch (entry.getKey().getType()) {
-					case "host":
+					switch (entry.getKey().getNodeType()) {
+					case HOST:
 						g.drawImage(imgHost, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						break;
-					case "APP_MODULE":
+					case APP_MODULE:
 						g.drawImage(imgAppModule, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,
 							wrapper.getY() + nodeHeight);
 						break;
-					case "core":
-					case "edge":
+					case CORE_SWITCH:
+					case EDGE_SWITCH:
 						g.drawImage(imgSwitch, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						break;
-					case "FOG_DEVICE":
+					case FOG_DEVICE:
 						g.drawImage(imgHost, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,
 							wrapper.getY() + nodeHeight);
 						break;
-					case "SENSOR":
+					case SENSOR:
 						g.drawImage(imgSensor, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,
 							wrapper.getY() + nodeHeight);
 						break;
-					case "ACTUATOR":
+					case ACTUATOR:
 						g.drawImage(imgActuator, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,
 							wrapper.getY() + nodeHeight);
 						break;
-					case "SENSOR_MODULE":
+					case SENSOR_MODULE:
 						g.drawImage(imgSensorModule, wrapper.getX() - nodeWidth / 2, wrapper.getY()
 							- nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,
 							wrapper.getY() + nodeHeight);
 						break;
-					case "ACTUATOR_MODULE":
+					case ACTUATOR_MODULE:
 						g.drawImage(imgActuatorModule, wrapper.getX() - nodeWidth / 2,
 							wrapper.getY() - nodeHeight / 2, nodeWidth, nodeHeight, this);
 						g.drawString(nodeName, wrapper.getX() - f.stringWidth(nodeName) / 2,

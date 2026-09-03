@@ -11,7 +11,8 @@ import org.junit.Test;
 public class MigrationTransferSchedulerTest {
 
 	private static final double DELTA = 0.000001;
-	private static final String LINK = "source->destination";
+	private static final TransportLinkId LINK =
+		TransportLinkId.directed(100, 101);
 
 	@Test
 	public void dynamicTransfersAreRescheduledWhenAnotherTransferStartsAndFinishes() {

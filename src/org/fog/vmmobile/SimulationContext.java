@@ -72,7 +72,7 @@ public final class SimulationContext implements AutoCloseable {
 			MyStatistics.setInstance(context.statistics);
 			NetworkUsageMonitor.useMetrics(context.networkMetrics);
 			NetworkSlicing.useRuntimeState(context.slicingState);
-			VmDestinationPolicy.configure(configuration.getVmDestinationPolicy());
+			VmDestinationPolicy.configure(configuration.getVmDestination());
 			context.outputManager = RunOutputManager.initialize(
 				configuration.getOutputDirectory(), configuration.getOutputMode());
 			AppExample.useSimulationContext(context);
@@ -183,7 +183,8 @@ public final class SimulationContext implements AutoCloseable {
 			TimeKeeper.setInstance(null);
 			MyStatistics.setInstance(null);
 			RunOutputManager.resetToDefault();
-			VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
+			VmDestinationPolicy.configure(
+				VmDestinationPolicy.Destination.HYBRID);
 			activeContext = null;
 			closed = true;
 		}

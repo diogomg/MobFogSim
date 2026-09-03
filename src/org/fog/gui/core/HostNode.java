@@ -15,6 +15,11 @@ public class HostNode extends Node {
 	public HostNode() {}
 
 	public HostNode(String name, String type, long pes, long mips, int ram, long storage, long bw) {
+		this(name, NodeType.fromExternal(type), pes, mips, ram, storage, bw);
+	}
+
+	public HostNode(String name, NodeType type, long pes, long mips, int ram,
+		long storage, long bw) {
 		super(name, type);
 		this.pes = pes;
 		this.mips = mips;

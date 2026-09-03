@@ -21,6 +21,7 @@ import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
+import org.fog.vmmobile.policy.MovementDirection;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -29,7 +30,7 @@ import org.cloudbus.cloudsim.Vm;
 
 public class MobileDevice extends FogDevice {
 
-	private int direction; // NONE, NORTH, SOUTH, ...
+	private MovementDirection direction = MovementDirection.NONE;
 	private int speed; // in m/s
 	protected Coordinate futureCoord;// = new Coordinate();//myiFogSim
 	private FogDevice sourceServerCloudlet;
@@ -141,9 +142,14 @@ public class MobileDevice extends FogDevice {
 	}
 
 	public MobileDevice(String name, int coordX, int coordY, int id, int dir, int sp) {
+		this(name, coordX, coordY, id, MovementDirection.fromLegacy(dir), sp);
+	}
+
+	public MobileDevice(String name, int coordX, int coordY, int id,
+		MovementDirection direction, int sp) {
 
 		super(name, coordX, coordY, id);
-		setDirection(dir);
+		setMovementDirection(direction);
 		setSpeed(sp);
 		setSourceServerCloudlet(null);
 		setDestinationServerCloudlet(null);
@@ -176,13 +182,26 @@ public class MobileDevice extends FogDevice {
 		double uplinkLatency, double d, int coordX, int coordY, int id, int dir, int sp,
 		float maxServiceValue, double vmSize
 		, VmMigrationTechnique migrationTechnique) throws Exception {
+		this(name, characteristics, vmAllocationPolicy, storageList,
+			schedulingInterval, uplinkBandwidth, downlinkBandwidth, uplinkLatency,
+			d, coordX, coordY, id, MovementDirection.fromLegacy(dir), sp,
+			maxServiceValue, vmSize, migrationTechnique);
+	}
+
+	public MobileDevice(String name, FogDeviceCharacteristics characteristics,
+		AppModuleAllocationPolicy vmAllocationPolicy,
+		LinkedList<Storage> storageList, double schedulingInterval,
+		double uplinkBandwidth, double downlinkBandwidth, double uplinkLatency,
+		double d, int coordX, int coordY, int id, MovementDirection direction,
+		int sp, float maxServiceValue, double vmSize,
+		VmMigrationTechnique migrationTechnique) throws Exception {
 
 		super(name, characteristics, vmAllocationPolicy
 			, storageList, schedulingInterval
 			, uplinkBandwidth
 			, downlinkBandwidth
 			, uplinkLatency, sp, coordX, coordY, id);
-		setDirection(dir);
+		setMovementDirection(direction);
 		setSpeed(sp);
 		setSourceServerCloudlet(null);
 		setDestinationServerCloudlet(null);
@@ -212,7 +231,7 @@ public class MobileDevice extends FogDevice {
 	@Override
 	public String toString() {
 		return this.getName() + "[coordX=" + this.getCoord().getCoordX() + ", coordY="
-			+ this.getCoord().getCoordY() + ", direction=" + direction + ", speed=" + speed
+			+ this.getCoord().getCoordY() + ", direction=" + getDirection() + ", speed=" + speed
 			+ ", sourceCloudletServer=" + sourceServerCloudlet + ", destinationCloudletServer="
 			+ destinationServerCloudlet + ", sourceAp=" + sourceAp + ", destinationAp="
 			+ destinationAp + ", vmMobileDevice=" + vmMobileDevice + ", migTime=" + migTime
@@ -426,10 +445,21 @@ public class MobileDevice extends FogDevice {
 	}
 
 	public int getDirection() {
-		return direction;
+		return direction.legacyValue();
 	}
 
 	public void setDirection(int direction) {
+		setMovementDirection(MovementDirection.fromLegacy(direction));
+	}
+
+	public MovementDirection getMovementDirection() {
+		return direction;
+	}
+
+	public void setMovementDirection(MovementDirection direction) {
+		if (direction == null) {
+			throw new IllegalArgumentException("Movement direction cannot be null");
+		}
 		this.direction = direction;
 	}
 

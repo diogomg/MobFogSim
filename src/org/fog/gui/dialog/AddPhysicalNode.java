@@ -23,6 +23,7 @@ import javax.swing.UIManager;
 
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.Node;
+import org.fog.gui.core.NodeType;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.SwitchNode;
 import org.fog.gui.core.HostNode;
@@ -91,8 +92,9 @@ public class AddPhysicalNode extends JDialog {
 				} else if (cType.getSelectedIndex() < 0) {
 					prompt("Please type VM Type", "Error");
 				} else {
-					String type = (String) cType.getSelectedItem();
-					if ("host" == getType(type)) {
+					NodeType type = NodeType.fromExternal(
+						(String) cType.getSelectedItem());
+					if (type == NodeType.HOST) {
 						if (top1.getText() == null || top1.getText().length() < 1) {
 							prompt("Please type pes", "Error");
 						} else if (top2.getText() == null || top2.getText().length() < 1) {
@@ -125,7 +127,8 @@ public class AddPhysicalNode extends JDialog {
 								setVisible(false);
 							}
 						}
-					} else if ("switch" == getType(type)) {
+					} else if (type == NodeType.CORE_SWITCH
+						|| type == NodeType.EDGE_SWITCH) {
 						if (top1.getText() == null || top1.getText().length() < 1) {
 							prompt("Please type Iops", "Error");
 						} else if (top2.getText() == null || top2.getText().length() < 1) {
@@ -168,10 +171,11 @@ public class AddPhysicalNode extends JDialog {
 		return buttonPanel;
 	}
 
-	private void updatePanel(String type) {
+	private void updatePanel(String externalType) {
+		NodeType type = NodeType.fromExternal(externalType);
 		switch (type) {
-		case "core":
-		case "edge":
+		case CORE_SWITCH:
+		case EDGE_SWITCH:
 			lop1.setText("Iops: ");
 			lop2.setText("Upports: ");
 			lop3.setText("Downports: ");
@@ -183,7 +187,7 @@ public class AddPhysicalNode extends JDialog {
 			top4.setVisible(false);
 			break;
 
-		case "host":
+		case HOST:
 			lop1.setText("Pes: ");
 			lop2.setText("Mips: ");
 			lop3.setText("Ram: ");
@@ -197,15 +201,6 @@ public class AddPhysicalNode extends JDialog {
 			top4.setText("");
 			break;
 		}
-	}
-
-	private String getType(String type) {
-		if ("core" == type || "edge" == type) {
-			return "switch";
-		} else if ("host" == type) {
-			return "host";
-		}
-		return "";
 	}
 
 	private JPanel createInputPanelArea() {

@@ -9,6 +9,7 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
+import org.fog.vmmobile.policy.MovementDirection;
 
 public final class Distances {
 
@@ -79,23 +80,27 @@ public final class Distances {
 	}
 
 	public static int findPosition(double theta) {
+		return findMovementDirection(theta).legacyValue();
+	}
+
+	public static MovementDirection findMovementDirection(double theta) {
 		if ((theta >= 0 && theta <= 22.5) || (theta > 337.5 && theta <= 360))
-			return Directions.EAST;
+			return MovementDirection.EAST;
 		else if (theta > 22.5 && theta <= 67.5)
-			return Directions.SOUTHEAST;
+			return MovementDirection.SOUTHEAST;
 		else if (theta > 67.5 && theta <= 112.5)
-			return Directions.SOUTH;
+			return MovementDirection.SOUTH;
 		else if (theta > 112.5 && theta <= 157.5)
-			return Directions.SOUTHWEST;
+			return MovementDirection.SOUTHWEST;
 		else if (theta > 157.5 && theta <= 202.5)
-			return Directions.WEST;
+			return MovementDirection.WEST;
 		else if (theta > 202.5 && theta <= 247.5)
-			return Directions.NORTHWEST;
+			return MovementDirection.NORTHWEST;
 		else if (theta > 247.5 && theta <= 292.5)
-			return Directions.NORTH;
+			return MovementDirection.NORTH;
 		else if (theta > 292.5 && theta <= 337.5)
-			return Directions.NORTHEAST;
-		return Directions.NONE;
+			return MovementDirection.NORTHEAST;
+		return MovementDirection.NONE;
 	}
 
 	public static double checkDistance(Coordinate firstCoord, Coordinate secondCoord) {

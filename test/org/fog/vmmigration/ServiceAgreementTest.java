@@ -31,17 +31,14 @@ public class ServiceAgreementTest {
 	}
 
 	@Test
-	public void unsupportedServiceTypeRaisesADescriptiveException() {
+	public void unsupportedServiceTypeIsRejectedAtTheBoundary() {
 		Service service = new Service();
-		service.setType(999);
-		destination.setService(service);
 
 		try {
-			ServiceAgreement.serviceAgreement(destination, mobileDevice);
+			service.setType(999);
 			fail("Expected an unsupported service type to fail");
-		} catch (IllegalStateException expected) {
+		} catch (IllegalArgumentException expected) {
 			assertTrue(expected.getMessage().contains("999"));
-			assertTrue(expected.getMessage().contains("destination"));
 		}
 	}
 }

@@ -1,11 +1,13 @@
 package org.fog.localization;
 
+import org.fog.vmmobile.policy.MovementDirection;
+
 public class DiscoverLocalization {
 
 	private static int coordX;
 	private static int coordY;
 	private static double theta;
-	private static int direction;
+	private static MovementDirection direction = MovementDirection.NONE;
 
 	public DiscoverLocalization() {
 		// TODO Auto-generated constructor stub
@@ -23,6 +25,11 @@ public class DiscoverLocalization {
 	 * @return - It is a regional (NORTH, SOUTH, EAST... )
 	 */
 	public static int discoverLocal(Coordinate firstCoord, Coordinate secondCoord) {
+		return discoverDirection(firstCoord, secondCoord).legacyValue();
+	}
+
+	public static MovementDirection discoverDirection(Coordinate firstCoord,
+		Coordinate secondCoord) {
 		// first becomes the coord (0,0) and the second becomes a new position -
 		// review this comment
 		// Because the second is in relative position from first
@@ -33,7 +40,7 @@ public class DiscoverLocalization {
 		setCoordY((firstCoord.getCoordY() - secondCoord.getCoordY()) * (-1));
 		setTheta(Distances.findTheta(getCoordX(), getCoordY()));
 		// verifying the relative position between firstCoord and secondCoord
-		return Distances.findPosition(getTheta());
+		return Distances.findMovementDirection(getTheta());
 	}
 
 	public static int getCoordX() {
@@ -61,10 +68,21 @@ public class DiscoverLocalization {
 	}
 
 	public static int getDirection() {
-		return direction;
+		return direction.legacyValue();
 	}
 
 	public static void setDirection(int direction) {
+		setMovementDirection(MovementDirection.fromLegacy(direction));
+	}
+
+	public static MovementDirection getMovementDirection() {
+		return direction;
+	}
+
+	public static void setMovementDirection(MovementDirection direction) {
+		if (direction == null) {
+			throw new IllegalArgumentException("Movement direction cannot be null");
+		}
 		DiscoverLocalization.direction = direction;
 	}
 

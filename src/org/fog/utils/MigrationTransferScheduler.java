@@ -97,7 +97,7 @@ final class MigrationTransferScheduler {
 
 	private static final class Transfer {
 		private final int id;
-		private final String link;
+		private final TransportLinkId link;
 		private final int sliceId;
 		private final double startedAt;
 		private final double transferBytes;
@@ -106,7 +106,7 @@ final class MigrationTransferScheduler {
 		private long generation;
 		private double completionTime;
 
-		private Transfer(int id, String link, int sliceId, double transferBytes,
+		private Transfer(int id, TransportLinkId link, int sliceId, double transferBytes,
 			double startedAt) {
 			this.id = id;
 			this.link = link;
@@ -132,7 +132,8 @@ final class MigrationTransferScheduler {
 	private final double[] percentages;
 	private final boolean slicingEnabled;
 	private final boolean dynamicBorrowing;
-	private final Map<String, LinkState> links = new HashMap<String, LinkState>();
+	private final Map<TransportLinkId, LinkState> links =
+		new HashMap<TransportLinkId, LinkState>();
 	private final Map<Integer, Transfer> transfers = new HashMap<Integer, Transfer>();
 	private long nextGeneration = 1L;
 
@@ -143,13 +144,14 @@ final class MigrationTransferScheduler {
 		this.dynamicBorrowing = dynamicBorrowing;
 	}
 
-	List<Schedule> start(int transferId, String link, int sliceId,
+	List<Schedule> start(int transferId, TransportLinkId link, int sliceId,
 		double transferBytes,
 		double physicalBandwidth, double now) {
 		validateStart(transferId, link, sliceId, transferBytes,
 			physicalBandwidth, now);
 
-		Set<String> affectedLinks = new LinkedHashSet<String>();
+		Set<TransportLinkId> affectedLinks =
+			new LinkedHashSet<TransportLinkId>();
 		Transfer previous = transfers.remove(transferId);
 		if (previous != null) {
 			LinkState previousLink = links.get(previous.link);
@@ -194,7 +196,8 @@ final class MigrationTransferScheduler {
 		transfers.remove(transferId);
 		double duration = now - transfer.startedAt;
 
-		Set<String> affectedLinks = new LinkedHashSet<String>();
+		Set<TransportLinkId> affectedLinks =
+			new LinkedHashSet<TransportLinkId>();
 		affectedLinks.add(transfer.link);
 		return new Completion(true, transferId, duration,
 			transfer.transferBytes,
@@ -211,7 +214,8 @@ final class MigrationTransferScheduler {
 		advance(linkState, now);
 		linkState.transfers.remove(transferId);
 
-		Set<String> affectedLinks = new LinkedHashSet<String>();
+		Set<TransportLinkId> affectedLinks =
+			new LinkedHashSet<TransportLinkId>();
 		affectedLinks.add(transfer.link);
 		return rebalance(affectedLinks, now);
 	}
@@ -220,9 +224,10 @@ final class MigrationTransferScheduler {
 		return transfers.containsKey(transferId);
 	}
 
-	private List<Schedule> rebalance(Set<String> affectedLinks, double now) {
+	private List<Schedule> rebalance(Set<TransportLinkId> affectedLinks,
+		double now) {
 		List<Schedule> schedules = new ArrayList<Schedule>();
-		for (String link : affectedLinks) {
+		for (TransportLinkId link : affectedLinks) {
 			LinkState linkState = links.get(link);
 			if (linkState == null) {
 				continue;
@@ -307,12 +312,12 @@ final class MigrationTransferScheduler {
 		linkState.lastUpdated = now;
 	}
 
-	private void validateStart(int transferId, String link, int sliceId,
+	private void validateStart(int transferId, TransportLinkId link, int sliceId,
 		double transferBytes, double physicalBandwidth, double now) {
 		if (transferId < 0) {
 			throw new IllegalArgumentException("Transfer ID cannot be negative");
 		}
-		if (link == null || link.trim().isEmpty()) {
+		if (link == null) {
 			throw new IllegalArgumentException("A transfer requires a physical link");
 		}
 		if (sliceId < 0 || sliceId >= percentages.length) {

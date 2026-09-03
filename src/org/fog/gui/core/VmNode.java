@@ -14,6 +14,11 @@ public class VmNode extends Node {
 	public VmNode() {}
 
 	public VmNode(String name, String type, long size, int pes, long mips, int ram) {
+		this(name, NodeType.fromExternal(type), size, pes, mips, ram);
+	}
+
+	public VmNode(String name, NodeType type, long size, int pes, long mips,
+		int ram) {
 		super(name, type);
 		this.size = size;
 		this.pes = pes;

@@ -11,7 +11,7 @@ public class ActuatorModule extends Node {
 	public ActuatorModule() {}
 
 	public ActuatorModule(String actuatorType) {
-		super(actuatorType, "ACTUATOR_MODULE");
+		super(actuatorType, NodeType.ACTUATOR_MODULE);
 		setActuatorType(actuatorType);
 	}
 

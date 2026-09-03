@@ -48,16 +48,20 @@ import org.fog.vmmobile.SimulationContext;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MigrationStrategyPolicy;
+import org.fog.vmmobile.policy.MembershipAction;
 import org.fog.scheduler.TupleScheduler;
 
 public class MobileController extends SimEntity {
 	private static boolean migrationAble;
-	private static int migPointPolicy;
+	private static MigrationPointPolicy migPointPolicy = MigrationPointPolicy.FIXED;
 
 	private static int stepPolicy; // Quantity of steps in the nextStep Function
 	private static Coordinate coordDevices;
 
-	private static int migStrategyPolicy;
+	private static MigrationStrategyPolicy migStrategyPolicy =
+		MigrationStrategyPolicy.LOWEST_LATENCY;
 	private static int seed;
 
 	private static List<FogDevice> serverCloudlets;
@@ -86,10 +90,10 @@ public class MobileController extends SimEntity {
 	/** Clears compatibility state before and after an embedded simulation run. */
 	public static void resetRunState() {
 		migrationAble = false;
-		migPointPolicy = 0;
+		migPointPolicy = MigrationPointPolicy.FIXED;
 		stepPolicy = 0;
 		coordDevices = null;
-		migStrategyPolicy = 0;
+		migStrategyPolicy = MigrationStrategyPolicy.LOWEST_LATENCY;
 		seed = 0;
 		serverCloudlets = new ArrayList<FogDevice>();
 		smartThings = new ArrayList<MobileDevice>();
@@ -112,6 +116,18 @@ public class MobileController extends SimEntity {
 		List<MobileDevice> smartThings, List<FogBroker> brokers, ModuleMapping moduleMapping
 		, int migPointPolicy, int migStrategyPolicy, int stepPolicy, Coordinate coordDevices,
 		int seed, boolean migrationAble) {
+		this(name, serverCloudlets, apDevices, smartThings, brokers, moduleMapping,
+			MigrationPointPolicy.fromLegacy(migPointPolicy),
+			MigrationStrategyPolicy.fromLegacy(migStrategyPolicy), stepPolicy,
+			coordDevices, seed, migrationAble);
+	}
+
+	public MobileController(String name, List<FogDevice> serverCloudlets,
+		List<ApDevice> apDevices, List<MobileDevice> smartThings,
+		List<FogBroker> brokers, ModuleMapping moduleMapping,
+		MigrationPointPolicy migPointPolicy,
+		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
+		Coordinate coordDevices, int seed, boolean migrationAble) {
 		super(name);
 		this.resultsService = new SimulationResultsService(
 			RunOutputManager.getInstance());
@@ -131,8 +147,8 @@ public class MobileController extends SimEntity {
 		setSmartThings(smartThings);
 		setBrokerList(brokers);
 		setBrokersByMobileId(indexBrokersByMobileId(smartThings, brokers));
-		setMigPointPolicy(migPointPolicy);
-		setMigStrategyPolicy(migStrategyPolicy);
+		setMigrationPointPolicy(migPointPolicy);
+		setMigrationStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
@@ -146,6 +162,17 @@ public class MobileController extends SimEntity {
 	public MobileController(String name, List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, List<MobileDevice> smartThings,
 		int migPointPolicy, int migStrategyPolicy, int stepPolicy,
+		Coordinate coordDevices, int seed) {
+		this(name, serverCloudlets, apDevices, smartThings,
+			MigrationPointPolicy.fromLegacy(migPointPolicy),
+			MigrationStrategyPolicy.fromLegacy(migStrategyPolicy), stepPolicy,
+			coordDevices, seed);
+	}
+
+	public MobileController(String name, List<FogDevice> serverCloudlets,
+		List<ApDevice> apDevices, List<MobileDevice> smartThings,
+		MigrationPointPolicy migPointPolicy,
+		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
 		Coordinate coordDevices, int seed) {
 		super(name);
 		this.resultsService = new SimulationResultsService(
@@ -166,8 +193,8 @@ public class MobileController extends SimEntity {
 		setSmartThings(smartThings);
 		setBrokerList(new ArrayList<FogBroker>());
 		setBrokersByMobileId(new HashMap<Integer, FogBroker>());
-		setMigPointPolicy(migPointPolicy);
-		setMigStrategyPolicy(migStrategyPolicy);
+		setMigrationPointPolicy(migPointPolicy);
+		setMigrationStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
@@ -515,7 +542,7 @@ public class MobileController extends SimEntity {
 		mobileDevice.setVmLocalServerCloudlet(mobileDevice.getSourceServerCloudlet());
 		mobileDevice.setLockedToMigration(false);
 		mobileDevice.getSourceServerCloudlet().setSmartThingsWithVm(
-			mobileDevice, Policies.ADD);
+			mobileDevice, MembershipAction.ADD);
 		MobileUserRegistration.submitVm(broker, mobileDevice);
 
 		Application application = MobileUserApplicationFactory.create(appId,
@@ -775,18 +802,43 @@ public class MobileController extends SimEntity {
 	}
 
 	public static int getMigPointPolicy() {
-		return migPointPolicy;
+		return migPointPolicy.legacyValue();
 	}
 
 	public static void setMigPointPolicy(int migPointPolicy) {
+		setMigrationPointPolicy(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	}
+
+	public static MigrationPointPolicy getMigrationPointPolicy() {
+		return migPointPolicy;
+	}
+
+	public static void setMigrationPointPolicy(
+		MigrationPointPolicy migPointPolicy) {
+		if (migPointPolicy == null) {
+			throw new IllegalArgumentException("Migration point policy cannot be null");
+		}
 		MobileController.migPointPolicy = migPointPolicy;
 	}
 
 	public static int getMigStrategyPolicy() {
-		return migStrategyPolicy;
+		return migStrategyPolicy.legacyValue();
 	}
 
 	public static void setMigStrategyPolicy(int migStrategyPolicy) {
+		setMigrationStrategyPolicy(
+			MigrationStrategyPolicy.fromLegacy(migStrategyPolicy));
+	}
+
+	public static MigrationStrategyPolicy getMigrationStrategyPolicy() {
+		return migStrategyPolicy;
+	}
+
+	public static void setMigrationStrategyPolicy(
+		MigrationStrategyPolicy migStrategyPolicy) {
+		if (migStrategyPolicy == null) {
+			throw new IllegalArgumentException("Migration strategy cannot be null");
+		}
 		MobileController.migStrategyPolicy = migStrategyPolicy;
 	}
 

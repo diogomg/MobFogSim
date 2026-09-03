@@ -60,6 +60,8 @@ import org.fog.vmmigration.Service;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MembershipAction;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 
 public class FogDevice extends PowerDatacenter {
 	private final MigrationCoordinator migrationCoordinator =
@@ -132,7 +134,8 @@ public class FogDevice extends PowerDatacenter {
 	protected Service service;
 	private HashMap<FogDevice, Double> netServerCloudlets;
 	protected DecisionMigration migrationStrategy;
-	protected int policyReplicaVM;
+	protected MigrationTechniquePolicy policyReplicaVM =
+		MigrationTechniquePolicy.COMPLETE_VM;
 	private FogDevice serverCloudletToVmMigrate;
 	protected BeforeMigration beforeMigration;
 	protected double startTravelTime;
@@ -184,7 +187,14 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void setSmartThings(MobileDevice st, int action) {
-		if (action == Policies.ADD) {
+		setSmartThings(st, MembershipAction.fromLegacy(action));
+	}
+
+	public void setSmartThings(MobileDevice st, MembershipAction action) {
+		if (action == null) {
+			throw new IllegalArgumentException("Membership action cannot be null");
+		}
+		if (action == MembershipAction.ADD) {
 			this.smartThings.add(st);
 		}
 		else {
@@ -197,7 +207,14 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void setApDevices(ApDevice ap, int action) {
-		if (action == Policies.ADD) {
+		setApDevices(ap, MembershipAction.fromLegacy(action));
+	}
+
+	public void setApDevices(ApDevice ap, MembershipAction action) {
+		if (action == null) {
+			throw new IllegalArgumentException("Membership action cannot be null");
+		}
+		if (action == MembershipAction.ADD) {
 			this.apDevices.add(ap);
 		}
 		else {
@@ -273,6 +290,19 @@ public class FogDevice extends PowerDatacenter {
 		double uplinkLatency, double ratePerMips, int coordX, int coordY, int id, Service service,
 		DecisionMigration migrationStrategy, int policyReplicaVM, BeforeMigration beforeMigration)
 		throws Exception {
+		this(name, characteristics, vmAllocationPolicy, storageList,
+			schedulingInterval, uplinkBandwidth, downlinkBandwidth, uplinkLatency,
+			ratePerMips, coordX, coordY, id, service, migrationStrategy,
+			MigrationTechniquePolicy.fromLegacy(policyReplicaVM), beforeMigration);
+	}
+
+	public FogDevice(String name, FogDeviceCharacteristics characteristics,
+		VmAllocationPolicy vmAllocationPolicy, List<Storage> storageList,
+		double schedulingInterval, double uplinkBandwidth, double downlinkBandwidth,
+		double uplinkLatency, double ratePerMips, int coordX, int coordY, int id,
+		Service service, DecisionMigration migrationStrategy,
+		MigrationTechniquePolicy policyReplicaVM, BeforeMigration beforeMigration)
+		throws Exception {
 
 		super(name, characteristics, vmAllocationPolicy, storageList, schedulingInterval);
 
@@ -288,7 +318,7 @@ public class FogDevice extends PowerDatacenter {
 		this.setService(service);
 
 		setBeforeMigrate(beforeMigration);
-		setPolicyReplicaVM(policyReplicaVM);
+		setMigrationTechniquePolicy(policyReplicaVM);
 		setMigrationStrategy(migrationStrategy);
 		setCharacteristics(characteristics);
 		setVmAllocationPolicy(vmAllocationPolicy);
@@ -789,7 +819,7 @@ public class FogDevice extends PowerDatacenter {
 
 		st.setSourceServerCloudlet(this);
 
-		setSmartThings(st, Policies.ADD);
+		setSmartThings(st, MembershipAction.ADD);
 		st.setParentId(getId());
 		double latency = st.getUplinkLatency();
 
@@ -904,12 +934,14 @@ public class FogDevice extends PowerDatacenter {
 				+ smartThing.getId() + ") from " + smartThing.getVmLocalServerCloudlet().getName()
 				+ " to " + smartThing.getDestinationServerCloudlet().getName());
 
-			smartThing.getVmLocalServerCloudlet().setSmartThingsWithVm(smartThing, Policies.REMOVE);
+			smartThing.getVmLocalServerCloudlet().setSmartThingsWithVm(
+				smartThing, MembershipAction.REMOVE);
 
 			smartThing.setVmLocalServerCloudlet(smartThing.getDestinationServerCloudlet());
 			smartThing.setDestinationServerCloudlet(null);
 
-			smartThing.getVmLocalServerCloudlet().setSmartThingsWithVm(smartThing, Policies.ADD);
+			smartThing.getVmLocalServerCloudlet().setSmartThingsWithVm(
+				smartThing, MembershipAction.ADD);
 
 			if (MyStatistics.getInstance().getInitialTimeDelayAfterNewConnection()
 				.containsKey(smartThing.getMyId())) {
@@ -980,7 +1012,8 @@ public class FogDevice extends PowerDatacenter {
 
 	private void invokeBeforeMigration(SimEvent ev) {
 		migrationCoordinator.prepare((MobileDevice) ev.getData(),
-			MobileController.getSmartThings(), getBeforeMigrate(), getPolicyReplicaVM(),
+			MobileController.getSmartThings(), getBeforeMigrate(),
+			getMigrationTechniquePolicy(),
 			(destinationId, delay, eventTag, payload) ->
 				send(destinationId, delay, eventTag, payload));
 	}
@@ -1907,10 +1940,23 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public int getPolicyReplicaVM() {
-		return policyReplicaVM;
+		return policyReplicaVM.legacyValue();
 	}
 
 	public void setPolicyReplicaVM(int policyReplicaVM) {
+		setMigrationTechniquePolicy(
+			MigrationTechniquePolicy.fromLegacy(policyReplicaVM));
+	}
+
+	public MigrationTechniquePolicy getMigrationTechniquePolicy() {
+		return policyReplicaVM;
+	}
+
+	public void setMigrationTechniquePolicy(
+		MigrationTechniquePolicy policyReplicaVM) {
+		if (policyReplicaVM == null) {
+			throw new IllegalArgumentException("Migration technique cannot be null");
+		}
 		this.policyReplicaVM = policyReplicaVM;
 	}
 
@@ -1919,7 +1965,14 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void setServerCloudlets(FogDevice sc, int action) {// myiFogSim
-		if (action == Policies.ADD) {
+		setServerCloudlets(sc, MembershipAction.fromLegacy(action));
+	}
+
+	public void setServerCloudlets(FogDevice sc, MembershipAction action) {
+		if (action == null) {
+			throw new IllegalArgumentException("Membership action cannot be null");
+		}
+		if (action == MembershipAction.ADD) {
 			this.serverCloudlets.add(sc);
 		}
 		else {
@@ -1940,7 +1993,15 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public void setSmartThingsWithVm(MobileDevice st, int action) {// myiFogSim
-		if (action == Policies.ADD) {
+		setSmartThingsWithVm(st, MembershipAction.fromLegacy(action));
+	}
+
+	public void setSmartThingsWithVm(MobileDevice st,
+		MembershipAction action) {
+		if (action == null) {
+			throw new IllegalArgumentException("Membership action cannot be null");
+		}
+		if (action == MembershipAction.ADD) {
 			this.smartThingsWithVm.add(st);
 		}
 		else {

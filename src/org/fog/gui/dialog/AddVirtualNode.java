@@ -25,6 +25,7 @@ import org.fog.gui.core.Graph;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.VmNode;
 import org.fog.gui.core.Node;
+import org.fog.gui.core.NodeType;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddVirtualNode extends JDialog {
@@ -107,8 +108,8 @@ public class AddVirtualNode extends JDialog {
 						prompt("Input should be numerical character", "Error");
 					}
 					if (!catchedError) {
-						Node node = new VmNode(tfName.getText().toString(), (String) cType
-							.getSelectedItem(),
+						Node node = new VmNode(tfName.getText().toString(),
+							NodeType.fromExternal((String) cType.getSelectedItem()),
 							t1, t2, t3, t4);
 						graph.addNode(node);
 						setVisible(false);

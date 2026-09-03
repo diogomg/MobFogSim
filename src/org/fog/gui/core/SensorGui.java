@@ -17,7 +17,7 @@ public class SensorGui extends Node implements Serializable {
 	private Distribution distribution;
 
 	public SensorGui(String name, String type, Distribution distribution) {
-		super(name, "SENSOR");
+		super(name, NodeType.SENSOR);
 		setName(name);
 		setSensorType(type);
 		setDistribution(distribution);
@@ -25,7 +25,7 @@ public class SensorGui extends Node implements Serializable {
 
 	public SensorGui(String name, String sensorType, String selectedItem, double normalMean_,
 		double normalStdDev_, double uniformLow_, double uniformUp_, double deterministicVal_) {
-		super(name, "SENSOR");
+		super(name, NodeType.SENSOR);
 		setName(name);
 		setSensorType(sensorType);
 		if (normalMean_ != -1) {

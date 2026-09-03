@@ -9,7 +9,9 @@ import java.util.UUID;
 import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.VmDestinationPolicy;
-import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MigrationStrategyPolicy;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 
 /** Immutable, fully validated command-line configuration for one simulation. */
 public final class SimulationConfig {
@@ -20,26 +22,29 @@ public final class SimulationConfig {
 
 	private final boolean migrationEnabled;
 	private final int seed;
-	private final int migrationPointPolicy;
-	private final int migrationStrategyPolicy;
+	private final MigrationPointPolicy migrationPointPolicy;
+	private final MigrationStrategyPolicy migrationStrategyPolicy;
 	private final int maximumUsers;
 	private final int maximumBandwidth;
-	private final int vmMigrationPolicy;
+	private final MigrationTechniquePolicy vmMigrationPolicy;
 	private final double cloudletLatency;
 	private final int travelPredictionTime;
 	private final int mobilityPredictionError;
 	private final NetworkSlicing.Configuration slicingConfiguration;
-	private final int vmDestinationPolicy;
+	private final VmDestinationPolicy.Destination vmDestinationPolicy;
 	private final Path mobilityDirectory;
 	private final Path mobilityOrderManifest;
 	private final Path outputDirectory;
 	private final RunOutputMode outputMode;
 
 	private SimulationConfig(boolean migrationEnabled, int seed,
-		int migrationPointPolicy, int migrationStrategyPolicy, int maximumUsers,
-		int maximumBandwidth, int vmMigrationPolicy, double cloudletLatency,
+		MigrationPointPolicy migrationPointPolicy,
+		MigrationStrategyPolicy migrationStrategyPolicy, int maximumUsers,
+		int maximumBandwidth, MigrationTechniquePolicy vmMigrationPolicy,
+		double cloudletLatency,
 		int travelPredictionTime, int mobilityPredictionError,
-		NetworkSlicing.Configuration slicingConfiguration, int vmDestinationPolicy,
+		NetworkSlicing.Configuration slicingConfiguration,
+		VmDestinationPolicy.Destination vmDestinationPolicy,
 		Path mobilityDirectory, Path mobilityOrderManifest, Path outputDirectory,
 		RunOutputMode outputMode) {
 		this.migrationEnabled = migrationEnabled;
@@ -72,22 +77,18 @@ public final class SimulationConfig {
 
 		boolean migrationEnabled = parseFlag(args, 0, "Migration enabled");
 		int seed = requirePositive(parseInteger(args, 1, "Seed"), "Seed");
-		int migrationPointPolicy = requireRange(
-			parseInteger(args, 2, "Migration point policy"),
-			Policies.FIXED_MIGRATION_POINT, Policies.SPEED_MIGRATION_POINT,
-			"Migration point policy");
-		int migrationStrategyPolicy = requireRange(
-			parseInteger(args, 3, "Migration strategy policy"),
-			Policies.LOWEST_LATENCY, Policies.LOWEST_DIST_BW_SMARTTING_AP,
-			"Migration strategy policy");
+		MigrationPointPolicy migrationPointPolicy = MigrationPointPolicy.fromLegacy(
+			parseInteger(args, 2, "Migration point policy"));
+		MigrationStrategyPolicy migrationStrategyPolicy =
+			MigrationStrategyPolicy.fromLegacy(
+				parseInteger(args, 3, "Migration strategy policy"));
 		int maximumUsers = requirePositive(
 			parseInteger(args, 4, "Number of users"), "Number of users");
 		int maximumBandwidth = requirePositive(
 			parseInteger(args, 5, "Network bandwidth"), "Network bandwidth");
-		int vmMigrationPolicy = requireRange(
-			parseInteger(args, 6, "VM migration policy"),
-			Policies.MIGRATION_COMPLETE_VM, Policies.LIVE_MIGRATION,
-			"VM migration policy");
+		MigrationTechniquePolicy vmMigrationPolicy =
+			MigrationTechniquePolicy.fromLegacy(
+				parseInteger(args, 6, "VM migration policy"));
 		double cloudletLatency = requirePositiveFinite(
 			parseDouble(args, 7, "Cloudlet latency"), "Cloudlet latency");
 		int travelPredictionTime = requireNonNegative(
@@ -97,22 +98,23 @@ public final class SimulationConfig {
 			parseInteger(args, 9, "Mobility prediction error"),
 			"Mobility prediction error");
 
-		int scope = args.length > 10
-			? parseInteger(args, 10, "Network slicing scope")
-			: NetworkSlicing.END_TO_END_NETWORK;
+		NetworkSlicing.Scope scope = args.length > 10
+			? NetworkSlicing.Scope.fromLegacy(
+				parseInteger(args, 10, "Network slicing scope"))
+			: NetworkSlicing.Scope.END_TO_END;
 		String userAllocation = args.length > 11 ? args[11] : null;
 		String bandwidthAllocation = args.length > 12 ? args[12] : null;
-		boolean dynamicSlicing = args.length <= 13
-			|| parseFlag(args, 13, "Dynamic slicing");
+		NetworkSlicing.Mode slicingMode = args.length <= 13
+			|| parseFlag(args, 13, "Dynamic slicing")
+			? NetworkSlicing.Mode.DYNAMIC : NetworkSlicing.Mode.FIXED;
 		NetworkSlicing.Configuration slicingConfiguration =
 			NetworkSlicing.parseConfiguration(bandwidthAllocation, userAllocation,
-				scope, dynamicSlicing);
+				scope, slicingMode);
 
-		int vmDestinationPolicy = args.length > 14
-			? parseInteger(args, 14, "VM destination policy")
-			: VmDestinationPolicy.HYBRID;
-		requireRange(vmDestinationPolicy, VmDestinationPolicy.EDGE_SERVERS_ONLY,
-			VmDestinationPolicy.HYBRID, "VM destination policy");
+		VmDestinationPolicy.Destination vmDestinationPolicy = args.length > 14
+			? VmDestinationPolicy.Destination.fromLegacy(
+				parseInteger(args, 14, "VM destination policy"))
+			: VmDestinationPolicy.Destination.HYBRID;
 
 		Path mobilityDirectory = Paths.get("input");
 		Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
@@ -207,10 +209,18 @@ public final class SimulationConfig {
 	}
 
 	public int getMigrationPointPolicy() {
+		return migrationPointPolicy.legacyValue();
+	}
+
+	public MigrationPointPolicy getMigrationPoint() {
 		return migrationPointPolicy;
 	}
 
 	public int getMigrationStrategyPolicy() {
+		return migrationStrategyPolicy.legacyValue();
+	}
+
+	public MigrationStrategyPolicy getMigrationStrategy() {
 		return migrationStrategyPolicy;
 	}
 
@@ -223,6 +233,10 @@ public final class SimulationConfig {
 	}
 
 	public int getVmMigrationPolicy() {
+		return vmMigrationPolicy.legacyValue();
+	}
+
+	public MigrationTechniquePolicy getMigrationTechnique() {
 		return vmMigrationPolicy;
 	}
 
@@ -243,6 +257,10 @@ public final class SimulationConfig {
 	}
 
 	public int getVmDestinationPolicy() {
+		return vmDestinationPolicy.legacyValue();
+	}
+
+	public VmDestinationPolicy.Destination getVmDestination() {
 		return vmDestinationPolicy;
 	}
 

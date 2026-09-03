@@ -4,25 +4,30 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
-import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
-import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MovementDirection;
 
 public class LiveMigration implements VmMigrationTechnique {
-	private int migPointPolicy;
+	private MigrationPointPolicy migPointPolicy;
 
 	public LiveMigration(int migPointPolicy) {
-		super();
-		setMigPointPolicy(migPointPolicy);
+		this(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	}
+
+	public LiveMigration(MigrationPointPolicy migPointPolicy) {
+		setMigrationPointPolicy(migPointPolicy);
 	}
 
 	@Override
-	public void verifyPoints(MobileDevice smartThing, int relativePosition) {
+	public void verifyPoints(MobileDevice smartThing,
+		MovementDirection relativePosition) {
 
 		// either (0 or 1) -> policies
-		smartThing.setMigPoint(migPointPolicyFunction(getMigPointPolicy()
+		smartThing.setMigPoint(migPointPolicyFunction(getMigrationPointPolicy()
 			, smartThing));// 0 -> fixed or 1 -> with speed
-		smartThing.setMigZone(migrationZoneFunction(smartThing.getDirection(), relativePosition));
+		smartThing.setMigZone(migrationZoneFunction(
+			smartThing.getMovementDirection(), relativePosition));
 	}
 
 	@Override
@@ -42,7 +47,11 @@ public class LiveMigration implements VmMigrationTechnique {
 	}
 
 	@Override
-	public boolean migPointPolicyFunction(int policy, MobileDevice smartThing) {
+	public boolean migPointPolicyFunction(MigrationPointPolicy policy,
+		MobileDevice smartThing) {
+		if (policy == null) {
+			throw new IllegalArgumentException("Migration point policy cannot be null");
+		}
 		double distance = Distances.checkDistance(smartThing.getSourceAp().getCoord(),
 			smartThing.getCoord());
 		double bandwidth = NetworkSlicing.getSliceBandwidth(
@@ -58,7 +67,7 @@ public class LiveMigration implements VmMigrationTechnique {
 				+ " tempo " + transferTimeMillis
 				+ " cloudlet uplink latency " + smartThing.getVmLocalServerCloudlet().getUplinkLatency()
 				+ " fixed migration delay " + fixedDelayMillis);
-		if (policy == Policies.FIXED_MIGRATION_POINT) {
+		if (policy == MigrationPointPolicy.FIXED) {
 			return migrationPointFunction(distance);
 		}
 		else {
@@ -92,37 +101,28 @@ public class LiveMigration implements VmMigrationTechnique {
 	}
 
 	@Override
-	public boolean migrationZoneFunction(int smartThingDirection,
-		int zoneDirection) {
-
-		int ajust1, ajust2;
-
-		if (smartThingDirection == Directions.EAST) {
-			ajust1 = Directions.SOUTHEAST;
-			ajust2 = Directions.EAST + 1;
-		}
-		else if (smartThingDirection == Directions.SOUTHEAST) {
-			ajust1 = Directions.SOUTHEAST - 1;
-			ajust2 = Directions.EAST;
-		}
-		else {
-			ajust1 = smartThingDirection - 1; /* plus 45 degree */
-			ajust2 = smartThingDirection + 1;
-		}
-
-		//Define Migration Zone -> it looks for 135 * degree = 45 way + 45 way1 +45 way2
-		if (zoneDirection == smartThingDirection ||
-			zoneDirection == ajust1 || zoneDirection == ajust2)
-			return true;
-		else
-			return false;
+	public boolean migrationZoneFunction(MovementDirection smartThingDirection,
+		MovementDirection zoneDirection) {
+		return smartThingDirection != null
+			&& smartThingDirection.containsInMigrationCone(zoneDirection);
 	}
 
 	public int getMigPointPolicy() {
-		return migPointPolicy;
+		return migPointPolicy.legacyValue();
 	}
 
 	public void setMigPointPolicy(int migPointPolicy) {
+		setMigrationPointPolicy(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	}
+
+	public MigrationPointPolicy getMigrationPointPolicy() {
+		return migPointPolicy;
+	}
+
+	public void setMigrationPointPolicy(MigrationPointPolicy migPointPolicy) {
+		if (migPointPolicy == null) {
+			throw new IllegalArgumentException("Migration point policy cannot be null");
+		}
 		this.migPointPolicy = migPointPolicy;
 	}
 

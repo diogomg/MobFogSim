@@ -65,6 +65,12 @@ import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.constants.Services;
+import org.fog.vmmobile.policy.LocationPolicy;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MigrationStrategyPolicy;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
+import org.fog.vmmobile.policy.MovementDirection;
+import org.fog.vmmobile.policy.ServiceType;
 
 public class AppExample {
 	private static int stepPolicy; // Quantity of steps in the nextStep Function
@@ -77,11 +83,13 @@ public class AppExample {
 
 	private static boolean migrationAble;
 
-	private static int migPointPolicy;
-	private static int migStrategyPolicy;
-	private static int positionApPolicy;
-	private static int positionScPolicy;
-	private static int policyReplicaVM;
+	private static MigrationPointPolicy migPointPolicy = MigrationPointPolicy.FIXED;
+	private static MigrationStrategyPolicy migStrategyPolicy =
+		MigrationStrategyPolicy.LOWEST_LATENCY;
+	private static LocationPolicy positionApPolicy = LocationPolicy.FIXED;
+	private static LocationPolicy positionScPolicy = LocationPolicy.FIXED;
+	private static MigrationTechniquePolicy policyReplicaVM =
+		MigrationTechniquePolicy.COMPLETE_VM;
 	private static int travelPredicTimeForST; // in seconds
 	private static int mobilityPrecitionError;// in meters
 	private static double latencyBetweenCloudlets;
@@ -172,8 +180,8 @@ public class AppExample {
 		Calendar calendar = Calendar.getInstance();
 		boolean traceFlag = false; // mean trace events
 		CloudSim.init(numUser, calendar, traceFlag);
-		setPositionApPolicy(Policies.FIXED_AP_LOCATION);
-		setPositionScPolicy(Policies.FIXED_SC_LOCATION);
+		setAccessPointLocationPolicy(LocationPolicy.FIXED);
+		setServerCloudletLocationPolicy(LocationPolicy.FIXED);
 		setStepPolicy(1);
 		applySimulationConfiguration(configuration);
 
@@ -182,7 +190,7 @@ public class AppExample {
 		 **/
 
 		/* It is creating Access Points. It makes according positionApPolicy */
-		if (positionApPolicy == Policies.FIXED_AP_LOCATION) {
+		if (positionApPolicy == LocationPolicy.FIXED) {
 			// it creates the Access Point according coordDevices' size
 			addApDevicesFixed(apDevices, coordDevices);
 		} else {
@@ -193,7 +201,7 @@ public class AppExample {
 		}
 
 		/* It is creating Server Cloudlets. */
-		if (getPositionScPolicy() == Policies.FIXED_SC_LOCATION) {
+		if (getServerCloudletLocationPolicy() == LocationPolicy.FIXED) {
 			addServerCloudlet(serverCloudlets, coordDevices);
 		} else {
 			// it creates the ServerCloudlets
@@ -242,15 +250,15 @@ public class AppExample {
 
 		mobileController = new MobileController("MobileController",
 			getServerCloudlets(), getApDevices(), getSmartThings(),
-			getBrokerList(), moduleMapping, getMigPointPolicy(),
-			getMigStrategyPolicy(), getStepPolicy(), getCoordDevices(),
+			getBrokerList(), moduleMapping, getMigrationPointPolicy(),
+			getMigrationStrategyPolicy(), getStepPolicy(), getCoordDevices(),
 			getSeed(), isMigrationAble());
 		TimeKeeper.getInstance().setSimulationStartTime(
 			SimulationContext.requireCurrent().getClock().wallTimeMillis());
 		MyStatistics.getInstance().setSeed(getSeed());
 		for (MobileDevice st : getSmartThings()) {
-			if (getMigPointPolicy() == Policies.FIXED_MIGRATION_POINT) {
-				if (getMigStrategyPolicy() == Policies.LOWEST_LATENCY) {
+			if (getMigrationPointPolicy() == MigrationPointPolicy.FIXED) {
+				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 
 					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
 						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
@@ -260,7 +268,8 @@ public class AppExample {
 							+ getSeed() + "_st_" + st.getMyId(), st.getMyId());
 					MyStatistics.getInstance().setToPrint(
 						"FIXED_MIGRATION_POINT_with_LOWEST_LATENCY");
-				} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_AP) {
+				} else if (getMigrationStrategyPolicy()
+					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_ACCESS_POINT) {
 					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
 						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
 						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
@@ -270,7 +279,8 @@ public class AppExample {
 					MyStatistics.getInstance().setToPrint(
 						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP");
 
-				} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET) {
+				} else if (getMigrationStrategyPolicy()
+					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
 					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
 						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
 						+ getSeed() + "_st_" + st.getMyId() + ".txt", st.getMyId());
@@ -280,8 +290,8 @@ public class AppExample {
 					MyStatistics.getInstance().setToPrint(
 						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET");
 				}
-			} else if (getMigPointPolicy() == Policies.SPEED_MIGRATION_POINT) {
-				if (getMigStrategyPolicy() == Policies.LOWEST_LATENCY) {
+			} else if (getMigrationPointPolicy() == MigrationPointPolicy.SPEED) {
+				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
 						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
 						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
@@ -291,7 +301,8 @@ public class AppExample {
 					MyStatistics.getInstance().setToPrint(
 						"SPEED_MIGRATION_POINT_with_LOWEST_LATENCY");
 
-				} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_AP) {
+				} else if (getMigrationStrategyPolicy()
+					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_ACCESS_POINT) {
 					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
 						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
 						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
@@ -301,7 +312,8 @@ public class AppExample {
 					MyStatistics.getInstance().setToPrint(
 						"SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP");
 
-				} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET) {
+				} else if (getMigrationStrategyPolicy()
+					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
 					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
 						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
 						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
@@ -362,16 +374,16 @@ public class AppExample {
 		setRand(context == null
 			? new Random(configuration.getSeed() * Integer.MAX_VALUE)
 			: context.random("application"));
-		setMigPointPolicy(configuration.getMigrationPointPolicy());
-		setMigStrategyPolicy(configuration.getMigrationStrategyPolicy());
+		setMigrationPointPolicy(configuration.getMigrationPoint());
+		setMigrationStrategyPolicy(configuration.getMigrationStrategy());
 		setMaxSmartThings(configuration.getMaximumUsers());
 		setMaxBandwidth(configuration.getMaximumBandwidth());
-		setPolicyReplicaVM(configuration.getVmMigrationPolicy());
+		setMigrationTechniquePolicy(configuration.getMigrationTechnique());
 		setLatencyBetweenCloudlets(configuration.getCloudletLatency());
 		setTravelPredicTimeForST(configuration.getTravelPredictionTime());
 		setMobilityPredictionError(configuration.getMobilityPredictionError());
 		NetworkSlicing.applyConfiguration(configuration.getSlicingConfiguration());
-		VmDestinationPolicy.configure(configuration.getVmDestinationPolicy());
+		VmDestinationPolicy.configure(configuration.getVmDestination());
 		setMobilityDirectory(configuration.getMobilityDirectory());
 		setMobilityOrderManifest(configuration.getMobilityOrderManifest());
 		setOutputDirectory(configuration.getOutputDirectory());
@@ -450,18 +462,20 @@ public class AppExample {
 		Coordinate coordDevices, int i) {
 
 		int coordX = 0, coordY = 0;
-		int direction, speed;
-		direction = getRand().nextInt(MaxAndMin.MAX_DIRECTION - 1) + 1;
+		MovementDirection direction;
+		int speed;
+		direction = MovementDirection.fromLegacy(
+			getRand().nextInt(MaxAndMin.MAX_DIRECTION - 1) + 1);
 		speed = getRand().nextInt(MaxAndMin.MAX_SPEED - 1) + 1;
 		/*************** Start set of Mobile Sensors ****************/
 		VmMigrationTechnique migrationTechnique = null;
 
-		if (getPolicyReplicaVM() == Policies.MIGRATION_COMPLETE_VM) {
-			migrationTechnique = new CompleteVM(getMigPointPolicy());
-		} else if (getPolicyReplicaVM() == Policies.MIGRATION_CONTAINER_VM) {
-			migrationTechnique = new ContainerVM(getMigPointPolicy());
-		} else if (getPolicyReplicaVM() == Policies.LIVE_MIGRATION) {
-			migrationTechnique = new LiveMigration(getMigPointPolicy());
+		if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
+			migrationTechnique = new CompleteVM(getMigrationPointPolicy());
+		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
+			migrationTechnique = new ContainerVM(getMigrationPointPolicy());
+		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
+			migrationTechnique = new LiveMigration(getMigrationPointPolicy());
 		}
 
 		DeterministicDistribution distribution0 = new DeterministicDistribution(
@@ -564,25 +578,26 @@ public class AppExample {
 
 		int coordX, coordY;
 		DecisionMigration migrationStrategy;
-		if (getMigStrategyPolicy() == Policies.LOWEST_LATENCY) {
+		if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 			migrationStrategy = new LowestLatency(getServerCloudlets(),
-				getApDevices(), getMigPointPolicy(), getPolicyReplicaVM());
-		} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET) {
+				getApDevices(), getMigrationPointPolicy(), getMigrationTechniquePolicy());
+		} else if (getMigrationStrategyPolicy()
+			== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
 			migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
-				getServerCloudlets(), getApDevices(), getMigPointPolicy(),
-				getPolicyReplicaVM());
+				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
+				getMigrationTechniquePolicy());
 		} else { // Policies.LOWEST_DIST_BW_SMARTTING_AP
 			migrationStrategy = new LowestDistBwSmartThingAP(
-				getServerCloudlets(), getApDevices(), getMigPointPolicy(),
-				getPolicyReplicaVM());
+				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
+				getMigrationTechniquePolicy());
 		}
 
 		BeforeMigration beforeMigration = null;
-		if (getPolicyReplicaVM() == Policies.MIGRATION_COMPLETE_VM) {
+		if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
 			beforeMigration = new PrepareCompleteVM();
-		} else if (getPolicyReplicaVM() == Policies.MIGRATION_CONTAINER_VM) {
+		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
 			beforeMigration = new PrepareContainerVM();
-		} else if (getPolicyReplicaVM() == Policies.LIVE_MIGRATION) {
+		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
 			beforeMigration = new PrepareLiveMigration();
 		}
 
@@ -624,8 +639,8 @@ public class AppExample {
 		FogDevice sc = null;
 		Service serviceOffer = new Service();
 		serviceOffer.setType(getRand().nextInt(10000) % MaxAndMin.MAX_SERVICES);
-		if (serviceOffer.getType() == Services.HIBRID
-			|| serviceOffer.getType() == Services.PUBLIC) {
+		if (serviceOffer.getServiceType() == ServiceType.HYBRID
+			|| serviceOffer.getServiceType() == ServiceType.PUBLIC) {
 			serviceOffer.setValue(getRand().nextFloat() * 10);
 		} else {
 			serviceOffer.setValue(0);
@@ -648,7 +663,7 @@ public class AppExample {
 				, 4// rand.nextDouble()//uplinkLatency
 				, 0.01// mipsPer..
 				, coordX, coordY, i, serviceOffer, migrationStrategy,
-				getPolicyReplicaVM(), beforeMigration);
+				getMigrationTechniquePolicy(), beforeMigration);
 			serverCloudlets.add(i, sc);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -669,25 +684,26 @@ public class AppExample {
 				- (2 * MaxAndMin.CLOUDLET_COVERAGE
 				/ 3)), i++) { /* evenly distributed */
 				DecisionMigration migrationStrategy;
-				if (getMigStrategyPolicy() == Policies.LOWEST_LATENCY) {
+				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 					migrationStrategy = new LowestLatency(getServerCloudlets(),
-						getApDevices(), getMigPointPolicy(), getPolicyReplicaVM());
-				} else if (getMigStrategyPolicy() == Policies.LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET) {
+						getApDevices(), getMigrationPointPolicy(), getMigrationTechniquePolicy());
+				} else if (getMigrationStrategyPolicy()
+					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
 					migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
 						getServerCloudlets(), getApDevices(),
-						getMigPointPolicy(), getPolicyReplicaVM());
+						getMigrationPointPolicy(), getMigrationTechniquePolicy());
 				} else { // LOWEST_DIST_BW_SMARTTING_AP
 					migrationStrategy = new LowestDistBwSmartThingAP(
 						getServerCloudlets(), getApDevices(),
-						getMigPointPolicy(), getPolicyReplicaVM());
+						getMigrationPointPolicy(), getMigrationTechniquePolicy());
 				}
 
 				BeforeMigration beforeMigration = null;
-				if (getPolicyReplicaVM() == Policies.MIGRATION_COMPLETE_VM) {
+				if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
 					beforeMigration = new PrepareCompleteVM();
-				} else if (getPolicyReplicaVM() == Policies.MIGRATION_CONTAINER_VM) {
+				} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
 					beforeMigration = new PrepareContainerVM();
-				} else if (getPolicyReplicaVM() == Policies.LIVE_MIGRATION) {
+				} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
 					beforeMigration = new PrepareLiveMigration();
 				}
 
@@ -730,8 +746,8 @@ public class AppExample {
 				FogDevice sc = null;
 				Service serviceOffer = new Service();
 				serviceOffer.setType(getRand().nextInt(10000) % MaxAndMin.MAX_SERVICES);
-				if (serviceOffer.getType() == Services.HIBRID
-					|| serviceOffer.getType() == Services.PUBLIC) {
+				if (serviceOffer.getServiceType() == ServiceType.HYBRID
+					|| serviceOffer.getServiceType() == ServiceType.PUBLIC) {
 					serviceOffer.setValue(getRand().nextFloat() * 10);
 				} else {
 					serviceOffer.setValue(0);
@@ -751,7 +767,7 @@ public class AppExample {
 						, 4//uplinkLatency
 						, 0.01// mipsPer..
 						, coordX, coordY, i, serviceOffer,
-						migrationStrategy, getPolicyReplicaVM(),
+						migrationStrategy, getMigrationTechniquePolicy(),
 						beforeMigration);
 					serverCloudlets.add(i, sc);
 					sc.setParentId(-1);
@@ -863,13 +879,22 @@ public class AppExample {
 	}
 
 	public static int getPolicyReplicaVM() {
-		return policyReplicaVM;
+		return policyReplicaVM.legacyValue();
 	}
 
 	public static void setPolicyReplicaVM(int policyReplicaVM) {
-		if (policyReplicaVM < Policies.MIGRATION_COMPLETE_VM
-			|| policyReplicaVM > Policies.LIVE_MIGRATION) {
-			throw new IllegalArgumentException("VM migration policy must be between 0 and 2");
+		setMigrationTechniquePolicy(
+			MigrationTechniquePolicy.fromLegacy(policyReplicaVM));
+	}
+
+	public static MigrationTechniquePolicy getMigrationTechniquePolicy() {
+		return policyReplicaVM;
+	}
+
+	public static void setMigrationTechniquePolicy(
+		MigrationTechniquePolicy policyReplicaVM) {
+		if (policyReplicaVM == null) {
+			throw new IllegalArgumentException("Migration technique cannot be null");
 		}
 		AppExample.policyReplicaVM = policyReplicaVM;
 	}
@@ -942,37 +967,63 @@ public class AppExample {
 	}
 
 	public static int getMigPointPolicy() {
-		return migPointPolicy;
+		return migPointPolicy.legacyValue();
 	}
 
 	public static void setMigPointPolicy(int migPointPolicy) {
-		if (migPointPolicy < Policies.FIXED_MIGRATION_POINT
-			|| migPointPolicy > Policies.SPEED_MIGRATION_POINT) {
-			throw new IllegalArgumentException(
-				"Migration point policy must be between 0 and 1");
+		setMigrationPointPolicy(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	}
+
+	public static MigrationPointPolicy getMigrationPointPolicy() {
+		return migPointPolicy;
+	}
+
+	public static void setMigrationPointPolicy(
+		MigrationPointPolicy migPointPolicy) {
+		if (migPointPolicy == null) {
+			throw new IllegalArgumentException("Migration point policy cannot be null");
 		}
 		AppExample.migPointPolicy = migPointPolicy;
 	}
 
 	public static int getMigStrategyPolicy() {
-		return migStrategyPolicy;
+		return migStrategyPolicy.legacyValue();
 	}
 
 	public static void setMigStrategyPolicy(int migStrategyPolicy) {
-		if (migStrategyPolicy < Policies.LOWEST_LATENCY
-			|| migStrategyPolicy > Policies.LOWEST_DIST_BW_SMARTTING_AP) {
-			throw new IllegalArgumentException(
-				"Migration strategy policy must be between 0 and 2");
+		setMigrationStrategyPolicy(
+			MigrationStrategyPolicy.fromLegacy(migStrategyPolicy));
+	}
+
+	public static MigrationStrategyPolicy getMigrationStrategyPolicy() {
+		return migStrategyPolicy;
+	}
+
+	public static void setMigrationStrategyPolicy(
+		MigrationStrategyPolicy migStrategyPolicy) {
+		if (migStrategyPolicy == null) {
+			throw new IllegalArgumentException("Migration strategy cannot be null");
 		}
 		AppExample.migStrategyPolicy = migStrategyPolicy;
 	}
 
 	public static int getPositionApPolicy() {
-		return positionApPolicy;
+		return positionApPolicy.legacyValue();
 	}
 
 	public static void setPositionApPolicy(int positionApPolicy) {
-		AppExample.positionApPolicy = positionApPolicy;
+		setAccessPointLocationPolicy(LocationPolicy.fromLegacy(positionApPolicy));
+	}
+
+	public static LocationPolicy getAccessPointLocationPolicy() {
+		return positionApPolicy;
+	}
+
+	public static void setAccessPointLocationPolicy(LocationPolicy policy) {
+		if (policy == null) {
+			throw new IllegalArgumentException("Access-point location policy cannot be null");
+		}
+		AppExample.positionApPolicy = policy;
 	}
 
 	public static Coordinate getCoordDevices() {
@@ -1019,11 +1070,22 @@ public class AppExample {
 	}
 
 	public static int getPositionScPolicy() {
-		return positionScPolicy;
+		return positionScPolicy.legacyValue();
 	}
 
 	public static void setPositionScPolicy(int positionScPolicy) {
-		AppExample.positionScPolicy = positionScPolicy;
+		setServerCloudletLocationPolicy(LocationPolicy.fromLegacy(positionScPolicy));
+	}
+
+	public static LocationPolicy getServerCloudletLocationPolicy() {
+		return positionScPolicy;
+	}
+
+	public static void setServerCloudletLocationPolicy(LocationPolicy policy) {
+		if (policy == null) {
+			throw new IllegalArgumentException("Server-cloudlet location policy cannot be null");
+		}
+		AppExample.positionScPolicy = policy;
 	}
 
 	public static int getMaxSmartThings() {

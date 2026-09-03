@@ -7,27 +7,37 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.DiscoverLocalization;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
+import org.fog.vmmobile.policy.MovementDirection;
 
 public class LowestDistBwSmartThingAP implements DecisionMigration {
 
 	private List<FogDevice> serverCloudlets;
 	private List<ApDevice> apDevices;
-	private int migPointPolicy;
+	private MigrationPointPolicy migPointPolicy;
 	private ApDevice correntAP;
 	private ApDevice nextAp;
 	private FogDevice nextServerCloudlet;
-	private int smartThingPosition;
+	private MovementDirection smartThingPosition;
 	private boolean migZone;
 	private boolean migPoint;
-	private int policyReplicaVM;
+	private MigrationTechniquePolicy policyReplicaVM;
 
 	public LowestDistBwSmartThingAP(List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, int migPointPolicy, int policyReplicaVM) {
-		super();
+		this(serverCloudlets, apDevices,
+			MigrationPointPolicy.fromLegacy(migPointPolicy),
+			MigrationTechniquePolicy.fromLegacy(policyReplicaVM));
+	}
+
+	public LowestDistBwSmartThingAP(List<FogDevice> serverCloudlets,
+		List<ApDevice> apDevices, MigrationPointPolicy migPointPolicy,
+		MigrationTechniquePolicy policyReplicaVM) {
 		setServerCloudlets(serverCloudlets);
 		setApDevices(apDevices);
 		setMigPointPolicy(migPointPolicy);
-		setPolicyReplicaVM(policyReplicaVM);
+		setMigrationTechniquePolicy(policyReplicaVM);
 	}
 
 	@Override
@@ -35,9 +45,10 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 		setCorrentAP(smartThing.getSourceAp());
 
 		// return the relative position between Access point and smart thing -> set this value
-		setSmartThingPosition(DiscoverLocalization.discoverLocal(getCorrentAP().getCoord()
-			, smartThing.getCoord()));
-		smartThing.getMigrationTechnique().verifyPoints(smartThing, getSmartThingPosition());
+		setSmartThingDirection(DiscoverLocalization.discoverDirection(
+			getCorrentAP().getCoord(), smartThing.getCoord()));
+		smartThing.getMigrationTechnique().verifyPoints(smartThing,
+			getSmartThingDirection());
 
 		if (!(smartThing.isMigPoint() && smartThing.isMigZone())) {
 			return false;// no migration
@@ -76,10 +87,21 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	}
 
 	public int getMigPointPolicy() {
-		return migPointPolicy;
+		return migPointPolicy.legacyValue();
 	}
 
 	public void setMigPointPolicy(int migPointPolicy) {
+		setMigPointPolicy(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	}
+
+	public MigrationPointPolicy getMigrationPointPolicy() {
+		return migPointPolicy;
+	}
+
+	public void setMigPointPolicy(MigrationPointPolicy migPointPolicy) {
+		if (migPointPolicy == null) {
+			throw new IllegalArgumentException("Migration point policy cannot be null");
+		}
 		this.migPointPolicy = migPointPolicy;
 	}
 
@@ -108,10 +130,21 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	}
 
 	public int getSmartThingPosition() {
-		return smartThingPosition;
+		return smartThingPosition.legacyValue();
 	}
 
 	public void setSmartThingPosition(int smartThingPosition) {
+		setSmartThingDirection(MovementDirection.fromLegacy(smartThingPosition));
+	}
+
+	public MovementDirection getSmartThingDirection() {
+		return smartThingPosition;
+	}
+
+	public void setSmartThingDirection(MovementDirection smartThingPosition) {
+		if (smartThingPosition == null) {
+			throw new IllegalArgumentException("Relative direction cannot be null");
+		}
 		this.smartThingPosition = smartThingPosition;
 	}
 
@@ -132,10 +165,23 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	}
 
 	public int getPolicyReplicaVM() {
-		return policyReplicaVM;
+		return policyReplicaVM.legacyValue();
 	}
 
 	public void setPolicyReplicaVM(int policyReplicaVM) {
+		setMigrationTechniquePolicy(
+			MigrationTechniquePolicy.fromLegacy(policyReplicaVM));
+	}
+
+	public MigrationTechniquePolicy getMigrationTechniquePolicy() {
+		return policyReplicaVM;
+	}
+
+	public void setMigrationTechniquePolicy(
+		MigrationTechniquePolicy policyReplicaVM) {
+		if (policyReplicaVM == null) {
+			throw new IllegalArgumentException("Migration technique cannot be null");
+		}
 		this.policyReplicaVM = policyReplicaVM;
 	}
 

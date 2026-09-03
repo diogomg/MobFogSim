@@ -19,6 +19,7 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MembershipAction;
 
 public class ApDevice extends FogDevice {
 
@@ -64,13 +65,15 @@ public class ApDevice extends FogDevice {
 		if (getSmartThings().contains(smartThing)) {
 			NetworkSlicing.cancelWirelessTransfers(smartThing);
 			// it'll remove the smartThing from ap-smartThing's set
-			smartThing.getSourceAp().setSmartThings(smartThing, Policies.REMOVE);
+			smartThing.getSourceAp().setSmartThings(smartThing,
+				MembershipAction.REMOVE);
 			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() - delay);
 			// remove link
 			NetworkTopology.addLink(smartThing.getSourceAp().getId(), smartThing.getId(), 0.0, 0.0);
 			smartThing.setSourceAp(smartThing.getDestinationAp());
 
-			smartThing.getSourceAp().setSmartThings(smartThing, Policies.ADD);
+			smartThing.getSourceAp().setSmartThings(smartThing,
+				MembershipAction.ADD);
 			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() + delay);
 			NetworkTopology.addLink(smartThing.getSourceAp().getId(), smartThing.getId(),
 				NetworkSlicing.getAccessPointUplinkBandwidth(
@@ -140,7 +143,7 @@ public class ApDevice extends FogDevice {
 		}
 
 		st.setSourceAp(apDevice);
-		apDevice.setSmartThings(st, Policies.ADD);
+		apDevice.setSmartThings(st, MembershipAction.ADD);
 		NetworkTopology.addLink(apDevice.getId(), st.getId(),
 			NetworkSlicing.getAccessPointUplinkBandwidth(apDevice, st), delay);
 		LogMobile.debug("ApDevice.java", st.getName() + " was connected to "

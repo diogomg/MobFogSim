@@ -18,6 +18,7 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
 import org.fog.localization.Distances;
 import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MembershipAction;
 
 /**
  * Loads mobility input and builds the physical topology used by a simulation.
@@ -97,7 +98,7 @@ public final class TopologyService {
 					"Cannot connect access point without a server cloudlet"));
 			accessPoint.setServerCloudlet(closestServerCloudlet);
 			accessPoint.setParentId(closestServerCloudlet.getId());
-			closestServerCloudlet.setApDevices(accessPoint, Policies.ADD);
+			closestServerCloudlet.setApDevices(accessPoint, MembershipAction.ADD);
 			NetworkTopology.addLink(closestServerCloudlet.getId(),
 				accessPoint.getId(), accessPoint.getDownlinkBandwidth(),
 				random.nextDouble());

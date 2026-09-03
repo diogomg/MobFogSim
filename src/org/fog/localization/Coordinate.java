@@ -5,6 +5,7 @@ import java.util.List;
 import org.fog.entities.MobileDevice;
 import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
+import org.fog.vmmobile.policy.MovementDirection;
 
 public class Coordinate { // extends Map {
 
@@ -39,25 +40,29 @@ public class Coordinate { // extends Map {
 	}
 
 	public static int convertDirection(Double direction) {
+		return convertMovementDirection(direction).legacyValue();
+	}
+
+	public static MovementDirection convertMovementDirection(Double direction) {
 
 		double degree = radiansToDegree(direction);
 
 		if (degree > 337.5 || degree <= 22.5)
-			return Directions.EAST;
+			return MovementDirection.EAST;
 		else if (degree > 22.5 && degree <= 67.5)
-			return Directions.NORTHEAST;
+			return MovementDirection.NORTHEAST;
 		else if (degree > 67.5 && degree <= 112.5)
-			return Directions.NORTH;
+			return MovementDirection.NORTH;
 		else if (degree > 112.5 && degree <= 157.5)
-			return Directions.NORTHWEST;
+			return MovementDirection.NORTHWEST;
 		else if (degree > 157.5 && degree <= 202.5)
-			return Directions.WEST;
+			return MovementDirection.WEST;
 		else if (degree > 202.5 && degree <= 247.5)
-			return Directions.SOUTHWEST;
+			return MovementDirection.SOUTHWEST;
 		else if (degree > 247.5 && degree <= 292.5)
-			return Directions.SOUTH;
+			return MovementDirection.SOUTH;
 		else
-			return Directions.SOUTHEAST;
+			return MovementDirection.SOUTHEAST;
 	}
 
 	public void newCoordinate(MobileDevice smartThing) {
@@ -124,7 +129,8 @@ public class Coordinate { // extends Map {
 			desableSmartThing(smartThing);
 			return;
 		}
-		smartThing.setDirection(convertDirection(sample.getDirectionRadians()));
+		smartThing.setMovementDirection(
+			convertMovementDirection(sample.getDirectionRadians()));
 		smartThing.getCoord().setCoordX(x);
 		smartThing.getCoord().setCoordY(y);
 		smartThing.setSpeed((int) sample.getSpeed());
@@ -136,7 +142,7 @@ public class Coordinate { // extends Map {
 			int increaseY = (smartThing.getCoord().getCoordY() + (smartThing.getSpeed() * add));
 			int decreaseX = (smartThing.getCoord().getCoordX() - (smartThing.getSpeed() * add));
 			int decreaseY = (smartThing.getCoord().getCoordY() - (smartThing.getSpeed() * add));
-			int direction = smartThing.getDirection();
+			MovementDirection direction = smartThing.getMovementDirection();
 
 			if (decreaseX < 0 || decreaseY < 0 || increaseX >= MaxAndMin.MAX_X
 				|| increaseY >= MaxAndMin.MAX_Y) {// It checks the CoordDevices limits.
@@ -144,40 +150,40 @@ public class Coordinate { // extends Map {
 				return;
 			}
 
-			if (direction == Directions.EAST) {
+			if (direction == MovementDirection.EAST) {
 				/* same Y, increase X */
 				smartThing.getCoord().setCoordX(increaseX);
 			}
-			else if (direction == Directions.WEST) {
+			else if (direction == MovementDirection.WEST) {
 				/* same Y, decrease X */
 				// next position in the same direction
 				smartThing.getCoord().setCoordX(decreaseX);
 			}
-			else if (direction == Directions.SOUTH) {// Directions.NORTH){
+			else if (direction == MovementDirection.SOUTH) {
 				/* same X, increase Y */
 				// next position in the same direction
 				smartThing.getCoord().setCoordY(increaseY);
 			}
-			else if (direction == Directions.NORTH) {// Directions.SOUTH){
+			else if (direction == MovementDirection.NORTH) {
 				/* same X, decrease Y */
 				smartThing.getCoord().setCoordY(decreaseY);
 			}
-			else if (direction == Directions.SOUTHEAST) {// Directions.NORTHEAST){
+			else if (direction == MovementDirection.SOUTHEAST) {
 				/* increase X and Y */
 				smartThing.getCoord().setCoordX(increaseX);
 				smartThing.getCoord().setCoordY(increaseY);
 			}
-			else if (direction == Directions.NORTHWEST) {// Directions.SOUTHWEST){
+			else if (direction == MovementDirection.NORTHWEST) {
 				/* decrease X and Y */
 				smartThing.getCoord().setCoordX(decreaseX);
 				smartThing.getCoord().setCoordY(decreaseY);
 			}
-			else if (direction == Directions.SOUTHWEST) {// Directions.NORTHWEST){
+			else if (direction == MovementDirection.SOUTHWEST) {
 				/* decrease X increase Y */
 				smartThing.getCoord().setCoordX(decreaseX);
 				smartThing.getCoord().setCoordY(increaseY);
 			}
-			else if (direction == Directions.NORTHEAST) {// Directions.SOUTHEAST){
+			else if (direction == MovementDirection.NORTHEAST) {
 				/* increase X decrease Y */
 				smartThing.getCoord().setCoordX(increaseX);
 				smartThing.getCoord().setCoordY(decreaseY);
@@ -187,31 +193,40 @@ public class Coordinate { // extends Map {
 
 	public static Coordinate newCoordinateWithError(Coordinate coord, int mobilityPredictionError,
 		int direction) {
+		return newCoordinateWithError(coord, mobilityPredictionError,
+			MovementDirection.fromLegacy(direction));
+	}
+
+	public static Coordinate newCoordinateWithError(Coordinate coord,
+		int mobilityPredictionError, MovementDirection direction) {
+		if (direction == null) {
+			throw new IllegalArgumentException("Prediction-error direction cannot be null");
+		}
 
 		int x = coord.getCoordX(), y = coord.getCoordY();
 
-		if (direction == Directions.EAST) {
+		if (direction == MovementDirection.EAST) {
 			x += mobilityPredictionError;
 		}
-		else if (direction == Directions.NORTHEAST) {
+		else if (direction == MovementDirection.NORTHEAST) {
 			x += mobilityPredictionError;
 			y -= mobilityPredictionError;
 		}
-		else if (direction == Directions.NORTH) {
+		else if (direction == MovementDirection.NORTH) {
 			y -= mobilityPredictionError;
 		}
-		else if (direction == Directions.NORTHWEST) {
+		else if (direction == MovementDirection.NORTHWEST) {
 			x -= mobilityPredictionError;
 			y -= mobilityPredictionError;
 		}
-		else if (direction == Directions.WEST) {
+		else if (direction == MovementDirection.WEST) {
 			x -= mobilityPredictionError;
 		}
-		else if (direction == Directions.SOUTHWEST) {
+		else if (direction == MovementDirection.SOUTHWEST) {
 			x -= mobilityPredictionError;
 			y += mobilityPredictionError;
 		}
-		else if (direction == Directions.SOUTH) {
+		else if (direction == MovementDirection.SOUTH) {
 			y += mobilityPredictionError;
 		}
 		else {

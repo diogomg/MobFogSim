@@ -17,6 +17,7 @@ import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.constants.*;
+import org.fog.vmmobile.policy.MovementDirection;
 
 public final class Migration {
 
@@ -47,31 +48,14 @@ public final class Migration {
 	}
 
 	public static boolean insideCone(int smartThingDirection, int zoneDirection) {//
-		int ajust1, ajust2;
+		return insideCone(MovementDirection.fromLegacy(smartThingDirection),
+			MovementDirection.fromLegacy(zoneDirection));
+	}
 
-		if (smartThingDirection == Directions.EAST) {
-			ajust1 = Directions.SOUTHEAST;
-			ajust2 = Directions.EAST + 1;
-		}
-		else if (smartThingDirection == Directions.SOUTHEAST) {
-			ajust1 = Directions.SOUTHEAST - 1;
-			ajust2 = Directions.EAST;
-		}
-		else {
-			ajust1 = smartThingDirection - 1; /* plus 45 degree */
-			ajust2 = smartThingDirection + 1;
-		}
-
-		/*
-		 * Define Migration Zone -> it looks for 135 degree = 45 way + 45 way1
-		 * +45 way2
-		 */
-		if (zoneDirection == smartThingDirection ||
-			zoneDirection == ajust1 ||
-			zoneDirection == ajust2)
-			return true;
-		else
-			return false;
+	public static boolean insideCone(MovementDirection smartThingDirection,
+		MovementDirection zoneDirection) {
+		return smartThingDirection != null
+			&& smartThingDirection.containsInMigrationCone(zoneDirection);
 	}
 
 	private static void saveDistance(int travelTimeId, Coordinate coord_atual,
@@ -108,7 +92,8 @@ public final class Migration {
 		coord_prev.setCoordX(x);
 		coord_prev.setCoordY(y);
 
-		int directionMPError = AppExample.getRand().nextInt(8) + 1;
+		MovementDirection directionMPError = MovementDirection.fromLegacy(
+			AppExample.getRand().nextInt(8) + 1);
 
 		// related to the ninth parameter: User Mobility prediction inaccuracy, in meters
 		Coordinate coord_inaccurated = Coordinate.newCoordinateWithError(coord_prev,
@@ -124,12 +109,12 @@ public final class Migration {
 
 		List<FogDevice> newServerCloudlets = new ArrayList<>();
 
-		int localServerCloudlet;
+		MovementDirection localServerCloudlet;
 		boolean cone;
 		for (FogDevice sc : oldServerCloudlets) {
 			// return the relative position between Server Cloudlet and smart
 			// thing -> set this value
-			localServerCloudlet = DiscoverLocalization.discoverLocal(
+			localServerCloudlet = DiscoverLocalization.discoverDirection(
 				smartThing.getFutureCoord(), sc.getCoord());
 			cone = insideCone(localServerCloudlet, directionMPError);
 			if (cone && sc != smartThing.getSourceServerCloudlet()) {

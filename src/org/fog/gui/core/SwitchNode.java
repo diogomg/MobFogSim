@@ -14,6 +14,11 @@ public class SwitchNode extends Node {
 	public SwitchNode() {}
 
 	public SwitchNode(String name, String type, long iops, int upports, int downports, long bw) {
+		this(name, NodeType.fromExternal(type), iops, upports, downports, bw);
+	}
+
+	public SwitchNode(String name, NodeType type, long iops, int upports,
+		int downports, long bw) {
 		super(name, type);
 		this.iops = iops;
 		this.upports = upports;

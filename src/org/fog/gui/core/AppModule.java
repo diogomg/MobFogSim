@@ -9,7 +9,7 @@ public class AppModule extends Node {
 	public AppModule() {}
 
 	public AppModule(String name) {
-		super(name, "APP_MODULE");
+		super(name, NodeType.APP_MODULE);
 	}
 
 	@Override

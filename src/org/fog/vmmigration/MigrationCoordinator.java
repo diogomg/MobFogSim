@@ -14,6 +14,7 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 
 /**
  * Coordinates migration transfer lifecycle independently of a FogDevice's
@@ -146,6 +147,13 @@ public final class MigrationCoordinator {
 	public void prepare(MobileDevice mobileDevice,
 		List<MobileDevice> activeMobileDevices, BeforeMigration preparation,
 		int migrationPolicy, EventDispatcher events) {
+		prepare(mobileDevice, activeMobileDevices, preparation,
+			MigrationTechniquePolicy.fromLegacy(migrationPolicy), events);
+	}
+
+	public void prepare(MobileDevice mobileDevice,
+		List<MobileDevice> activeMobileDevices, BeforeMigration preparation,
+		MigrationTechniquePolicy migrationPolicy, EventDispatcher events) {
 		if (mobileDevice == null || activeMobileDevices == null
 			|| preparation == null || events == null) {
 			throw new IllegalArgumentException(
@@ -168,7 +176,7 @@ public final class MigrationCoordinator {
 		if (preparationDelay < 0.0) {
 			return;
 		}
-		if (migrationPolicy == Policies.LIVE_MIGRATION) {
+		if (migrationPolicy == MigrationTechniquePolicy.LIVE_MIGRATION) {
 			mobileDevice.setPostCopyStatus(true);
 			mobileDevice.setTimeStartLiveMigration(CloudSim.clock());
 		} else {

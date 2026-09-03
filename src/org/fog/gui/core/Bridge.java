@@ -35,21 +35,28 @@ public class Bridge {
 
 	// convert from JSON object to Graph object
 	public static Graph jsonToGraph(String fileName, int type) {
+		return jsonToGraph(fileName, TopologyType.fromLegacy(type));
+	}
+
+	public static Graph jsonToGraph(String fileName, TopologyType type) {
+		if (type == null) {
+			throw new IllegalArgumentException("Topology type cannot be null");
+		}
 
 		Graph graph = new Graph();
 
-		// type 0->physical topology 1->virtual topology
-		if (0 == type) {
+		if (type == TopologyType.PHYSICAL) {
 			try {
 				JSONObject doc = (JSONObject) JSONValue.parse(new FileReader(fileName));
 				JSONArray nodes = (JSONArray) doc.get("nodes");
 				@SuppressWarnings("unchecked") Iterator<JSONObject> iter = nodes.iterator();
 				while (iter.hasNext()) {
 					JSONObject node = iter.next();
-					String nodeType = (String) node.get("type");
+					NodeType nodeType = NodeType.fromExternal(
+						(String) node.get("type"));
 					String nodeName = (String) node.get("name");
-					
-					if (nodeType.equalsIgnoreCase("host")) {  // host
+
+					if (nodeType == NodeType.HOST) {
 						long pes = (Long) node.get("pes");
 						long mips = (Long) node.get("mips");
 						int ram = new BigDecimal((Long) node.get("ram")).intValueExact();
@@ -66,7 +73,7 @@ public class Bridge {
 							graph.addNode(hNode);
 						}
 
-					} else if (nodeType.equals("FOG_DEVICE")) {
+					} else if (nodeType == NodeType.FOG_DEVICE) {
 						long mips = (Long) node.get("mips");
 						int ram = new BigDecimal((Long) node.get("ram")).intValueExact();
 						long upBw = new BigDecimal((Long) node.get("upBw")).intValueExact();
@@ -79,7 +86,7 @@ public class Bridge {
 							upBw, downBw, level, rate);
 						graph.addNode(fogDevice);
 
-					} else if (nodeType.equals("SENSOR")) {
+					} else if (nodeType == NodeType.SENSOR) {
 						String sensorType = node.get("sensorType").toString();
 						int distType = new BigDecimal((Long) node.get("distribution")).intValue();
 						Distribution distribution = null;
@@ -98,11 +105,12 @@ public class Bridge {
 						System.out.println("Sensor type : " + sensorType);
 						Node sensor = new SensorGui(nodeName, sensorType, distribution);
 						graph.addNode(sensor);
-					} else if (nodeType.equals("ACTUATOR")) {
+					} else if (nodeType == NodeType.ACTUATOR) {
 						String actuatorType = node.get("actuatorType").toString();
 						Node actuator = new ActuatorGui(nodeName, actuatorType);
 						graph.addNode(actuator);
-					} else {   // switch
+					} else if (nodeType == NodeType.CORE_SWITCH
+						|| nodeType == NodeType.EDGE_SWITCH) {
 						int bw = new BigDecimal((Long) node.get("bw")).intValueExact();
 						long iops = (Long) node.get("iops");
 						int upports = new BigDecimal((Long) node.get("upports")).intValueExact();
@@ -112,6 +120,9 @@ public class Bridge {
 						Node sNode = new SwitchNode(nodeName, nodeType, iops, upports, downports,
 							bw);
 						graph.addNode(sNode);
+					} else {
+						throw new IllegalArgumentException(
+							"Unsupported physical topology node type " + nodeType);
 					}
 				}
 
@@ -137,7 +148,7 @@ public class Bridge {
 				e.printStackTrace();
 			}
 
-		} else if (1 == type) {
+		} else {
 			try {
 				JSONObject doc = (JSONObject) JSONValue.parse(new FileReader(fileName));
 				JSONArray nodes = (JSONArray) doc.get("nodes");
@@ -145,7 +156,12 @@ public class Bridge {
 				while (iter.hasNext()) {
 					JSONObject node = iter.next();
 
-					String nodeType = (String) node.get("type");
+					NodeType nodeType = NodeType.fromExternal(
+						(String) node.get("type"));
+					if (nodeType != NodeType.VM) {
+						throw new IllegalArgumentException(
+							"Virtual topology contains non-VM node type " + nodeType);
+					}
 					String nodeName = (String) node.get("name");
 					int pes = new BigDecimal((Long) node.get("pes")).intValueExact();
 					long mips = (Long) node.get("mips");
@@ -209,14 +225,14 @@ public class Bridge {
 
 			// add node
 			JSONObject jobj = new JSONObject();
-			switch (srcNode.getType()) {
-			case "ACTUATOR":
+			switch (srcNode.getNodeType()) {
+			case ACTUATOR:
 				ActuatorGui actuator = (ActuatorGui) srcNode;
 				jobj.put("name", actuator.getName());
 				jobj.put("type", actuator.getType());
 				jobj.put("actuatorType", actuator.getActuatorType());
 				break;
-			case "SENSOR":
+			case SENSOR:
 				SensorGui sensor = (SensorGui) srcNode;
 				jobj.put("name", sensor.getName());
 				jobj.put("sensorType", sensor.getSensorType());
@@ -232,7 +248,7 @@ public class Bridge {
 					jobj.put("max", ((UniformDistribution) sensor.getDistribution()).getMax());
 				}
 				break;
-			case "FOG_DEVICE":
+			case FOG_DEVICE:
 				FogDeviceGui fogDevice = (FogDeviceGui) srcNode;
 				jobj.put("name", fogDevice.getName());
 				jobj.put("type", fogDevice.getType());
@@ -243,7 +259,7 @@ public class Bridge {
 				jobj.put("level", fogDevice.getLevel());
 				jobj.put("ratePerMips", fogDevice.getRatePerMips());
 				break;
-			case "host":
+			case HOST:
 				HostNode hNode = (HostNode) srcNode;
 				jobj.put("name", hNode.getName());
 				jobj.put("type", hNode.getType());
@@ -253,8 +269,8 @@ public class Bridge {
 				jobj.put("storage", hNode.getStorage());
 				jobj.put("bw", hNode.getBw());
 				break;
-			case "core":
-			case "edge":
+			case CORE_SWITCH:
+			case EDGE_SWITCH:
 				SwitchNode sNode = (SwitchNode) srcNode;
 				jobj.put("name", sNode.getName());
 				jobj.put("type", sNode.getType());
@@ -263,7 +279,7 @@ public class Bridge {
 				jobj.put("downports", sNode.getDownports());
 				jobj.put("bw", sNode.getBw());
 				break;
-			case "vm":
+			case VM:
 				VmNode vNode = (VmNode) srcNode;
 				jobj.put("name", vNode.getName());
 				jobj.put("type", vNode.getType());
@@ -287,12 +303,9 @@ public class Bridge {
 				JSONObject jobj2 = new JSONObject();
 				jobj2.put("source", srcNode.getName());
 				jobj2.put("destination", destNode.getName());
-				if ("host" == destNode.getType() || "core" == destNode.getType()
-					|| "edge" == destNode.getType() ||
-					"FOG_DEVICE" == destNode.getType() || "SENSOR" == destNode.getType()
-					|| "ACTUATOR" == destNode.getType()) {
+				if (destNode.getNodeType().isPhysicalNode()) {
 					jobj2.put("latency", edge.getLatency());
-				} else if ("vm" == destNode.getName()) {
+				} else {
 					if (edge.getBandwidth() > 0) {
 						jobj2.put("bandwidth", edge.getBandwidth());
 					}

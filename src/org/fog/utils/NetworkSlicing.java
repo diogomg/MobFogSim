@@ -39,19 +39,89 @@ public final class NetworkSlicing {
 		DOWNLINK
 	}
 
+	/** Portion of the network on which slice reservations are enforced. */
+	public enum Scope {
+		TRANSPORT(TRANSPORT_NETWORK, true, false),
+		WIRELESS(WIRELESS_NETWORK, false, true),
+		END_TO_END(END_TO_END_NETWORK, true, true);
+
+		private final int legacyValue;
+		private final boolean transport;
+		private final boolean wireless;
+
+		Scope(int legacyValue, boolean transport, boolean wireless) {
+			this.legacyValue = legacyValue;
+			this.transport = transport;
+			this.wireless = wireless;
+		}
+
+		public int legacyValue() {
+			return legacyValue;
+		}
+
+		public boolean coversTransportNetwork() {
+			return transport;
+		}
+
+		public boolean coversWirelessNetwork() {
+			return wireless;
+		}
+
+		public static Scope fromLegacy(int value) {
+			for (Scope scope : values()) {
+				if (scope.legacyValue == value) {
+					return scope;
+				}
+			}
+			throw new IllegalArgumentException(
+				"Network slice scope must be 0 (transport), 1 (wireless), or 2 (end-to-end)");
+		}
+	}
+
+	/** Whether idle slice capacity remains reserved or may be borrowed. */
+	public enum Mode {
+		FIXED(false),
+		DYNAMIC(true);
+
+		private final boolean dynamicBorrowing;
+
+		Mode(boolean dynamicBorrowing) {
+			this.dynamicBorrowing = dynamicBorrowing;
+		}
+
+		public boolean allowsDynamicBorrowing() {
+			return dynamicBorrowing;
+		}
+
+		public static Mode fromDynamicBorrowing(boolean enabled) {
+			return enabled ? DYNAMIC : FIXED;
+		}
+	}
+
 	/** Immutable, fully validated slicing settings for one simulation run. */
 	public static final class Configuration {
 		private final double[] bandwidthPercentages;
 		private final double[] userPercentages;
-		private final boolean dynamicBorrowing;
-		private final int scope;
+		private final Mode mode;
+		private final Scope scope;
 
 		private Configuration(double[] bandwidthPercentages,
-			double[] userPercentages, boolean dynamicBorrowing, int scope) {
+			double[] userPercentages, Scope scope, Mode mode) {
 			this.bandwidthPercentages = bandwidthPercentages.clone();
 			this.userPercentages = userPercentages.clone();
-			this.dynamicBorrowing = dynamicBorrowing;
+			if (scope == null || mode == null) {
+				throw new IllegalArgumentException("Slicing scope and mode cannot be null");
+			}
 			this.scope = scope;
+			this.mode = mode;
+		}
+
+		public Scope getScope() {
+			return scope;
+		}
+
+		public Mode getMode() {
+			return mode;
 		}
 	}
 
@@ -59,8 +129,8 @@ public final class NetworkSlicing {
 	public static final class RuntimeState {
 		private double[] percentages;
 		private double[] userAllocationPercentages;
-		private boolean dynamicBorrowing;
-		private int scope;
+		private Mode mode;
+		private Scope scope;
 		private final Map<Integer, MigrationTransferMetadata> migrationTransfers =
 			new HashMap<Integer, MigrationTransferMetadata>();
 		private MigrationTransferScheduler migrationScheduler;
@@ -76,17 +146,17 @@ public final class NetworkSlicing {
 		private RuntimeState(Configuration configuration) {
 			percentages = configuration.bandwidthPercentages.clone();
 			userAllocationPercentages = configuration.userPercentages.clone();
-			dynamicBorrowing = configuration.dynamicBorrowing;
+			mode = configuration.mode;
 			scope = configuration.scope;
 			migrationScheduler = new MigrationTransferScheduler(percentages,
-				coversTransportNetwork(scope), dynamicBorrowing);
+				scope.coversTransportNetwork(), mode.allowsDynamicBorrowing());
 			wirelessScheduler = new AccessPointTransferScheduler(percentages,
-				coversWirelessNetwork(scope), dynamicBorrowing);
+				scope.coversWirelessNetwork(), mode.allowsDynamicBorrowing());
 		}
 
 		private static RuntimeState defaults() {
 			return new RuntimeState(new Configuration(new double[] { 100.0 },
-				new double[] { 100.0 }, true, END_TO_END_NETWORK));
+				new double[] { 100.0 }, Scope.END_TO_END, Mode.DYNAMIC));
 		}
 	}
 
@@ -291,7 +361,7 @@ public final class NetworkSlicing {
 	 */
 	public static void configure(String percentageList) {
 		applyConfiguration(parseConfiguration(percentageList, null, state().scope,
-			state().dynamicBorrowing));
+			state().mode));
 	}
 
 	/**
@@ -299,7 +369,17 @@ public final class NetworkSlicing {
 	 */
 	public static Configuration parseConfiguration(String bandwidthPercentageList,
 		String userPercentageList, int selectedScope, boolean useDynamicBorrowing) {
-		validateScope(selectedScope);
+		return parseConfiguration(bandwidthPercentageList, userPercentageList,
+			Scope.fromLegacy(selectedScope),
+			Mode.fromDynamicBorrowing(useDynamicBorrowing));
+	}
+
+	/** Parses typed slicing options without changing global slicing state. */
+	public static Configuration parseConfiguration(String bandwidthPercentageList,
+		String userPercentageList, Scope selectedScope, Mode selectedMode) {
+		if (selectedScope == null || selectedMode == null) {
+			throw new IllegalArgumentException("Slicing scope and mode cannot be null");
+		}
 		double[] parsedBandwidthPercentages = parsePercentagesOrDefault(
 			bandwidthPercentageList, "Network slice");
 		double[] parsedUserPercentages;
@@ -315,7 +395,7 @@ public final class NetworkSlicing {
 			}
 		}
 		return new Configuration(parsedBandwidthPercentages, parsedUserPercentages,
-			useDynamicBorrowing, selectedScope);
+			selectedScope, selectedMode);
 	}
 
 	/** Applies one already validated slicing configuration in a single update. */
@@ -325,7 +405,7 @@ public final class NetworkSlicing {
 		}
 		state().percentages = configuration.bandwidthPercentages.clone();
 		state().userAllocationPercentages = configuration.userPercentages.clone();
-		state().dynamicBorrowing = configuration.dynamicBorrowing;
+		state().mode = configuration.mode;
 		state().scope = configuration.scope;
 		resetUsage();
 	}
@@ -355,12 +435,23 @@ public final class NetworkSlicing {
 
 	/** Enables (true) or disables (false) borrowing of idle slice capacity. */
 	public static void setDynamicBorrowing(boolean enabled) {
-		state().dynamicBorrowing = enabled;
+		setMode(Mode.fromDynamicBorrowing(enabled));
+	}
+
+	public static void setMode(Mode mode) {
+		if (mode == null) {
+			throw new IllegalArgumentException("Network slicing mode cannot be null");
+		}
+		state().mode = mode;
 		resetUsage();
 	}
 
 	public static boolean isDynamicBorrowing() {
-		return state().dynamicBorrowing;
+		return state().mode.allowsDynamicBorrowing();
+	}
+
+	public static Mode getMode() {
+		return state().mode;
 	}
 
 	/**
@@ -368,20 +459,31 @@ public final class NetworkSlicing {
 	 * {@link #WIRELESS_NETWORK}, or {@link #END_TO_END_NETWORK}.
 	 */
 	public static void setScope(int selectedScope) {
-		state().scope = validateScope(selectedScope);
+		setScope(Scope.fromLegacy(selectedScope));
+	}
+
+	public static void setScope(Scope selectedScope) {
+		if (selectedScope == null) {
+			throw new IllegalArgumentException("Network slicing scope cannot be null");
+		}
+		state().scope = selectedScope;
 		resetUsage();
 	}
 
 	public static int getScope() {
+		return state().scope.legacyValue();
+	}
+
+	public static Scope getTypedScope() {
 		return state().scope;
 	}
 
 	public static boolean coversTransportNetwork() {
-		return coversTransportNetwork(state().scope);
+		return state().scope.coversTransportNetwork();
 	}
 
 	public static boolean coversWirelessNetwork() {
-		return coversWirelessNetwork(state().scope);
+		return state().scope.coversWirelessNetwork();
 	}
 
 	public static double getPercentage(int sliceId) {
@@ -715,7 +817,7 @@ public final class NetworkSlicing {
 
 		int requestedSlice = validateSliceId(mobileDevice.getNetworkSliceId());
 		double maximumAccessPointRate = accessPointBandwidth;
-		if (coversWirelessNetwork() && !state().dynamicBorrowing) {
+		if (coversWirelessNetwork() && !state().mode.allowsDynamicBorrowing()) {
 			maximumAccessPointRate *= state().percentages[requestedSlice] / 100.0;
 		}
 		return Math.min(mobileDeviceBandwidth, maximumAccessPointRate);
@@ -775,29 +877,11 @@ public final class NetworkSlicing {
 		return equal;
 	}
 
-	private static String linkKey(FogDevice source, FogDevice destination) {
+	private static TransportLinkId linkKey(FogDevice source, FogDevice destination) {
 		if (source == null || destination == null) {
 			throw new IllegalArgumentException("Network-slice reservations require source and destination cloudlets");
 		}
-		return source.getId() + "->" + destination.getId();
-	}
-
-	private static int validateScope(int selectedScope) {
-		if (selectedScope < TRANSPORT_NETWORK || selectedScope > END_TO_END_NETWORK) {
-			throw new IllegalArgumentException(
-				"Network slice scope must be 0 (transport), 1 (wireless), or 2 (end-to-end)");
-		}
-		return selectedScope;
-	}
-
-	private static boolean coversTransportNetwork(int selectedScope) {
-		return selectedScope == TRANSPORT_NETWORK
-			|| selectedScope == END_TO_END_NETWORK;
-	}
-
-	private static boolean coversWirelessNetwork(int selectedScope) {
-		return selectedScope == WIRELESS_NETWORK
-			|| selectedScope == END_TO_END_NETWORK;
+		return TransportLinkId.directed(source.getId(), destination.getId());
 	}
 
 	private static void validateWirelessTransfer(ApDevice accessPoint,
@@ -940,13 +1024,13 @@ public final class NetworkSlicing {
 		state().migrationTransfers.clear();
 		state().migrationScheduler = new MigrationTransferScheduler(
 			state().percentages, coversTransportNetwork(),
-			state().dynamicBorrowing);
+			state().mode.allowsDynamicBorrowing());
 		state().wirelessTransfers.clear();
 		state().activeWirelessTransfers.clear();
 		state().queuedWirelessTransfers.clear();
 		state().wirelessScheduler = new AccessPointTransferScheduler(
 			state().percentages, coversWirelessNetwork(),
-			state().dynamicBorrowing);
+			state().mode.allowsDynamicBorrowing());
 		state().nextWirelessTransferId = 1L;
 	}
 

@@ -31,6 +31,7 @@ import org.fog.gui.core.Edge;
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.Link;
 import org.fog.gui.core.Node;
+import org.fog.gui.core.NodeType;
 import org.fog.gui.core.NodeCellRenderer;
 
 /** A dialog to add a new edge */
@@ -115,12 +116,13 @@ public class AddLink extends JDialog {
 					for (Edge edge : edgesForSelectedNode) {
 						nodesInEdges.add(edge.getNode());
 					}
-					if (!(selectedNode.getType().equals("SENSOR") || selectedNode.getType().equals(
-						"ACTUATOR"))
+					if (!(selectedNode.getNodeType() == NodeType.SENSOR
+						|| selectedNode.getNodeType() == NodeType.ACTUATOR)
 						|| edgesForSelectedNode.size() == 0) {
 						for (Node node : allNodes) {
-							if ((selectedNode.getType().equals("SENSOR") || selectedNode.getType()
-								.equals("ACTUATOR")) && !node.getType().equals("FOG_DEVICE"))
+							if ((selectedNode.getNodeType() == NodeType.SENSOR
+								|| selectedNode.getNodeType() == NodeType.ACTUATOR)
+								&& node.getNodeType() != NodeType.FOG_DEVICE)
 								continue;
 							if (!node.equals(selectedNode) && !nodesInEdges.contains(node)) {
 								nodesToDisplay.add(node);

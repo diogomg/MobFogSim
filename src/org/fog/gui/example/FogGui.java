@@ -243,7 +243,7 @@ public class FogGui extends JFrame {
 
 		btnRun.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				if ("i" == mode) {
+				if ("i".equals(mode)) {
 					if (physicalTopologyFile == null || physicalTopologyFile.isEmpty()) {
 						JOptionPane.showMessageDialog(panel, "Please select physicalTopologyFile",
 							"Error", JOptionPane.ERROR_MESSAGE);
@@ -268,7 +268,7 @@ public class FogGui extends JFrame {
 					SDNRun run = new SDNRun(physicalTopologyFile, deploymentFile,
 						workloads_background, workloads, FogGui.this);
 
-				} else if ("m" == mode) {
+				} else if ("m".equals(mode)) {
 
 				}
 
@@ -351,7 +351,7 @@ public class FogGui extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					String cmd = e.getActionCommand();
-					if ("Canvas" == cmd) {
+					if ("Canvas".equals(cmd)) {
 						btnSensor.setVisible(true);
 						btnActuator.setVisible(true);
 						btnFogDevice.setVisible(true);
@@ -371,7 +371,7 @@ public class FogGui extends JFrame {
 
 						mode = "m";
 
-					} else if ("Execution" == cmd) {
+					} else if ("Execution".equals(cmd)) {
 						btnSensor.setVisible(false);
 						btnActuator.setVisible(false);
 						btnFogDevice.setVisible(false);

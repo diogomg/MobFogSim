@@ -15,6 +15,7 @@ TEST_SUITES := \
 	org.fog.entities.FogDeviceChildStateTest \
 	org.fog.entities.TupleRoutingServiceTest \
 	org.fog.entities.SensorTest \
+	org.fog.gui.core.TopologyTypesTest \
 	org.fog.localization.CoordinateTest \
 	org.fog.localization.DistancesTest \
 	org.fog.placement.MobileControllerDelayedEntryTest \
@@ -34,7 +35,9 @@ TEST_SUITES := \
 	org.fog.vmmobile.MobilityDataLoaderTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
 	org.fog.vmmobile.SimulationContextIntegrationTest \
+	org.fog.vmmobile.TypedPolicyTest \
 	org.fog.utils.TimeKeeperTest \
+	org.fog.utils.TransportLinkIdTest \
 	org.fog.utils.distribution.RandomizedDistributionTest \
 	org.fog.utils.NetworkSlicingConfigurationTest \
 	org.fog.utils.UserAllocationNetworkSlicingTest \

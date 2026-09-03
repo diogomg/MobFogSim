@@ -10,7 +10,7 @@ public class ActuatorGui extends Node implements Serializable {
 	private String actuatorType;
 
 	public ActuatorGui(String name, String actuatorType) {
-		super(name, "ACTUATOR");
+		super(name, NodeType.ACTUATOR);
 		setName(name);
 		setActuatorType(actuatorType);
 	}
