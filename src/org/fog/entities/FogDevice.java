@@ -753,7 +753,7 @@ public class FogDevice extends PowerDatacenter {
 		if (!smartThing.getSourceServerCloudlet().equals(smartThing.getVmLocalServerCloudlet())) {
 			smartThing.getSourceServerCloudlet().desconnectServerCloudletSmartThing(smartThing);
 			smartThing.getVmLocalServerCloudlet().connectServerCloudletSmartThing(smartThing);
-			MyStatistics.getInstance().setMyCountLowestLatency(1);
+			MyStatistics.getInstance().incrementLowestLatencyCloudletCount();
 		}
 	}
 
@@ -958,18 +958,18 @@ public class FogDevice extends PowerDatacenter {
 			send(smartThing.getVmLocalServerCloudlet().getId(), migrationLocked,
 				MobileEvents.UNLOCKED_MIGRATION, smartThing);
 			MyStatistics.getInstance().countMigration();
-			MyStatistics.getInstance().historyMigrationTime(smartThing.getMyId(),
+			MyStatistics.getInstance().observeMigrationTime(smartThing.getMyId(),
 				smartThing.getMigTime());
 			if (smartThing.getMigrationTechnique() instanceof CompleteVM) {
-				MyStatistics.getInstance().historyDowntime(smartThing.getMyId(),
+				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
 					smartThing.getMigTime());
 			}
 			else if (smartThing.getMigrationTechnique() instanceof ContainerVM) {
-				MyStatistics.getInstance().historyDowntime(smartThing.getMyId(),
+				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
 					smartThing.getMigTime());
 			}
 			else if (smartThing.getMigrationTechnique() instanceof LiveMigration) {
-				MyStatistics.getInstance().historyDowntime(smartThing.getMyId(),
+				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
 					smartThing.getMigTime() * 0.15);
 			}
 			smartThing.setTimeFinishDeliveryVm(CloudSim.clock());
@@ -1487,7 +1487,7 @@ public class FogDevice extends PowerDatacenter {
 
 	protected void processTupleArrival(SimEvent ev) {
 		Tuple tuple = (Tuple) ev.getData();
-		MyStatistics.getInstance().setMyCountTotalTuple(1);
+		MyStatistics.getInstance().incrementTotalTupleCount();
 
 		if (!MobileController.isApplicationActive(tuple.getAppId())) {
 			return;
@@ -1503,7 +1503,7 @@ public class FogDevice extends PowerDatacenter {
 					break;
 				}
 				else {
-					MyStatistics.getInstance().setMyCountLostTuple(1);
+					MyStatistics.getInstance().incrementLostTupleCount();
 					saveLostTupple(String.valueOf(CloudSim.clock()), st.getId()
 						+ "fdlostTupple.txt");
 					if (st.isMigStatus()) {

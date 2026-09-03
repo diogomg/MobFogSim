@@ -1,0 +1,164 @@
+package org.fog.placement;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+
+import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.core.CloudSim;
+import org.fog.entities.ApDevice;
+import org.fog.entities.FogDevice;
+import org.fog.entities.MobileDevice;
+import org.fog.utils.NetworkUsageMonitor;
+import org.fog.utils.TimeKeeper;
+import org.fog.vmmigration.MyStatistics;
+import org.junit.Before;
+import org.junit.Test;
+
+public class SimulationMetricsSnapshotTest {
+
+	private static final double DELTA = 0.000001;
+	private MyStatistics statistics;
+	private TimeKeeper timeKeeper;
+
+	@Before
+	public void resetMetricSources() {
+		Log.disable();
+		CloudSim.init(1, Calendar.getInstance(), false);
+		NetworkUsageMonitor.reset();
+		statistics = new MyStatistics();
+		timeKeeper = TimeKeeper.getInstance();
+		timeKeeper.setLoopIdToTupleIds(
+			new HashMap<Integer, List<Integer>>());
+		timeKeeper.setLoopIdToCurrentAverage(
+			new HashMap<Integer, Double>());
+		timeKeeper.setMaxLoopExecutionTime(
+			new HashMap<Integer, Double>());
+		timeKeeper.setTupleTypeToAverageCpuTime(
+			new HashMap<String, Double>());
+	}
+
+	@Test
+	public void emptyRunUsesFiniteZeroSemantics() {
+		SimulationMetricsSnapshot snapshot = capture(
+			Collections.<FogDevice>emptyList(),
+			Collections.<ApDevice>emptyList(), 0.0, -1L);
+
+		assertEquals(0L, snapshot.getExecutionTimeMillis());
+		assertEquals(0.0, snapshot.getAverageCloudletEnergy(), DELTA);
+		assertEquals(0.0, snapshot.getAverageAccessPointEnergy(), DELTA);
+		assertEquals(0.0, snapshot.getAverageLoopDelay(), DELTA);
+		assertEquals(0.0, snapshot.getAverageMaximumLoopDelay(), DELTA);
+		assertEquals(0.0,
+			snapshot.getMeanMigrationUsageByteMilliseconds(), DELTA);
+		assertEquals(0.0, snapshot.perSimulationMillisecond(123.0), DELTA);
+		assertEquals(0.0,
+			snapshot.getStatistics().getLostTuplePercentage(), DELTA);
+		assertTrue(snapshot.getLoopTimings().isEmpty());
+	}
+
+	@Test
+	public void energyAveragesUseExplicitRolesAndIncludeEveryCloudlet() {
+		FogDevice cloudletWithFormerSentinelEnergy =
+			new FogDevice("cloudlet-a", 0, 0, 7);
+		cloudletWithFormerSentinelEnergy.setEnergyConsumption(
+			5.8736831999993116E7);
+		FogDevice cloudlet = new FogDevice("cloudlet-b", 0, 0, 42);
+		cloudlet.setEnergyConsumption(40.0);
+		ApDevice firstAccessPoint = new ApDevice("ap-a", 0, 0, 100);
+		firstAccessPoint.setEnergyConsumption(10.0);
+		ApDevice secondAccessPoint = new ApDevice("ap-b", 0, 0, 101);
+		secondAccessPoint.setEnergyConsumption(30.0);
+
+		SimulationMetricsSnapshot snapshot = capture(
+			Arrays.asList(cloudletWithFormerSentinelEnergy, cloudlet),
+			Arrays.asList(firstAccessPoint, secondAccessPoint), 1.0, 1L);
+
+		assertEquals(2, snapshot.getCloudlets().size());
+		assertEquals((5.8736831999993116E7 + 40.0) / 2.0,
+			snapshot.getAverageCloudletEnergy(), DELTA);
+		assertEquals(20.0, snapshot.getAverageAccessPointEnergy(), DELTA);
+	}
+
+	@Test
+	public void sparseIdsArePreservedAndCapturedCollectionsAreImmutable() {
+		statistics.recordPowerAndEnergy(7, 1.5, 2.5);
+		statistics.recordPowerAndEnergy(42, Double.NaN,
+			Double.POSITIVE_INFINITY);
+		statistics.observeMigrationTime(42, 10.0);
+		statistics.observeMigrationTime(42, 30.0);
+		statistics.observeMigrationTime(7, 20.0);
+		timeKeeper.registerLoop(7);
+		timeKeeper.registerLoop(42);
+		timeKeeper.registerLoop(99);
+		timeKeeper.getLoopIdToCurrentAverage().put(7, 10.0);
+		timeKeeper.getLoopIdToCurrentAverage().put(42, 30.0);
+		timeKeeper.getLoopIdToCurrentAverage().put(99, Double.NaN);
+		timeKeeper.getMaxLoopExecutionTime().put(42, 50.0);
+		timeKeeper.getTupleTypeToAverageCpuTime().put("sensor", Double.NaN);
+
+		SimulationMetricsSnapshot snapshot = capture(
+			Collections.<FogDevice>emptyList(),
+			Collections.<ApDevice>emptyList(), 100.0, 1L);
+		statistics.getPowerHistory().put(8, 99.0);
+		timeKeeper.getLoopIdToCurrentAverage().put(7, 999.0);
+
+		assertEquals(Arrays.asList(7, 42),
+			new ArrayList<Integer>(snapshot.getMobilePowerHistory().keySet()));
+		assertFalse(snapshot.getMobilePowerHistory().containsKey(8));
+		assertEquals(0.0, snapshot.getMobilePowerHistory().get(42), DELTA);
+		assertEquals(Arrays.asList(7, 42, 99),
+			new ArrayList<Integer>(snapshot.getLoopTimings().keySet()));
+		assertEquals(10.0, snapshot.getLoopTimings().get(7).getAverage(), DELTA);
+		assertEquals(0.0, snapshot.getLoopTimings().get(7).getMaximum(), DELTA);
+		assertEquals(0.0, snapshot.getLoopTimings().get(99).getAverage(), DELTA);
+		assertEquals(20.0, snapshot.getAverageLoopDelay(), DELTA);
+		assertEquals(50.0, snapshot.getAverageMaximumLoopDelay(), DELTA);
+		assertEquals(20.0,
+			snapshot.getStatistics().getMigrationTime().getAverage(), DELTA);
+		assertEquals(30.0,
+			snapshot.getStatistics().getMigrationTime().getMaximum(), DELTA);
+		assertEquals(0.0, snapshot.getTupleCpuTimes().get("sensor"), DELTA);
+
+		try {
+			snapshot.getMobilePowerHistory().put(9, 1.0);
+			fail("Snapshot maps must be immutable");
+		} catch (UnsupportedOperationException expected) {
+			// Expected.
+		}
+	}
+
+	@Test
+	public void statisticQueriesDoNotChangeCounters() {
+		assertEquals(0, statistics.getMyCountTuple());
+		assertEquals(0, statistics.getMyCountTuple());
+		assertEquals(1, statistics.nextTupleId());
+		assertEquals(1, statistics.getMyCountTuple());
+		assertEquals(1, statistics.getMyCountTuple());
+
+		statistics.setTotalMigrations(4);
+		statistics.setTotalMigrations(2);
+		assertEquals(2, statistics.getTotalMigrations());
+		statistics.startWithoutConnetion(42, 10.0);
+		statistics.finalWithoutConnection(42, 15.0);
+		assertEquals(1, statistics.getMyCountWithoutConnection());
+		assertEquals(1, statistics.getMyCountWithoutConnection());
+		assertEquals(5.0, statistics.getAverageWithoutConnection(), DELTA);
+	}
+
+	private SimulationMetricsSnapshot capture(List<FogDevice> cloudlets,
+		List<ApDevice> accessPoints, double simulationTimeMillis,
+		long executionTimeMillis) {
+		return SimulationMetricsSnapshot.capture(cloudlets, accessPoints,
+			Collections.<MobileDevice>emptyList(), statistics, timeKeeper,
+			simulationTimeMillis, executionTimeMillis);
+	}
+}

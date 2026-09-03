@@ -263,7 +263,7 @@ public class MobileDevice extends FogDevice {
 	protected void processTupleArrival(SimEvent ev) {
 
 		Tuple tuple = (Tuple) ev.getData();
-		MyStatistics.getInstance().setMyCountTotalTuple(1);
+		MyStatistics.getInstance().incrementTotalTupleCount();
 
 		if (!MobileController.getSmartThings().contains(this)) {
 			return;
@@ -297,7 +297,7 @@ public class MobileDevice extends FogDevice {
 		}
 
 		if ((isMigStatus() || isHandoffStatus())) {
-			MyStatistics.getInstance().setMyCountLostTuple(1);
+			MyStatistics.getInstance().incrementLostTupleCount();
 			saveLostTupple(String.valueOf(CloudSim.clock()), tuple.getUserId() + "mdlostTupple.txt");
 			return;
 		}

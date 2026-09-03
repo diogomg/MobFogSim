@@ -38,7 +38,6 @@ import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.MigrationTransferSpec;
-import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
@@ -317,11 +316,16 @@ public class MobileController extends SimEntity {
 			.println("*********************Stopping simulation********************");
 		System.out.println("CloudSim.clock(): " + CloudSim.clock());
 		System.out.println("Size SmartThings: " + getSmartThings().size());
-		printTimeDetails();
-		printPowerDetails();
+		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+			getServerCloudlets(), getApDevices(), getSmartThings(),
+			MyStatistics.getInstance(), TimeKeeper.getInstance(), CloudSim.clock(),
+			Calendar.getInstance().getTimeInMillis()
+				- TimeKeeper.getInstance().getSimulationStartTime());
+		printTimeDetails(metrics);
+		printPowerDetails(metrics);
 		printCostDetails();
-		printNetworkUsageDetails();
-		printMigrationsDetalis();
+		printNetworkUsageDetails(metrics);
+		printMigrationDetails(metrics);
 		CloudSim.terminateSimulation();
 	}
 
@@ -579,11 +583,9 @@ public class MobileController extends SimEntity {
 				disconnectMobileUser(st);
 				return;
 			}
-			MyStatistics.getInstance().getEnergyHistory()
-				.put(st.getMyId(), st.getEnergyConsumption());
 			if (st.getCharacteristics() != null && !st.getHostList().isEmpty()) {
-				MyStatistics.getInstance().getPowerHistory()
-					.put(st.getMyId(), st.getHost().getPower());
+				MyStatistics.getInstance().recordPowerAndEnergy(st.getMyId(),
+					st.getHost().getPower(), st.getEnergyConsumption());
 			}
 
 			if (st.getSourceAp() != null) {
@@ -668,7 +670,7 @@ public class MobileController extends SimEntity {
 							send(st.getSourceAp().getId(), handoffTime, MobileEvents.START_HANDOFF,st);
 							send(st.getDestinationAp().getId(), handoffLocked,
 								MobileEvents.UNLOCKED_HANDOFF, st);
-							MyStatistics.getInstance().setTotalHandoff(1);
+							MyStatistics.getInstance().incrementHandoffCount();
 
 							saveHandOff(st);
 
@@ -745,60 +747,53 @@ public class MobileController extends SimEntity {
 		}
 	}
 
-	private void printPowerDetails() {
-		double energyConsumedMean = 0.0;
-		int j = 0;
+	private void printPowerDetails(SimulationMetricsSnapshot metrics) {
 		System.out.println("=========================================");
 		System.out.println("CLOUDLETS ENERGY CONSUMPTION");
 		System.out.println("=========================================");
-		for (FogDevice fogDevice : getServerCloudlets()) {
-			if (fogDevice.getEnergyConsumption() != 5.8736831999993116E7) {
-				System.out.println(fogDevice.getName() + ": Power = "
-					+ fogDevice.getHost().getPower());
-				System.out.println(fogDevice.getName() + ": Energy Consumed = "
-					+ fogDevice.getEnergyConsumption());
-				energyConsumedMean += fogDevice.getEnergyConsumption();
-				j++;
-			}
+		for (SimulationMetricsSnapshot.DeviceEnergy cloudlet : metrics.getCloudlets()) {
+			System.out.println(cloudlet.getName() + ": Power = "
+				+ cloudlet.getPower());
+			System.out.println(cloudlet.getName() + ": Energy Consumed = "
+				+ cloudlet.getEnergy());
 		}
-		System.out.println("Total consumido Coudlets: " + energyConsumedMean + " Media: "
-			+ energyConsumedMean / j);
-		printResults(String.valueOf(energyConsumedMean / j), "averageEnergyHistoryDevice.txt");
+		System.out.println("Total cloudlet energy: " + metrics.getTotalCloudletEnergy()
+			+ " Mean: " + metrics.getAverageCloudletEnergy());
+		printResults(String.valueOf(metrics.getAverageCloudletEnergy()),
+			"averageEnergyHistoryDevice.txt");
 		printResults(
-			String.valueOf(energyConsumedMean) + "\t" + String.valueOf(energyConsumedMean / j),
+			String.valueOf(metrics.getTotalCloudletEnergy()) + "\t"
+				+ String.valueOf(metrics.getAverageCloudletEnergy()),
 			"results.txt");
-		energyConsumedMean = 0.0;
 		System.out.println("=========================================");
 		System.out.println("AP DEVICES ENERGY CONSUMPTION");
 		System.out.println("=========================================");
-		for (FogDevice apDevice : getApDevices()) {
-			System.out.println(apDevice.getName() + ": Energy Consumed = "
-				+ apDevice.getEnergyConsumption());
-			energyConsumedMean += apDevice.getEnergyConsumption();
-			j++;
+		for (SimulationMetricsSnapshot.DeviceEnergy accessPoint
+			: metrics.getAccessPoints()) {
+			System.out.println(accessPoint.getName() + ": Energy Consumed = "
+				+ accessPoint.getEnergy());
 		}
-		System.out.println("Total consumido AP: " + energyConsumedMean + " Media: "
-			+ energyConsumedMean / j);
-		energyConsumedMean = 0.0;
+		System.out.println("Total AP energy: " + metrics.getTotalAccessPointEnergy()
+			+ " Mean: " + metrics.getAverageAccessPointEnergy());
 		System.out.println("=========================================");
 		System.out.println("SMARTTHINGS ENERGY CONSUMPTION");
 		System.out.println("=========================================");
-		for (FogDevice mobileDevice : getSmartThings()) {
+		for (SimulationMetricsSnapshot.DeviceEnergy mobileDevice
+			: metrics.getMobileDevices()) {
 			System.out.println(mobileDevice.getName() + ": Power = "
-				+ mobileDevice.getHost().getPower());
+				+ mobileDevice.getPower());
 			System.out.println(mobileDevice.getName() + ": Energy Consumed = "
-				+ mobileDevice.getEnergyConsumption());
+				+ mobileDevice.getEnergy());
 		}
-		for (int i = 0; i < MyStatistics.getInstance().getPowerHistory().size(); i++) {
-			System.out.println("SmartThing" + i + ": Power = "
-				+ MyStatistics.getInstance().getPowerHistory().get(i));
+		for (Entry<Integer, Double> power : metrics.getMobilePowerHistory().entrySet()) {
+			System.out.println("SmartThing" + power.getKey() + ": Power = "
+				+ power.getValue());
 		}
-		for (int i = 0; i < MyStatistics.getInstance().getEnergyHistory().size(); i++) {
-			System.out.println("SmartThing" + i + ": Energy Consumed = "
-				+ MyStatistics.getInstance().getEnergyHistory().get(i));
-			printResults(String.valueOf(MyStatistics.getInstance().getEnergyHistory().get(i)),
+		for (Entry<Integer, Double> energy : metrics.getMobileEnergyHistory().entrySet()) {
+			System.out.println("SmartThing" + energy.getKey() + ": Energy Consumed = "
+				+ energy.getValue());
+			printResults(String.valueOf(energy.getValue()),
 				"results.txt");
-			energyConsumedMean += MyStatistics.getInstance().getEnergyHistory().get(i);
 		}
 	}
 
@@ -810,230 +805,255 @@ public class MobileController extends SimEntity {
 					return loop.getModules().toString();
 			}
 		}
-		return null;
+		return "Loop " + loopId;
 	}
 
-	private void printTimeDetails() {
+	private void printTimeDetails(SimulationMetricsSnapshot metrics) {
 
 		System.out.println("=========================================");
 		System.out.println("============== RESULTS ==================");
 		System.out.println("=========================================");
 		System.out.println("EXECUTION TIME : "
-			+ (Calendar.getInstance().getTimeInMillis() - TimeKeeper.getInstance()
-				.getSimulationStartTime()));
+			+ metrics.getExecutionTimeMillis());
 		System.out.println("=========================================");
 		System.out.println("APPLICATION LOOP DELAYS");
 		System.out.println("=========================================");
-		double mediaLatencia = 0.0;
-		double mediaLatenciaMax = 0.0;
-		for (Integer loopId : TimeKeeper.getInstance().getLoopIdToTupleIds().keySet()) {
-			System.out.println(getStringForLoopId(loopId) + " ---> "
-				+ TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loopId)
+		for (SimulationMetricsSnapshot.LoopTiming loop
+			: metrics.getLoopTimings().values()) {
+			System.out.println(getStringForLoopId(loop.getLoopId()) + " ---> "
+				+ loop.getAverage()
 				+ " MaxExecutionTime: "
-				+ TimeKeeper.getInstance().getMaxLoopExecutionTime().get(loopId));
-			printResults(
-				String.valueOf(TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loopId)),
+				+ loop.getMaximum());
+			printResults(String.valueOf(loop.getAverage()),
 				"results.txt");
-			printResults(
-				String.valueOf(TimeKeeper.getInstance().getMaxLoopExecutionTime().get(loopId)),
+			printResults(String.valueOf(loop.getMaximum()),
 				"results.txt");
-			mediaLatencia += TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loopId);
-			mediaLatenciaMax += TimeKeeper.getInstance().getMaxLoopExecutionTime().get(loopId);
 		}
-		printResults(
-			String.valueOf(mediaLatencia
-				/ TimeKeeper.getInstance().getLoopIdToCurrentAverage().keySet().size()),
+		printResults(String.valueOf(metrics.getAverageLoopDelay()),
 			"averageLoopIdToCurrentAverage.txt");
-		printResults(
-			String.valueOf(mediaLatenciaMax
-				/ TimeKeeper.getInstance().getMaxLoopExecutionTime().keySet().size()),
+		printResults(String.valueOf(metrics.getAverageMaximumLoopDelay()),
 			"averageMaxLoopExecutionTime.txt");
 		System.out.println("=========================================");
 		System.out.println("TUPLE CPU EXECUTION DELAY");
 		System.out.println("=========================================");
 
-		for (String tupleType : TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().keySet()) {
-			System.out.println(tupleType + " ---> "
-				+ TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().get(tupleType));
+		for (Entry<String, Double> tupleCpuTime
+			: metrics.getTupleCpuTimes().entrySet()) {
+			System.out.println(tupleCpuTime.getKey() + " ---> "
+				+ tupleCpuTime.getValue());
 		}
 
 		System.out.println("=========================================");
 	}
 
-	private void printNetworkUsageDetails() {
+	private void printNetworkUsageDetails(SimulationMetricsSnapshot metrics) {
 		System.out.println("=========================================");
 		System.out.println("=============NETWORK USAGE===============");
 		System.out.println("=========================================");
-		double transferredMebibytes = NetworkUsageMonitor.getMigrationTransferredBytes()
-			/ (1024.0 * 1024.0);
-		double deviceNetworkUsage = NetworkUsageMonitor
-			.getTupleUsageByteMilliseconds();
+		double transferredMebibytes = metrics.getMigrationTransferredMebibytes();
+		double deviceNetworkUsage = metrics.getTupleUsageByteMilliseconds();
 		System.out.println("VM data transferred in migration (MiB) = "
 			+ transferredMebibytes);
 		printResults(
-			String.valueOf(transferredMebibytes / CloudSim.clock()) + '\t'
+			String.valueOf(metrics.perSimulationMillisecond(transferredMebibytes)) + '\t'
 				+ String.valueOf(transferredMebibytes) + '\t'
-				+ CloudSim.clock(), "results.txt");
+				+ metrics.getSimulationTimeMillis(), "results.txt");
 		printResults(
-			String.valueOf(transferredMebibytes / CloudSim.clock()) + '\t'
+			String.valueOf(metrics.perSimulationMillisecond(transferredMebibytes)) + '\t'
 				+ String.valueOf(transferredMebibytes) + '\t'
-				+ CloudSim.clock(), "vmsizesended.txt");
+				+ metrics.getSimulationTimeMillis(), "vmsizesended.txt");
 		System.out.println("Device network usage (byte-ms) = " + deviceNetworkUsage);
 		printResults(
-			String.valueOf(deviceNetworkUsage / CloudSim.clock()) + '\t'
-				+ String.valueOf(deviceNetworkUsage) + '\t' + CloudSim.clock(), "results.txt");
+			String.valueOf(metrics.perSimulationMillisecond(deviceNetworkUsage)) + '\t'
+				+ String.valueOf(deviceNetworkUsage) + '\t'
+				+ metrics.getSimulationTimeMillis(), "results.txt");
 		printResults(
-			String.valueOf(deviceNetworkUsage / CloudSim.clock()) + '\t'
-				+ String.valueOf(deviceNetworkUsage) + '\t' + CloudSim.clock(),
+			String.valueOf(metrics.perSimulationMillisecond(deviceNetworkUsage)) + '\t'
+				+ String.valueOf(deviceNetworkUsage) + '\t'
+				+ metrics.getSimulationTimeMillis(),
 			"deviceNetworkUsage.txt");
 		System.out.println("Migration network usage (total byte-ms) = "
-			+ NetworkUsageMonitor.getMigrationUsageByteMilliseconds());
-		double meanMigrationUsage = MyStatistics.getInstance().getTotalMigrations() == 0
-			? 0.0 : NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
-				/ MyStatistics.getInstance().getTotalMigrations();
+			+ metrics.getMigrationUsageByteMilliseconds());
 		System.out.println("Migration network usage (mean byte-ms) = "
-			+ meanMigrationUsage);
+			+ metrics.getMeanMigrationUsageByteMilliseconds());
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
-				/ CloudSim.clock())
+			String.valueOf(metrics.perSimulationMillisecond(
+				metrics.getMigrationUsageByteMilliseconds()))
 				+ '\t' + String.valueOf(
-					NetworkUsageMonitor.getMigrationUsageByteMilliseconds()) + '\t'
-				+ CloudSim.clock(), "results.txt");
+					metrics.getMigrationUsageByteMilliseconds()) + '\t'
+				+ metrics.getSimulationTimeMillis(), "results.txt");
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getMigrationUsageByteMilliseconds()
-				/ CloudSim.clock())
+			String.valueOf(metrics.perSimulationMillisecond(
+				metrics.getMigrationUsageByteMilliseconds()))
 				+ '\t' + String.valueOf(
-					NetworkUsageMonitor.getMigrationUsageByteMilliseconds()) + '\t'
-				+ CloudSim.clock(), "cloudletNetworkUsage.txt");
+					metrics.getMigrationUsageByteMilliseconds()) + '\t'
+				+ metrics.getSimulationTimeMillis(), "cloudletNetworkUsage.txt");
 		System.out.println("Total network usage (byte-ms) = "
-			+ NetworkUsageMonitor.getTotalUsageByteMilliseconds());
+			+ metrics.getTotalUsageByteMilliseconds());
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds()
-				/ CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds())
-				+ '\t' + CloudSim.clock(),
+			String.valueOf(metrics.perSimulationMillisecond(
+				metrics.getTotalUsageByteMilliseconds())) + '\t'
+				+ String.valueOf(metrics.getTotalUsageByteMilliseconds())
+				+ '\t' + metrics.getSimulationTimeMillis(),
 			"results.txt");
 		printResults(
-			String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds()
-				/ CloudSim.clock()) + '\t'
-				+ String.valueOf(NetworkUsageMonitor.getTotalUsageByteMilliseconds())
-				+ '\t' + CloudSim.clock(),
+			String.valueOf(metrics.perSimulationMillisecond(
+				metrics.getTotalUsageByteMilliseconds())) + '\t'
+				+ String.valueOf(metrics.getTotalUsageByteMilliseconds())
+				+ '\t' + metrics.getSimulationTimeMillis(),
 			"totalNetworkUsage.txt");
 	}
 
-	private void printMigrationsDetalis() {
+	private void printMigrationDetails(SimulationMetricsSnapshot metrics) {
+		SimulationMetricsSnapshot.Statistics statistics = metrics.getStatistics();
 		System.out.println("=========================================");
 		System.out.println("==============MIGRATIONS=================");
 		System.out.println("=========================================");
 		System.out.println("Total of migrations: "
-			+ MyStatistics.getInstance().getTotalMigrations());
-		System.out.println("Total of handoff: " + MyStatistics.getInstance().getTotalHandoff());
+			+ statistics.getTotalMigrations());
+		System.out.println("Total of handoff: " + statistics.getTotalHandoffs());
 		System.out.println("Different Cloudlets reached along the user's path: "
-			+ MyStatistics.getInstance().getMyCountLowestLatency());
+			+ statistics.getDistinctCloudletsReached());
 
-		printResults(String.valueOf(MyStatistics.getInstance().getTotalMigrations()),
+		printResults(String.valueOf(statistics.getTotalMigrations()),
 			"results.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getTotalHandoff()), "results.txt");
+		printResults(String.valueOf(statistics.getTotalHandoffs()), "results.txt");
 
-		printResults(String.valueOf(MyStatistics.getInstance().getTotalMigrations()),
+		printResults(String.valueOf(statistics.getTotalMigrations()),
 			"totalMigrations.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getMyCountLowestLatency()),
+		printResults(String.valueOf(statistics.getDistinctCloudletsReached()),
 			"totalMyCountLowestLatency.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getTotalHandoff()),
+		printResults(String.valueOf(statistics.getTotalHandoffs()),
 			"totalHandoff.txt");
 
-		MyStatistics.getInstance().printResults();
+		printStatisticsAverages(statistics);
 		System.out.println("***Last time without connection***");
 
-		for (Entry<Integer, Double> test : MyStatistics.getInstance().getWithoutConnectionTime()
-			.entrySet()) {
-			System.out.println("SmartThing" + test.getKey() + ": "
-				+ MyStatistics.getInstance().getWithoutConnectionTime().get(test.getKey())
-				+ " - Max: "
-				+ MyStatistics.getInstance().getMaxWithoutConnectionTime().get(test.getKey()));
+		for (Entry<Integer, Double> observation : statistics.getWithoutConnection()
+			.getLatestByUserId().entrySet()) {
+			System.out.println("SmartThing" + observation.getKey() + ": "
+				+ observation.getValue() + " - Max: "
+				+ statistics.getWithoutConnection()
+					.getMaximumForUser(observation.getKey()));
 		}
 
 		System.out.println("Average of without connection: "
-			+ MyStatistics.getInstance().getAverageWithoutConnection());
+			+ statistics.getWithoutConnection().getAverage());
 
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageWithoutConnection()),
+		printResults(String.valueOf(statistics.getWithoutConnection().getAverage()),
 			"results.txt");
 
 		System.out.println("***Last time without Vm***");
 
-		for (Entry<Integer, Double> test : MyStatistics.getInstance().getWithoutVmTime().entrySet()) {
-			System.out.println("SmartThing" + test.getKey() + ": "
-				+ MyStatistics.getInstance().getWithoutVmTime().get(test.getKey()) + " - Max: "
-				+ MyStatistics.getInstance().getMaxWithoutVmTime().get(test.getKey()));
+		for (Entry<Integer, Double> observation : statistics.getWithoutVm()
+			.getLatestByUserId().entrySet()) {
+			System.out.println("SmartThing" + observation.getKey() + ": "
+				+ observation.getValue() + " - Max: "
+				+ statistics.getWithoutVm().getMaximumForUser(observation.getKey()));
 		}
 
 		System.out.println("Average of without Vm: "
-			+ MyStatistics.getInstance().getAverageWithoutVmTime());
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageWithoutVmTime()),
+			+ statistics.getWithoutVm().getAverage());
+		printResults(String.valueOf(statistics.getWithoutVm().getAverage()),
 			"results.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageWithoutVmTime()),
+		printResults(String.valueOf(statistics.getWithoutVm().getAverage()),
 			"averageWithoutVmTime.txt");
 
 		System.out.println("===Last delay after connection===");
-		for (Entry<Integer, Double> test : MyStatistics.getInstance().getDelayAfterNewConnection()
-			.entrySet()) {
-			System.out.println("SmartThing" + test.getKey() + ": "
-				+ MyStatistics.getInstance().getDelayAfterNewConnection().get(test.getKey())
-				+ " - Max: "
-				+ MyStatistics.getInstance().getMaxDelayAfterNewConnection().get(test.getKey()));
+		for (Entry<Integer, Double> observation : statistics.getDelayAfterConnection()
+			.getLatestByUserId().entrySet()) {
+			System.out.println("SmartThing" + observation.getKey() + ": "
+				+ observation.getValue() + " - Max: "
+				+ statistics.getDelayAfterConnection()
+					.getMaximumForUser(observation.getKey()));
 		}
 		System.out.println("Average of delay after new Connection: "
-			+ MyStatistics.getInstance().getAverageDelayAfterNewConnection());
-		printResults(
-			String.valueOf(MyStatistics.getInstance().getAverageDelayAfterNewConnection()),
+			+ statistics.getDelayAfterConnection().getAverage());
+		printResults(String.valueOf(statistics.getDelayAfterConnection().getAverage()),
 			"results.txt");
-		printResults(
-			String.valueOf(MyStatistics.getInstance().getAverageDelayAfterNewConnection()),
+		printResults(String.valueOf(statistics.getDelayAfterConnection().getAverage()),
 			"averageDelayAfterNewConnection.txt");
 
 		System.out.println("---Average of Time of Migrations---");
-		double tempoMigracaoMax = 0.0;
-		for (Entry<Integer, Double> test : MyStatistics.getInstance().getMigrationTime().entrySet()) {
-			System.out.println("SmartThing" + test.getKey() + ": "
-				+ MyStatistics.getInstance().getMigrationTime().get(test.getKey()) + " - Max: "
-				+ MyStatistics.getInstance().getMaxMigrationTime().get(test.getKey()));
-			tempoMigracaoMax = Math.max(tempoMigracaoMax, MyStatistics.getInstance()
-				.getMaxMigrationTime().get(test.getKey()));
+		for (Entry<Integer, Double> observation : statistics.getMigrationTime()
+			.getLatestByUserId().entrySet()) {
+			System.out.println("SmartThing" + observation.getKey() + ": "
+				+ observation.getValue() + " - Max: "
+				+ statistics.getMigrationTime()
+					.getMaximumForUser(observation.getKey()));
 		}
 		System.out.println("Average of Time of Migrations: "
-			+ MyStatistics.getInstance().getAverageMigrationTime());
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageMigrationTime()),
+			+ statistics.getMigrationTime().getAverage());
+		printResults(String.valueOf(statistics.getMigrationTime().getAverage()),
 			"results.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageMigrationTime()),
+		printResults(String.valueOf(statistics.getMigrationTime().getAverage()),
 			"averageMigrationTime.txt");
-		System.out.println("Hightest Time of Migrations: " + tempoMigracaoMax);
-		printResults(String.valueOf(tempoMigracaoMax), "averageMigrationMaxTime.txt");
+		System.out.println("Highest Time of Migrations: "
+			+ statistics.getMigrationTime().getMaximum());
+		printResults(String.valueOf(statistics.getMigrationTime().getMaximum()),
+			"averageMigrationMaxTime.txt");
 		System.out.println("---Average of Downtime---");
-		double tempoDowntimeMax = 0.0;
-		for (Entry<Integer, Double> test : MyStatistics.getInstance().getDowntime().entrySet()) {
-			System.out.println("SmartThing" + test.getKey() + ": "
-				+ MyStatistics.getInstance().getDowntime().get(test.getKey()) + " - Max: "
-				+ MyStatistics.getInstance().getMaxDowntime().get(test.getKey()));
-			tempoDowntimeMax += MyStatistics.getInstance().getMaxDowntime().get(test.getKey());
+		for (Entry<Integer, Double> observation : statistics.getDowntime()
+			.getLatestByUserId().entrySet()) {
+			System.out.println("SmartThing" + observation.getKey() + ": "
+				+ observation.getValue() + " - Max: "
+				+ statistics.getDowntime().getMaximumForUser(observation.getKey()));
 		}
 		System.out.println("Average of Downtime: "
-			+ MyStatistics.getInstance().getAverageDowntime());
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageDowntime()),
+			+ statistics.getDowntime().getAverage());
+		printResults(String.valueOf(statistics.getDowntime().getAverage()),
 			"results.txt");
-		printResults(String.valueOf(MyStatistics.getInstance().getAverageDowntime()),
+		printResults(String.valueOf(statistics.getDowntime().getAverage()),
 			"averageDowntime.txt");
-		System.out.println("Max Downtime: " + tempoDowntimeMax);
-		printResults(String.valueOf(tempoDowntimeMax), "averageDowntimeMax.txt");
-		long lostTuples = MyStatistics.getInstance().getMyCountLostTuple();
-		long totalTuples = MyStatistics.getInstance().getMyCountTotalTuple();
-		double lostPercentage = totalTuples == 0L
-			? 0.0 : (double) lostTuples / totalTuples * 100.0;
-		System.out.println("Tuple lost: " + lostPercentage + "%");
-		System.out.println("Tuple lost: " + lostTuples);
-		System.out.println("Total tuple: " + totalTuples);
-		printResults(lostTuples + "\t" + totalTuples + "\t" + lostPercentage,
+		System.out.println("Max Downtime: " + statistics.getDowntime().getMaximum());
+		printResults(String.valueOf(statistics.getDowntime().getMaximum()),
+			"averageDowntimeMax.txt");
+		System.out.println("Tuple lost: " + statistics.getLostTuplePercentage() + "%");
+		System.out.println("Tuple lost: " + statistics.getLostTuples());
+		System.out.println("Total tuple: " + statistics.getTotalTuples());
+		printResults(statistics.getLostTuples() + "\t" + statistics.getTotalTuples()
+			+ "\t" + statistics.getLostTuplePercentage(),
 			"tupleLoss.txt");
 
+	}
+
+	private void printStatisticsAverages(
+		SimulationMetricsSnapshot.Statistics statistics) {
+		String suffix = statistics.getOutputLabel();
+		RunOutputManager output = RunOutputManager.getInstance();
+		try (PrintWriter withoutConnection = output.newSummaryPrintWriter(
+			"averages/withoutConnection_" + suffix, true);
+			PrintWriter withoutVm = output.newSummaryPrintWriter(
+				"averages/withoutVM_" + suffix, true);
+			PrintWriter delayAfterConnection = output.newSummaryPrintWriter(
+				"averages/delayAfterConnection_" + suffix, true);
+			PrintWriter migrationTime = output.newSummaryPrintWriter(
+				"averages/timeOfMigration_" + suffix, true);
+			PrintWriter downtime = output.newSummaryPrintWriter(
+				"averages/downtime_" + suffix, true);
+			PrintWriter all = output.newSummaryPrintWriter(
+				"averages/all_" + suffix, true)) {
+			int seedValue = statistics.getSeed();
+			withoutConnection.println(
+				statistics.getWithoutConnection().getAverage() + " " + seedValue);
+			withoutVm.println(statistics.getWithoutVm().getAverage() + " "
+				+ seedValue);
+			delayAfterConnection.println(
+				statistics.getDelayAfterConnection().getAverage() + " " + seedValue);
+			migrationTime.println(statistics.getMigrationTime().getAverage() + " "
+				+ seedValue);
+			downtime.println(statistics.getDowntime().getAverage() + " " + seedValue);
+			all.println(statistics.getWithoutConnection().getAverage() + " "
+				+ statistics.getWithoutVm().getAverage() + " "
+				+ statistics.getDelayAfterConnection().getAverage() + " "
+				+ statistics.getMigrationTime().getAverage() + " "
+				+ statistics.getDowntime().getAverage() + " "
+				+ statistics.getTotalMigrations() + " "
+				+ statistics.getTotalHandoffs() + " " + seedValue);
+		} catch (IOException error) {
+			throw new IllegalStateException(
+				"Could not write simulation statistics averages", error);
+		}
 	}
 
 	public void submitApplication(Application application, int delay) {

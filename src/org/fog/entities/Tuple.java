@@ -46,7 +46,7 @@ public class Tuple extends Cloudlet {
 		setModuleCopyMap(new HashMap<String, Integer>());
 		setInitialTime(-1);
 		setFinalTime(-1);
-		setMyTupleId(MyStatistics.getInstance().getMyCountTuple());
+		setMyTupleId(MyStatistics.getInstance().nextTupleId());
 	}
 
 	public int getActualTupleId() {

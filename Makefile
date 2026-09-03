@@ -14,6 +14,7 @@ TEST_SUITES := \
 	org.fog.localization.CoordinateTest \
 	org.fog.localization.DistancesTest \
 	org.fog.placement.MobileControllerDelayedEntryTest \
+	org.fog.placement.SimulationMetricsSnapshotTest \
 	org.fog.placement.ModulePlacementEdgewardsAtomicityTest \
 	org.fog.vmmigration.MigrationTechniqueTest \
 	org.fog.vmmigration.MigrationPreparationTest \

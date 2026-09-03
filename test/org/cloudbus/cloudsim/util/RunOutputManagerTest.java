@@ -81,7 +81,7 @@ public class RunOutputManagerTest {
 	}
 
 	@Test
-	public void statisticsCreateLatencyAndAverageDirectoriesFromScratch()
+	public void outputApisCreateLatencyAndAverageDirectoriesFromScratch()
 		throws IOException {
 		MyStatistics statistics = new MyStatistics();
 		MyStatistics.setInstance(statistics);
@@ -89,13 +89,14 @@ public class RunOutputManagerTest {
 		statistics.setFileMap("outputLatencies/7/latencies.txt", 7);
 		statistics.getMyCount().put(7, 0);
 		statistics.putLantencyFileName("header", 7);
-		statistics.printResults();
+		try (PrintWriter average = RunOutputManager.getInstance()
+			.newSummaryPrintWriter("averages/all_test-policy", true)) {
+			average.println("0.0 0.0 0");
+		}
 		BufferedFileManager.closeAll();
 
 		assertTrue(Files.isRegularFile(
 			runRoot.resolve("outputLatencies/7/latencies.txt")));
-		assertTrue(Files.isRegularFile(
-			runRoot.resolve("averages/withoutConnection_test-policy")));
 		assertTrue(Files.isRegularFile(
 			runRoot.resolve("averages/all_test-policy")));
 	}
@@ -121,7 +122,7 @@ public class RunOutputManagerTest {
 	}
 
 	@Test
-	public void summaryStatisticsDoNotCreateLatencyDirectories() throws IOException {
+	public void summaryModeDoesNotCreateLatencyDirectories() throws IOException {
 		RunOutputManager.initialize(runRoot, RunOutputMode.SUMMARY);
 		MyStatistics statistics = new MyStatistics();
 		MyStatistics.setInstance(statistics);
@@ -130,7 +131,10 @@ public class RunOutputManagerTest {
 		statistics.getMyCount().put(7, 0);
 		statistics.putLantencyFileName("header", 7);
 		statistics.putLatencyFileValue(1.0, 2.0, "app", 7, "server", "tuple");
-		statistics.printResults();
+		try (PrintWriter average = RunOutputManager.getInstance()
+			.newSummaryPrintWriter("averages/all_summary-policy", true)) {
+			average.println("0.0 0.0 0");
+		}
 		BufferedFileManager.closeAll();
 
 		assertFalse(Files.exists(runRoot.resolve("outputLatencies")));

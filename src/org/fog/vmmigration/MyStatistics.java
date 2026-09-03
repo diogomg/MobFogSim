@@ -66,46 +66,46 @@ public class MyStatistics {
 	private Map<Integer, Double> energyHistory;
 
 	public MyStatistics() {
-		setTotalMigTimes(0);
-		setTimeOutApplication(0);
-		setTotalMigrations(0);
-		setMyCountWithoutConnection(0);
-		setMyCountWithoutVmTime(0);
-		setMyCountDelayAfterNewConnection(0);
-		setMyCountMigrationTime(0);
-		setMyCountLowestLatency(0);
-		setMyCountDowntime(0);
-		setMyCount(new HashMap<Integer, Integer>());
-		setMyCountTotalTuple(0);
-		setMyCountLostTuple(0);
-		setAverageMigrationTime(0);
-		setAverageDelayAfterNewConnection(0);
-		setAverageDowntime(0);
-		setAverageWithoutConnection(0);
-		setAverageWithoutVmTime(0);
+		totalMigTimes = 0.0;
+		timeOutApplication = 0.0;
+		totalMigrations = 0;
+		myCountWithoutConnection = 0;
+		myCountWithoutVmTime = 0;
+		myCountDelayAfterNewConnection = 0;
+		myCountMigrationTime = 0;
+		myCountLowestLatency = 0;
+		myCountDowntime = 0;
+		myCount = new HashMap<Integer, Integer>();
+		myCountTotalTuple = 0L;
+		myCountLostTuple = 0L;
+		averageMigrationTime = 0.0;
+		averageDelayAfterNewConnection = 0.0;
+		averageDowntime = 0.0;
+		averageWithoutConnection = 0.0;
+		averageWithoutVmTime = 0.0;
 
-		setTupleLatency(new HashMap<Integer, Double>());
+		tupleLatency = new HashMap<Integer, Double>();
 		this.fileMap = new HashMap<Integer, File>();
 
-		setWithoutConnectionTime(new HashMap<Integer, Double>());
-		setWithoutVmTime(new HashMap<Integer, Double>());
-		setDelayAfterNewConnection(new HashMap<Integer, Double>());
-		setMigrationTime(new HashMap<Integer, Double>());
-		setDowntime(new HashMap<Integer, Double>());
+		withoutConnectionTime = new HashMap<Integer, Double>();
+		withoutVmTime = new HashMap<Integer, Double>();
+		DelayAfterNewConnection = new HashMap<Integer, Double>();
+		migrationTime = new HashMap<Integer, Double>();
+		downtime = new HashMap<Integer, Double>();
 
-		setInitialTimeWithoutConnection(new HashMap<Integer, Double>());
-		setInitialWithoutVmTime(new HashMap<Integer, Double>());
-		setInitialDowntime(new HashMap<Integer, Double>());
-		setInitialTimeDelayAfterNewConnection(new HashMap<Integer, Double>());
+		initialTimeWithoutConnection = new HashMap<Integer, Double>();
+		initialWithoutVmTime = new HashMap<Integer, Double>();
+		initialDowntime = new HashMap<Integer, Double>();
+		initialTimeDelayAfterNewConnection = new HashMap<Integer, Double>();
 
-		setMaxWithoutConnectionTime(new HashMap<Integer, Double>());
-		setMaxWithoutVmTime(new HashMap<Integer, Double>());
-		setMaxDelayAfterNewConnection(new HashMap<Integer, Double>());
-		setMaxMigrationTime(new HashMap<Integer, Double>());
-		setMaxDowntime(new HashMap<Integer, Double>());;
+		maxWithoutConnectionTime = new HashMap<Integer, Double>();
+		maxWithoutVmTime = new HashMap<Integer, Double>();
+		maxDelayAfterNewConnection = new HashMap<Integer, Double>();
+		maxMigrationTime = new HashMap<Integer, Double>();
+		maxDowntime = new HashMap<Integer, Double>();
 
-		setPowerHistory(new HashMap<Integer, Double>());
-		setEnergyHistory(new HashMap<Integer, Double>());
+		powerHistory = new HashMap<Integer, Double>();
+		energyHistory = new HashMap<Integer, Double>();
 
 	}
 
@@ -116,7 +116,7 @@ public class MyStatistics {
 	}
 
 	public void countMigration() {
-		setTotalMigrations(1);
+		totalMigrations++;
 	}
 
 	public void putLatencyFileValue(double latency, double time, String appId, int smartThingMyId,
@@ -138,21 +138,16 @@ public class MyStatistics {
 	}
 
 	public void finalWithoutConnection(int id, double clock) {
-		if (getInitialTimeWithoutConnection().get(id) != null) {
-			double delay = clock - getInitialTimeWithoutConnection().get(id);
-			double correntAverage = getAverageWithoutConnection();
-			double correntCount = getMyCountWithoutConnection();
-			getWithoutConnectionTime().put(id, delay);
-			setAverageWithoutConnection((correntAverage * correntCount + delay)
-				/ (correntCount + 1));
-			if (!getMaxWithoutConnectionTime().containsKey(id)) {
-				getMaxWithoutConnectionTime().put(id, 0.0);
-			}
-			if (delay > getMaxWithoutConnectionTime().get(id)) {
-				getMaxWithoutConnectionTime().put(id, delay);
-			}
-			getInitialTimeWithoutConnection().remove(id);
+		Double startedAt = initialTimeWithoutConnection.remove(id);
+		if (startedAt == null) {
+			return;
 		}
+		double delay = clock - startedAt;
+		averageWithoutConnection = runningMean(averageWithoutConnection,
+			myCountWithoutConnection, delay);
+		myCountWithoutConnection++;
+		withoutConnectionTime.put(id, delay);
+		observeMaximum(maxWithoutConnectionTime, id, delay);
 	}
 
 	public void startWithoutVmTime(int id, double clock) {
@@ -160,21 +155,17 @@ public class MyStatistics {
 	}
 
 	public void finalWithoutVmTime(int id, double clock) {
-		if (getInitialWithoutVmTime().get(id) != null) {
-			double delay = clock - getInitialWithoutVmTime().get(id);
-			double correntAverage = getAverageWithoutVmTime();
-			double correntCount = getMyCountWithoutVmTime();
-			LogMobile.debug("MyStatistics.java", "SmartThing" + id + " - Downtime: " + delay);
-			getWithoutVmTime().put(id, delay);
-			setAverageWithoutVmTime((correntAverage * correntCount + delay) / (correntCount + 1));
-			if (!getMaxWithoutVmTime().containsKey(id)) {
-				getMaxWithoutVmTime().put(id, 0.0);
-			}
-			if (delay > getMaxWithoutVmTime().get(id)) {
-				getMaxWithoutVmTime().put(id, delay);
-			}
-			getInitialWithoutVmTime().remove(id);
+		Double startedAt = initialWithoutVmTime.remove(id);
+		if (startedAt == null) {
+			return;
 		}
+		double delay = clock - startedAt;
+		LogMobile.debug("MyStatistics.java", "SmartThing" + id + " - Downtime: " + delay);
+		averageWithoutVmTime = runningMean(averageWithoutVmTime,
+			myCountWithoutVmTime, delay);
+		myCountWithoutVmTime++;
+		withoutVmTime.put(id, delay);
+		observeMaximum(maxWithoutVmTime, id, delay);
 	}
 
 	public void startDelayAfterNewConnection(int id, double clock) {
@@ -182,93 +173,71 @@ public class MyStatistics {
 	}
 
 	public void finalDelayAfterNewConnection(int id, double clock) {// T8
-		if (getInitialTimeDelayAfterNewConnection().get(id) != null) {
-			double delay = clock - getInitialTimeDelayAfterNewConnection().get(id);
-			LogMobile.debug("MyStatistics.java", "SmartThing" + id
-				+ " - DelayAfterNewConnection: " + delay);
-			double correntAverage = getAverageDelayAfterNewConnection();
-			double correntCount = getMyCountDelayAfterNewConnection();
-			getDelayAfterNewConnection().put(id, delay);
-			setAverageDelayAfterNewConnection((correntAverage * correntCount + delay)
-				/ (correntCount + 1));
-			if (!getMaxDelayAfterNewConnection().containsKey(id)) {
-				getMaxDelayAfterNewConnection().put(id, 0.0);
-			}
-			if (delay > getMaxDelayAfterNewConnection().get(id)) {
-				getMaxDelayAfterNewConnection().put(id, delay);
-			}
-			getInitialTimeDelayAfterNewConnection().remove(id);
+		Double startedAt = initialTimeDelayAfterNewConnection.remove(id);
+		if (startedAt == null) {
+			return;
 		}
+		double delay = clock - startedAt;
+		LogMobile.debug("MyStatistics.java", "SmartThing" + id
+			+ " - DelayAfterNewConnection: " + delay);
+		averageDelayAfterNewConnection = runningMean(
+			averageDelayAfterNewConnection, myCountDelayAfterNewConnection, delay);
+		myCountDelayAfterNewConnection++;
+		DelayAfterNewConnection.put(id, delay);
+		observeMaximum(maxDelayAfterNewConnection, id, delay);
 	}
 
-	public void historyMigrationTime(int id, double time) {
-		double correntAverage = getAverageMigrationTime();
-		double correntCount = getMyCountMigrationTime();
-		getMigrationTime().put(id, time);
-		setAverageMigrationTime((correntAverage * correntCount + time) / (correntCount + 1));
-		if (!getMaxMigrationTime().containsKey(id)) {
-			getMaxMigrationTime().put(id, 0.0);
-		}
-		if (time > getMaxMigrationTime().get(id)) {
-			getMaxMigrationTime().put(id, time);
-		}
+	public void observeMigrationTime(int id, double time) {
+		averageMigrationTime = runningMean(averageMigrationTime,
+			myCountMigrationTime, time);
+		myCountMigrationTime++;
+		migrationTime.put(id, time);
+		observeMaximum(maxMigrationTime, id, time);
 	}
 
-	public void historyDowntime(int id, double time) {
-		double correntAverage = getAverageDowntime();
-		double correntCount = getMyCountDowntime();
-		getDowntime().put(id, time);
-		setAverageDowntime((correntAverage * correntCount + time) / (correntCount + 1));
-		if (!getMaxDowntime().containsKey(id)) {
-			getMaxDowntime().put(id, 0.0);
-		}
-		if (time > getMaxDowntime().get(id)) {
-			getMaxDowntime().put(id, time);
-		}
+	public void observeDowntime(int id, double time) {
+		averageDowntime = runningMean(averageDowntime, myCountDowntime, time);
+		myCountDowntime++;
+		downtime.put(id, time);
+		observeMaximum(maxDowntime, id, time);
 	}
 
-	public void printResults() {
-		String name1 = "averages/withoutConnection_" + getToPrint();
-		String name2 = "averages/withoutVM_" + getToPrint();
-		String name3 = "averages/delayAfterConnection_" + getToPrint();
-		String name4 = "averages/timeOfMigration_" + getToPrint();
-		String name5 = "averages/downtime_" + getToPrint();
-		String name6 = "averages/all_" + getToPrint();
-		RunOutputManager output = RunOutputManager.getInstance();
-		try (BufferedWriter buffer1 = output.newSummaryBufferedWriter(name1, true);
-			BufferedWriter buffer2 = output.newSummaryBufferedWriter(name2, true);
-			BufferedWriter buffer3 = output.newSummaryBufferedWriter(name3, true);
-			BufferedWriter buffer4 = output.newSummaryBufferedWriter(name4, true);
-			BufferedWriter buffer5 = output.newSummaryBufferedWriter(name5, true);
-			BufferedWriter buffer6 = output.newSummaryBufferedWriter(name6, true)) {
-			buffer1.write(Double.toString(getAverageWithoutConnection()) + " "
-				+ Integer.toString(getSeed()));
-			buffer2.write(Double.toString(getAverageWithoutVmTime()) + " "
-				+ Integer.toString(getSeed()));
-			buffer3.write(Double.toString(getAverageDelayAfterNewConnection()) + " "
-				+ Integer.toString(getSeed()));
-			buffer4.write(Double.toString(getAverageMigrationTime()) + " "
-				+ Integer.toString(getSeed()));
-			buffer5.write(Double.toString(getAverageDowntime()) + " " + Integer.toString(getSeed()));
-			buffer6.write(Double.toString(getAverageWithoutConnection()) + " " +
-				Double.toString(getAverageWithoutVmTime()) + " " +
-				Double.toString(getAverageDelayAfterNewConnection()) + " " +
-				Double.toString(getAverageMigrationTime()) + " " +
-				Double.toString(getAverageDowntime()) + " " +
-				Integer.toString(getTotalMigrations()) + " " +
-				Integer.toString(getTotalHandoff()) + " " +
-				Integer.toString(getSeed()));
+	public void recordPowerAndEnergy(int id, double power, double energy) {
+		powerHistory.put(id, power);
+		energyHistory.put(id, energy);
+	}
 
-			buffer1.newLine();
-			buffer2.newLine();
-			buffer3.newLine();
-			buffer4.newLine();
-			buffer5.newLine();
-			buffer6.newLine();
-		} catch (IOException e) {
-			e.printStackTrace();
+	public void incrementLowestLatencyCloudletCount() {
+		myCountLowestLatency++;
+	}
+
+	public void incrementHandoffCount() {
+		totalHandoff++;
+	}
+
+	public void incrementLostTupleCount() {
+		myCountLostTuple++;
+	}
+
+	public void incrementTotalTupleCount() {
+		myCountTotalTuple++;
+	}
+
+	public int nextTupleId() {
+		return ++myCountTuple;
+	}
+
+	private static double runningMean(double currentMean, int currentCount,
+		double observation) {
+		return (currentMean * currentCount + observation) / (currentCount + 1);
+	}
+
+	private static void observeMaximum(Map<Integer, Double> maxima, int id,
+		double observation) {
+		Double currentMaximum = maxima.get(id);
+		if (currentMaximum == null || observation > currentMaximum) {
+			maxima.put(id, observation);
 		}
-
 	}
 
 	public double getTotalMigTimes() {
@@ -276,7 +245,7 @@ public class MyStatistics {
 	}
 
 	public void setTotalMigTimes(double totalMigTimes) {
-		this.totalMigTimes += totalMigTimes;
+		this.totalMigTimes = totalMigTimes;
 	}
 
 	public double getTimeOutApplication() {
@@ -292,7 +261,7 @@ public class MyStatistics {
 	}
 
 	public void setTotalMigrations(int totalMigrations) {
-		this.totalMigrations += totalMigrations;
+		this.totalMigrations = totalMigrations;
 	}
 
 	public static void setInstance(MyStatistics instance) {
@@ -346,7 +315,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountTuple() {
-		return ++myCountTuple;
+		return myCountTuple;
 	}
 
 	public void setMyCountTuple(int myCountTuple) {
@@ -378,7 +347,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountWithoutConnection() {
-		return myCountWithoutConnection++;
+		return myCountWithoutConnection;
 	}
 
 	public void setMyCountWithoutConnection(int myCountWithoutConnection) {
@@ -447,7 +416,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountDelayAfterNewConnection() {
-		return myCountDelayAfterNewConnection++;
+		return myCountDelayAfterNewConnection;
 	}
 
 	public void setMyCountDelayAfterNewConnection(int myCountDelayAfterNewConnection) {
@@ -479,7 +448,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountWithoutVmTime() {
-		return myCountWithoutVmTime++;
+		return myCountWithoutVmTime;
 	}
 
 	public void setMyCountWithoutVmTime(int myCountWithoutVmTime) {
@@ -551,7 +520,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountMigrationTime() {
-		return myCountMigrationTime++;
+		return myCountMigrationTime;
 	}
 
 	public void setMyCountMigrationTime(int myCountMigrationTime) {
@@ -559,7 +528,7 @@ public class MyStatistics {
 	}
 
 	public int getMyCountDowntime() {
-		return myCountDowntime++;
+		return myCountDowntime;
 	}
 
 	public void setMyCountDowntime(int myCountDowntime) {
@@ -579,7 +548,7 @@ public class MyStatistics {
 	}
 
 	public void setMyCountLowestLatency(int myCountLowestLatency) {
-		this.myCountLowestLatency += myCountLowestLatency;
+		this.myCountLowestLatency = myCountLowestLatency;
 	}
 
 	public int getTotalHandoff() {
@@ -587,7 +556,7 @@ public class MyStatistics {
 	}
 
 	public void setTotalHandoff(int totalHandoff) {
-		this.totalHandoff += totalHandoff;
+		this.totalHandoff = totalHandoff;
 	}
 
 	public void setMyCount(Map<Integer, Integer> myCount) {
@@ -603,7 +572,7 @@ public class MyStatistics {
 	}
 
 	public void setMyCountLostTuple(long myCountLostTuple) {
-		this.myCountLostTuple += myCountLostTuple;
+		this.myCountLostTuple = myCountLostTuple;
 	}
 
 	public long getMyCountTotalTuple() {
@@ -611,7 +580,7 @@ public class MyStatistics {
 	}
 
 	public void setMyCountTotalTuple(long myCountTotalTuple) {
-		this.myCountTotalTuple += myCountTotalTuple;
+		this.myCountTotalTuple = myCountTotalTuple;
 	}
 
 }
