@@ -112,6 +112,25 @@ public class AppExample {
 	 */
 
 	public static void main(String[] args) throws Exception {
+		run(args);
+	}
+
+	/** Runs one isolated simulation and returns its immutable final result. */
+	public static SimulationRunResult run(String[] args) throws Exception {
+		return run(SimulationConfig.parse(args));
+	}
+
+	/** Runs one already validated configuration for an embedded caller. */
+	public static SimulationRunResult run(SimulationConfig configuration)
+		throws Exception {
+		try (SimulationContext context = SimulationContext.open(configuration)) {
+			executeSimulation(configuration);
+			return context.result();
+		}
+	}
+
+	private static void executeSimulation(SimulationConfig configuration)
+		throws Exception {
 		/*
 		 *  Simulation steps
 		 *  
@@ -156,13 +175,10 @@ public class AppExample {
 		Calendar calendar = Calendar.getInstance();
 		boolean traceFlag = false; // mean trace events
 		CloudSim.init(numUser, calendar, traceFlag);
-		NetworkUsageMonitor.reset();
-
 		setPositionApPolicy(Policies.FIXED_AP_LOCATION);
 		setPositionScPolicy(Policies.FIXED_SC_LOCATION);
 		setStepPolicy(1);
-		configureSimulationParameters(args);
-		RunOutputManager.initialize(getOutputDirectory(), getOutputMode());
+		applySimulationConfiguration(configuration);
 
 		/**
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
@@ -231,7 +247,7 @@ public class AppExample {
 			getMigStrategyPolicy(), getStepPolicy(), getCoordDevices(),
 			getSeed(), isMigrationAble());
 		TimeKeeper.getInstance().setSimulationStartTime(
-			Calendar.getInstance().getTimeInMillis());
+			SimulationContext.requireCurrent().getClock().wallTimeMillis());
 		MyStatistics.getInstance().setSeed(getSeed());
 		for (MobileDevice st : getSmartThings()) {
 			if (getMigPointPolicy() == Policies.FIXED_MIGRATION_POINT) {
@@ -343,7 +359,10 @@ public class AppExample {
 	private static void applySimulationConfiguration(SimulationConfig configuration) {
 		setMigrationAble(configuration.isMigrationEnabled());
 		setSeed(configuration.getSeed());
-		setRand(new Random(configuration.getSeed() * Integer.MAX_VALUE));
+		SimulationContext context = SimulationContext.currentOrNull();
+		setRand(context == null
+			? new Random(configuration.getSeed() * Integer.MAX_VALUE)
+			: context.random("application"));
 		setMigPointPolicy(configuration.getMigrationPointPolicy());
 		setMigStrategyPolicy(configuration.getMigrationStrategyPolicy());
 		setMaxSmartThings(configuration.getMaximumUsers());
@@ -358,6 +377,30 @@ public class AppExample {
 		setMobilityOrderManifest(configuration.getMobilityOrderManifest());
 		setOutputDirectory(configuration.getOutputDirectory());
 		setOutputMode(configuration.getOutputMode());
+	}
+
+	static void useSimulationContext(SimulationContext context) {
+		SimulationTopology topology = context.getTopology();
+		setSmartThings(topology.getMobileDevices());
+		setServerCloudlets(topology.getServerCloudlets());
+		setApDevices(topology.getAccessPoints());
+		setBrokerList(topology.getBrokers());
+		setAppIdList(topology.getApplicationIds());
+		setApplicationList(topology.getApplications());
+	}
+
+	static void releaseSimulationContext(SimulationContext context) {
+		if (SimulationContext.currentOrNull() != context) {
+			return;
+		}
+		setSmartThings(new ArrayList<MobileDevice>());
+		setServerCloudlets(new ArrayList<FogDevice>());
+		setApDevices(new ArrayList<ApDevice>());
+		setBrokerList(new ArrayList<FogBroker>());
+		setAppIdList(new ArrayList<String>());
+		setApplicationList(new ArrayList<Application>());
+		setCoordDevices(null);
+		rand = null;
 	}
 
 	private static void readMobilityData() {

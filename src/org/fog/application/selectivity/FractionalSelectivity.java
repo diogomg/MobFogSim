@@ -1,5 +1,9 @@
 package org.fog.application.selectivity;
 
+import java.util.Random;
+
+import org.fog.vmmobile.SimulationContext;
+
 /**
  * Generates an output tuple for an incoming input tuple with a fixed
  * probability
@@ -11,7 +15,8 @@ public class FractionalSelectivity implements SelectivityModel {
 	/**
 	 * The fixed probability of output tuple creation per incoming input tuple
 	 */
-	double selectivity;
+	private double selectivity;
+	private final Random random;
 
 	/**
 	 * Defines the selectivity value
@@ -19,6 +24,15 @@ public class FractionalSelectivity implements SelectivityModel {
 	 * @param selectivity
 	 */
 	public FractionalSelectivity(double selectivity) {
+		this(selectivity, contextRandom());
+	}
+
+	/** Creates a model with an explicitly injected reproducible stream. */
+	public FractionalSelectivity(double selectivity, Random random) {
+		if (random == null) {
+			throw new IllegalArgumentException("Selectivity random stream cannot be null");
+		}
+		this.random = random;
 		setSelectivity(selectivity);
 	}
 
@@ -38,6 +52,11 @@ public class FractionalSelectivity implements SelectivityModel {
 	 *        value
 	 */
 	public void setSelectivity(double selectivity) {
+		if (!Double.isFinite(selectivity)
+			|| selectivity < 0.0 || selectivity > 1.0) {
+			throw new IllegalArgumentException(
+				"Selectivity must be finite and between 0 and 1");
+		}
 		this.selectivity = selectivity;
 	}
 
@@ -48,9 +67,7 @@ public class FractionalSelectivity implements SelectivityModel {
 	 */
 	@Override
 	public boolean canSelect() {
-		if (Math.random() < getSelectivity()) // if the probability condition is satisfied
-			return true;
-		return false;
+		return random.nextDouble() < getSelectivity();
 	}
 
 	/**
@@ -73,5 +90,11 @@ public class FractionalSelectivity implements SelectivityModel {
 	@Override
 	public double getMaxRate() {
 		return getSelectivity();
+	}
+
+	private static Random contextRandom() {
+		SimulationContext context = SimulationContext.currentOrNull();
+		return context == null ? new Random()
+			: context.random("fractional-selectivity");
 	}
 }

@@ -1,5 +1,7 @@
 package org.fog.application.selectivity;
 
+import java.util.function.DoubleSupplier;
+
 import org.cloudbus.cloudsim.core.CloudSim;
 
 /**
@@ -14,23 +16,48 @@ public class BurstySelectivity implements SelectivityModel {
 	/**
 	 * Duration of the low burst period
 	 */
-	double burstLowPeriod;
+	private final double burstLowPeriod;
 
 	/**
 	 * Duration of the high burst period
 	 */
-	double burstHighPeriod;
+	private final double burstHighPeriod;
 
 	/**
 	 * First instance of the start of high burst period, using which subsequent
 	 * burst periods will be calculated.
 	 */
-	double firstHighTime;
+	private final double firstHighTime;
+	private final DoubleSupplier clock;
 
 	public BurstySelectivity(double burstLowPeriod, double burstHighPeriod, double firstHighTime) {
-		setBurstLowPeriod(burstLowPeriod);
-		setBurstHighPeriod(burstHighPeriod);
-		setFirstHighTime(firstHighTime);
+		this(burstLowPeriod, burstHighPeriod, firstHighTime,
+			new DoubleSupplier() {
+				@Override
+				public double getAsDouble() {
+					return CloudSim.clock();
+				}
+			});
+	}
+
+	/** Creates a model with an injected clock for deterministic testing. */
+	public BurstySelectivity(double burstLowPeriod, double burstHighPeriod,
+		double firstHighTime, DoubleSupplier clock) {
+		requireNonNegativeFinite(burstLowPeriod, "Low burst period");
+		requireNonNegativeFinite(burstHighPeriod, "High burst period");
+		requireNonNegativeFinite(firstHighTime, "First high-burst time");
+		if (clock == null) {
+			throw new IllegalArgumentException("Burst clock cannot be null");
+		}
+		double totalPeriod = burstLowPeriod + burstHighPeriod;
+		if (!Double.isFinite(totalPeriod) || totalPeriod <= 0.0) {
+			throw new IllegalArgumentException(
+				"The total burst period must be finite and positive");
+		}
+		this.burstLowPeriod = burstLowPeriod;
+		this.burstHighPeriod = burstHighPeriod;
+		this.firstHighTime = firstHighTime;
+		this.clock = clock;
 	}
 
 	/**
@@ -39,13 +66,13 @@ public class BurstySelectivity implements SelectivityModel {
 	 */
 	@Override
 	public boolean canSelect() {
-		double time = CloudSim.clock() + getFirstHighTime();
-		double burstPeriod = getBurstHighPeriod() + getBurstLowPeriod();
-		double burstStartTime = burstPeriod * ((int) (time / burstPeriod));
-		if (time <= burstStartTime + getBurstHighPeriod())
-			return true;
-		else
+		double time = clock.getAsDouble() - getFirstHighTime();
+		if (time < 0.0 || getBurstHighPeriod() == 0.0) {
 			return false;
+		}
+		double burstPeriod = getBurstHighPeriod() + getBurstLowPeriod();
+		double phase = time % burstPeriod;
+		return phase < getBurstHighPeriod();
 	}
 
 	/**
@@ -69,24 +96,20 @@ public class BurstySelectivity implements SelectivityModel {
 		return burstLowPeriod;
 	}
 
-	public void setBurstLowPeriod(double burstLowPeriod) {
-		this.burstLowPeriod = burstLowPeriod;
-	}
-
 	public double getBurstHighPeriod() {
 		return burstHighPeriod;
-	}
-
-	public void setBurstHighPeriod(double burstHighPeriod) {
-		this.burstHighPeriod = burstHighPeriod;
 	}
 
 	public double getFirstHighTime() {
 		return firstHighTime;
 	}
 
-	public void setFirstHighTime(double firstHighTime) {
-		this.firstHighTime = firstHighTime;
+	private static void requireNonNegativeFinite(double value,
+		String description) {
+		if (!Double.isFinite(value) || value < 0.0) {
+			throw new IllegalArgumentException(
+				description + " must be finite and non-negative");
+		}
 	}
 
 }

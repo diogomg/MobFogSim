@@ -73,6 +73,14 @@ public final class RunOutputManager {
 		return instance;
 	}
 
+	/** Installs an output manager owned by a simulation context. */
+	public static synchronized void use(RunOutputManager outputManager) {
+		if (outputManager == null) {
+			throw new IllegalArgumentException("Run output manager cannot be null");
+		}
+		instance = outputManager;
+	}
+
 	public Path getOutputRoot() {
 		return outputRoot;
 	}
@@ -223,6 +231,11 @@ public final class RunOutputManager {
 	}
 
 	static synchronized void resetForTests() {
+		resetToDefault();
+	}
+
+	/** Detaches the previous run without creating another output directory. */
+	public static synchronized void resetToDefault() {
 		instance = new RunOutputManager(Paths.get("runs", "unconfigured"),
 			RunOutputMode.FULL);
 	}

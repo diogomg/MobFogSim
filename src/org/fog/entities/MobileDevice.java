@@ -303,7 +303,7 @@ public class MobileDevice extends FogDevice {
 				+ CloudSim.getEntityName(ev.getDestination()));
 		send(ev.getSource(), CloudSim.getMinTimeBetweenEvents(), FogEvents.TUPLE_ACK);
 
-		if (FogUtils.appIdToGeoCoverageMap.containsKey(tuple.getAppId())) {
+		if (FogUtils.getApplicationCoverage().containsKey(tuple.getAppId())) {
 		}
 
 		if (tuple.getDirection() == Tuple.ACTUATOR) {
@@ -394,9 +394,11 @@ public class MobileDevice extends FogDevice {
 		 * broadcasted, only UP tuples are replicated
 		 */
 		for (int i = 0; i < ((edge.getDirection() == Tuple.UP) ? instanceCount : 1); i++) {
-			Tuple tuple = applicationMap.get(module.getAppId()).createTuple(edge, getId());
-			updateTimingsOnSending(tuple);
-			sendToSelf(tuple);
+			for (Tuple tuple : applicationMap.get(module.getAppId())
+				.createTuples(edge, getId())) {
+				updateTimingsOnSending(tuple);
+				sendToSelf(tuple);
+			}
 		}
 		send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
 	}

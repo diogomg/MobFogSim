@@ -31,23 +31,7 @@ public final class NetworkSlicing {
 	public static final int WIRELESS_NETWORK = 1;
 	public static final int END_TO_END_NETWORK = 2;
 
-	private static double[] percentages = new double[] { 100.0 };
-	private static double[] userAllocationPercentages = new double[] { 100.0 };
-	private static boolean dynamicBorrowing = true;
-	private static int scope = END_TO_END_NETWORK;
-	private static final Map<Integer, MigrationTransferMetadata> migrationTransfers =
-		new HashMap<Integer, MigrationTransferMetadata>();
-	private static MigrationTransferScheduler migrationScheduler =
-		new MigrationTransferScheduler(percentages, true, dynamicBorrowing);
-	private static final Map<Long, WirelessTransferMetadata> wirelessTransfers =
-		new HashMap<Long, WirelessTransferMetadata>();
-	private static final Map<String, Long> activeWirelessTransfers =
-		new HashMap<String, Long>();
-	private static final Map<String, ArrayDeque<Long>> queuedWirelessTransfers =
-		new HashMap<String, ArrayDeque<Long>>();
-	private static AccessPointTransferScheduler wirelessScheduler =
-		new AccessPointTransferScheduler(percentages, true, dynamicBorrowing);
-	private static long nextWirelessTransferId = 1L;
+	private static RuntimeState activeState = RuntimeState.defaults();
 
 	/** AP channel direction. Uplink and downlink capacity are independent. */
 	public enum WirelessDirection {
@@ -68,6 +52,41 @@ public final class NetworkSlicing {
 			this.userPercentages = userPercentages.clone();
 			this.dynamicBorrowing = dynamicBorrowing;
 			this.scope = scope;
+		}
+	}
+
+	/** Mutable schedulers and transfer registries owned by one simulation run. */
+	public static final class RuntimeState {
+		private double[] percentages;
+		private double[] userAllocationPercentages;
+		private boolean dynamicBorrowing;
+		private int scope;
+		private final Map<Integer, MigrationTransferMetadata> migrationTransfers =
+			new HashMap<Integer, MigrationTransferMetadata>();
+		private MigrationTransferScheduler migrationScheduler;
+		private final Map<Long, WirelessTransferMetadata> wirelessTransfers =
+			new HashMap<Long, WirelessTransferMetadata>();
+		private final Map<String, Long> activeWirelessTransfers =
+			new HashMap<String, Long>();
+		private final Map<String, ArrayDeque<Long>> queuedWirelessTransfers =
+			new HashMap<String, ArrayDeque<Long>>();
+		private AccessPointTransferScheduler wirelessScheduler;
+		private long nextWirelessTransferId = 1L;
+
+		private RuntimeState(Configuration configuration) {
+			percentages = configuration.bandwidthPercentages.clone();
+			userAllocationPercentages = configuration.userPercentages.clone();
+			dynamicBorrowing = configuration.dynamicBorrowing;
+			scope = configuration.scope;
+			migrationScheduler = new MigrationTransferScheduler(percentages,
+				coversTransportNetwork(scope), dynamicBorrowing);
+			wirelessScheduler = new AccessPointTransferScheduler(percentages,
+				coversWirelessNetwork(scope), dynamicBorrowing);
+		}
+
+		private static RuntimeState defaults() {
+			return new RuntimeState(new Configuration(new double[] { 100.0 },
+				new double[] { 100.0 }, true, END_TO_END_NETWORK));
 		}
 	}
 
@@ -239,13 +258,40 @@ public final class NetworkSlicing {
 	private NetworkSlicing() {
 	}
 
+	/** Creates isolated runtime state without changing the active run. */
+	public static RuntimeState createRuntimeState(Configuration configuration) {
+		if (configuration == null) {
+			throw new IllegalArgumentException(
+				"Network slicing configuration cannot be null");
+		}
+		return new RuntimeState(configuration);
+	}
+
+	/** Activates slicing state owned by the current simulation context. */
+	public static synchronized void useRuntimeState(RuntimeState runtimeState) {
+		if (runtimeState == null) {
+			throw new IllegalArgumentException("Network slicing state cannot be null");
+		}
+		activeState = runtimeState;
+	}
+
+	/** Replaces the active state with clean default slicing. */
+	public static synchronized void useDefaultRuntimeState() {
+		resetUsage();
+		activeState = RuntimeState.defaults();
+	}
+
+	private static RuntimeState state() {
+		return activeState;
+	}
+
 	/**
 	 * Configures slices from a comma-separated percentage list, for example
 	 * {@code "50,50"} or {@code "40,30,20,10"}.
 	 */
 	public static void configure(String percentageList) {
-		applyConfiguration(parseConfiguration(percentageList, null, scope,
-			dynamicBorrowing));
+		applyConfiguration(parseConfiguration(percentageList, null, state().scope,
+			state().dynamicBorrowing));
 	}
 
 	/**
@@ -277,10 +323,10 @@ public final class NetworkSlicing {
 		if (configuration == null) {
 			throw new IllegalArgumentException("Network slicing configuration cannot be null");
 		}
-		percentages = configuration.bandwidthPercentages.clone();
-		userAllocationPercentages = configuration.userPercentages.clone();
-		dynamicBorrowing = configuration.dynamicBorrowing;
-		scope = configuration.scope;
+		state().percentages = configuration.bandwidthPercentages.clone();
+		state().userAllocationPercentages = configuration.userPercentages.clone();
+		state().dynamicBorrowing = configuration.dynamicBorrowing;
+		state().scope = configuration.scope;
 		resetUsage();
 	}
 
@@ -290,30 +336,31 @@ public final class NetworkSlicing {
 	 */
 	public static void configureUserAllocation(String percentageList) {
 		if (percentageList == null || percentageList.trim().isEmpty()) {
-			userAllocationPercentages = equalPercentages(percentages.length);
+			state().userAllocationPercentages =
+				equalPercentages(state().percentages.length);
 			return;
 		}
 
 		double[] parsed = parsePercentages(percentageList, "User allocation");
-		if (parsed.length != percentages.length) {
+		if (parsed.length != state().percentages.length) {
 			throw new IllegalArgumentException(
 				"User allocation must contain one percentage for each network slice");
 		}
-		userAllocationPercentages = parsed;
+		state().userAllocationPercentages = parsed;
 	}
 
 	public static int getSliceCount() {
-		return percentages.length;
+		return state().percentages.length;
 	}
 
 	/** Enables (true) or disables (false) borrowing of idle slice capacity. */
 	public static void setDynamicBorrowing(boolean enabled) {
-		dynamicBorrowing = enabled;
+		state().dynamicBorrowing = enabled;
 		resetUsage();
 	}
 
 	public static boolean isDynamicBorrowing() {
-		return dynamicBorrowing;
+		return state().dynamicBorrowing;
 	}
 
 	/**
@@ -321,28 +368,28 @@ public final class NetworkSlicing {
 	 * {@link #WIRELESS_NETWORK}, or {@link #END_TO_END_NETWORK}.
 	 */
 	public static void setScope(int selectedScope) {
-		scope = validateScope(selectedScope);
+		state().scope = validateScope(selectedScope);
 		resetUsage();
 	}
 
 	public static int getScope() {
-		return scope;
+		return state().scope;
 	}
 
 	public static boolean coversTransportNetwork() {
-		return scope == TRANSPORT_NETWORK || scope == END_TO_END_NETWORK;
+		return coversTransportNetwork(state().scope);
 	}
 
 	public static boolean coversWirelessNetwork() {
-		return scope == WIRELESS_NETWORK || scope == END_TO_END_NETWORK;
+		return coversWirelessNetwork(state().scope);
 	}
 
 	public static double getPercentage(int sliceId) {
-		return percentages[validateSliceId(sliceId)];
+		return state().percentages[validateSliceId(sliceId)];
 	}
 
 	public static double getUserAllocationPercentage(int sliceId) {
-		return userAllocationPercentages[validateSliceId(sliceId)];
+		return state().userAllocationPercentages[validateSliceId(sliceId)];
 	}
 
 	/**
@@ -354,17 +401,17 @@ public final class NetworkSlicing {
 			throw new IllegalArgumentException("Total users cannot be negative");
 		}
 
-		int[] allocations = new int[userAllocationPercentages.length];
-		double[] remainders = new double[userAllocationPercentages.length];
+		int[] allocations = new int[state().userAllocationPercentages.length];
+		double[] remainders = new double[state().userAllocationPercentages.length];
 		double configuredTotal = 0.0;
-		for (double percentage : userAllocationPercentages) {
+		for (double percentage : state().userAllocationPercentages) {
 			configuredTotal += percentage;
 		}
 
 		int assignedUsers = 0;
 		for (int sliceId = 0; sliceId < allocations.length; sliceId++) {
 			double exactAllocation = totalUsers
-				* userAllocationPercentages[sliceId] / configuredTotal;
+				* state().userAllocationPercentages[sliceId] / configuredTotal;
 			allocations[sliceId] = (int) Math.floor(exactAllocation);
 			remainders[sliceId] = exactAllocation - allocations[sliceId];
 			assignedUsers += allocations[sliceId];
@@ -465,22 +512,22 @@ public final class NetworkSlicing {
 		int destinationEntityId, double propagationDelayMillis) {
 		validateWirelessTransfer(accessPoint, mobileDevice, direction, tuple,
 			eventSourceId, destinationEntityId, propagationDelayMillis);
-		long transferId = nextWirelessTransferId++;
+		long transferId = state().nextWirelessTransferId++;
 		WirelessTransferMetadata metadata = new WirelessTransferMetadata(
 			transferId, accessPoint, mobileDevice, direction, tuple, eventSourceId,
 			destinationEntityId, propagationDelayMillis);
-		wirelessTransfers.put(transferId, metadata);
+		state().wirelessTransfers.put(transferId, metadata);
 
-		if (!activeWirelessTransfers.containsKey(metadata.mobileDirectionKey)) {
-			activeWirelessTransfers.put(metadata.mobileDirectionKey, transferId);
+		if (!state().activeWirelessTransfers.containsKey(metadata.mobileDirectionKey)) {
+			state().activeWirelessTransfers.put(metadata.mobileDirectionKey, transferId);
 			startWirelessTransfer(metadata);
 		}
 		else {
-			ArrayDeque<Long> queue = queuedWirelessTransfers.get(
+			ArrayDeque<Long> queue = state().queuedWirelessTransfers.get(
 				metadata.mobileDirectionKey);
 			if (queue == null) {
 				queue = new ArrayDeque<Long>();
-				queuedWirelessTransfers.put(metadata.mobileDirectionKey, queue);
+				state().queuedWirelessTransfers.put(metadata.mobileDirectionKey, queue);
 			}
 			queue.addLast(transferId);
 		}
@@ -495,18 +542,18 @@ public final class NetworkSlicing {
 				"Wireless completion cannot be null");
 		}
 		AccessPointTransferScheduler.Completion schedulerCompletion =
-			wirelessScheduler.complete(completion.transferId,
+			state().wirelessScheduler.complete(completion.transferId,
 				completion.generation, CloudSim.clock());
 		if (!schedulerCompletion.isAccepted()) {
 			return null;
 		}
 
-		WirelessTransferMetadata metadata = wirelessTransfers.remove(
+		WirelessTransferMetadata metadata = state().wirelessTransfers.remove(
 			schedulerCompletion.getTransferId());
 		if (metadata == null || !metadata.active) {
 			return null;
 		}
-		activeWirelessTransfers.remove(metadata.mobileDirectionKey);
+		state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
 		NetworkUsageMonitor.sendingTuple(metadata.propagationDelayMillis,
 			metadata.tuple.getCloudletFileSize());
 		WirelessTransferResult result = new WirelessTransferResult(metadata,
@@ -518,7 +565,7 @@ public final class NetworkSlicing {
 			applyWirelessSchedules(schedulerCompletion.getSchedules());
 		}
 		else {
-			activeWirelessTransfers.put(next.mobileDirectionKey, next.transferId);
+			state().activeWirelessTransfers.put(next.mobileDirectionKey, next.transferId);
 			startWirelessTransfer(next);
 		}
 		return result;
@@ -532,31 +579,32 @@ public final class NetworkSlicing {
 		}
 		List<Long> matchingTransfers = new ArrayList<Long>();
 		for (Map.Entry<Long, WirelessTransferMetadata> entry
-			: wirelessTransfers.entrySet()) {
+			: state().wirelessTransfers.entrySet()) {
 			if (entry.getValue().mobileDevice == mobileDevice) {
 				matchingTransfers.add(entry.getKey());
 			}
 		}
 
 		for (Long transferId : matchingTransfers) {
-			WirelessTransferMetadata metadata = wirelessTransfers.remove(transferId);
+			WirelessTransferMetadata metadata =
+				state().wirelessTransfers.remove(transferId);
 			if (metadata == null) {
 				continue;
 			}
-			ArrayDeque<Long> queue = queuedWirelessTransfers.get(
+			ArrayDeque<Long> queue = state().queuedWirelessTransfers.get(
 				metadata.mobileDirectionKey);
 			if (queue != null) {
 				queue.remove(transferId);
 				if (queue.isEmpty()) {
-					queuedWirelessTransfers.remove(metadata.mobileDirectionKey);
+					state().queuedWirelessTransfers.remove(metadata.mobileDirectionKey);
 				}
 			}
 			if (!metadata.active) {
 				continue;
 			}
-			activeWirelessTransfers.remove(metadata.mobileDirectionKey);
+			state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
 			cancelWirelessCompletionEvent(metadata);
-			applyWirelessSchedules(wirelessScheduler.cancel(transferId,
+			applyWirelessSchedules(state().wirelessScheduler.cancel(transferId,
 				CloudSim.clock()));
 		}
 	}
@@ -567,7 +615,7 @@ public final class NetworkSlicing {
 		if (accessPoint == null || direction == null) {
 			return 0;
 		}
-		return wirelessScheduler.activeCount(
+		return state().wirelessScheduler.activeCount(
 			wirelessChannelKey(accessPoint, direction));
 	}
 
@@ -575,7 +623,7 @@ public final class NetworkSlicing {
 	public static synchronized boolean hasActiveWirelessTransfer(
 		MobileDevice mobileDevice, WirelessDirection direction) {
 		return mobileDevice != null && direction != null
-			&& activeWirelessTransfers.containsKey(
+			&& state().activeWirelessTransfers.containsKey(
 				mobileDirectionKey(mobileDevice, direction));
 	}
 
@@ -594,17 +642,20 @@ public final class NetworkSlicing {
 		validateTransferSpec(spec);
 
 		int transferId = spec.getMobileDevice().getId();
-		MigrationTransferMetadata previous = migrationTransfers.remove(transferId);
+		MigrationTransferMetadata previous =
+			state().migrationTransfers.remove(transferId);
 		cancelCompletionEvent(transferId, previous);
 
 		double physicalBandwidth = getPhysicalBandwidth(spec.getSource(),
 			spec.getDestination());
 
-		List<MigrationTransferScheduler.Schedule> schedules = migrationScheduler.start(
+		List<MigrationTransferScheduler.Schedule> schedules =
+			state().migrationScheduler.start(
 			transferId, linkKey(spec.getSource(), spec.getDestination()),
 			spec.getNetworkSliceId(), spec.getTransferBytes(), physicalBandwidth,
 			CloudSim.clock());
-		migrationTransfers.put(transferId, new MigrationTransferMetadata(spec));
+		state().migrationTransfers.put(transferId,
+			new MigrationTransferMetadata(spec));
 		applySchedules(schedules);
 	}
 
@@ -620,13 +671,14 @@ public final class NetworkSlicing {
 			throw new IllegalArgumentException("Migration completion cannot be null");
 		}
 
-		MigrationTransferScheduler.Completion result = migrationScheduler.complete(
+		MigrationTransferScheduler.Completion result =
+			state().migrationScheduler.complete(
 			completion.transferId, completion.generation, CloudSim.clock());
 		if (!result.isAccepted()) {
 			return null;
 		}
 
-		MigrationTransferMetadata metadata = migrationTransfers.remove(
+		MigrationTransferMetadata metadata = state().migrationTransfers.remove(
 			result.getTransferId());
 		if (metadata == null) {
 			return null;
@@ -645,7 +697,8 @@ public final class NetworkSlicing {
 	/** Returns whether a mobile device currently owns a timed transfer. */
 	public static synchronized boolean hasActiveMigrationTransfer(
 		MobileDevice mobileDevice) {
-		return mobileDevice != null && migrationScheduler.contains(mobileDevice.getId());
+		return mobileDevice != null
+			&& state().migrationScheduler.contains(mobileDevice.getId());
 	}
 
 	private static double getAccessPointBandwidth(ApDevice accessPoint,
@@ -662,8 +715,8 @@ public final class NetworkSlicing {
 
 		int requestedSlice = validateSliceId(mobileDevice.getNetworkSliceId());
 		double maximumAccessPointRate = accessPointBandwidth;
-		if (coversWirelessNetwork() && !dynamicBorrowing) {
-			maximumAccessPointRate *= percentages[requestedSlice] / 100.0;
+		if (coversWirelessNetwork() && !state().dynamicBorrowing) {
+			maximumAccessPointRate *= state().percentages[requestedSlice] / 100.0;
 		}
 		return Math.min(mobileDeviceBandwidth, maximumAccessPointRate);
 	}
@@ -737,6 +790,16 @@ public final class NetworkSlicing {
 		return selectedScope;
 	}
 
+	private static boolean coversTransportNetwork(int selectedScope) {
+		return selectedScope == TRANSPORT_NETWORK
+			|| selectedScope == END_TO_END_NETWORK;
+	}
+
+	private static boolean coversWirelessNetwork(int selectedScope) {
+		return selectedScope == WIRELESS_NETWORK
+			|| selectedScope == END_TO_END_NETWORK;
+	}
+
 	private static void validateWirelessTransfer(ApDevice accessPoint,
 		MobileDevice mobileDevice, WirelessDirection direction, Tuple tuple,
 		int eventSourceId, int destinationEntityId,
@@ -792,7 +855,7 @@ public final class NetworkSlicing {
 		double mobileBandwidth = metadata.direction == WirelessDirection.UPLINK
 			? metadata.mobileDevice.getUplinkBandwidth()
 			: metadata.mobileDevice.getDownlinkBandwidth();
-		applyWirelessSchedules(wirelessScheduler.start(metadata.transferId,
+		applyWirelessSchedules(state().wirelessScheduler.start(metadata.transferId,
 			wirelessChannelKey(metadata.accessPoint, metadata.direction),
 			metadata.mobileDevice.getNetworkSliceId(),
 			metadata.tuple.getCloudletFileSize(), accessPointBandwidth,
@@ -801,25 +864,27 @@ public final class NetworkSlicing {
 
 	private static WirelessTransferMetadata nextQueuedWirelessTransfer(
 		String mobileDirection) {
-		ArrayDeque<Long> queue = queuedWirelessTransfers.get(mobileDirection);
+		ArrayDeque<Long> queue =
+			state().queuedWirelessTransfers.get(mobileDirection);
 		while (queue != null && !queue.isEmpty()) {
 			Long transferId = queue.removeFirst();
-			WirelessTransferMetadata metadata = wirelessTransfers.get(transferId);
+			WirelessTransferMetadata metadata =
+				state().wirelessTransfers.get(transferId);
 			if (metadata != null) {
 				if (queue.isEmpty()) {
-					queuedWirelessTransfers.remove(mobileDirection);
+					state().queuedWirelessTransfers.remove(mobileDirection);
 				}
 				return metadata;
 			}
 		}
-		queuedWirelessTransfers.remove(mobileDirection);
+		state().queuedWirelessTransfers.remove(mobileDirection);
 		return null;
 	}
 
 	private static void applyWirelessSchedules(
 		List<AccessPointTransferScheduler.Schedule> schedules) {
 		for (AccessPointTransferScheduler.Schedule schedule : schedules) {
-			WirelessTransferMetadata metadata = wirelessTransfers.get(
+			WirelessTransferMetadata metadata = state().wirelessTransfers.get(
 				schedule.getTransferId());
 			if (metadata == null || !metadata.active) {
 				continue;
@@ -864,22 +929,25 @@ public final class NetworkSlicing {
 	private static void resetUsage() {
 		if (CloudSim.running()) {
 			for (Map.Entry<Integer, MigrationTransferMetadata> entry
-				: migrationTransfers.entrySet()) {
+				: state().migrationTransfers.entrySet()) {
 				cancelCompletionEvent(entry.getKey(), entry.getValue());
 			}
-			for (WirelessTransferMetadata metadata : wirelessTransfers.values()) {
+			for (WirelessTransferMetadata metadata
+				: state().wirelessTransfers.values()) {
 				cancelWirelessCompletionEvent(metadata);
 			}
 		}
-		migrationTransfers.clear();
-		migrationScheduler = new MigrationTransferScheduler(percentages,
-			coversTransportNetwork(), dynamicBorrowing);
-		wirelessTransfers.clear();
-		activeWirelessTransfers.clear();
-		queuedWirelessTransfers.clear();
-		wirelessScheduler = new AccessPointTransferScheduler(percentages,
-			coversWirelessNetwork(), dynamicBorrowing);
-		nextWirelessTransferId = 1L;
+		state().migrationTransfers.clear();
+		state().migrationScheduler = new MigrationTransferScheduler(
+			state().percentages, coversTransportNetwork(),
+			state().dynamicBorrowing);
+		state().wirelessTransfers.clear();
+		state().activeWirelessTransfers.clear();
+		state().queuedWirelessTransfers.clear();
+		state().wirelessScheduler = new AccessPointTransferScheduler(
+			state().percentages, coversWirelessNetwork(),
+			state().dynamicBorrowing);
+		state().nextWirelessTransferId = 1L;
 	}
 
 	private static void cancelMigrationTransfer(MobileDevice mobileDevice) {
@@ -887,20 +955,22 @@ public final class NetworkSlicing {
 			return;
 		}
 		int transferId = mobileDevice.getId();
-		MigrationTransferMetadata metadata = migrationTransfers.remove(transferId);
-		if (metadata == null && !migrationScheduler.contains(transferId)) {
+		MigrationTransferMetadata metadata =
+			state().migrationTransfers.remove(transferId);
+		if (metadata == null
+			&& !state().migrationScheduler.contains(transferId)) {
 			return;
 		}
 		cancelCompletionEvent(transferId, metadata);
 		List<MigrationTransferScheduler.Schedule> schedules =
-			migrationScheduler.cancel(transferId, CloudSim.clock());
+			state().migrationScheduler.cancel(transferId, CloudSim.clock());
 		applySchedules(schedules);
 	}
 
 	private static void applySchedules(
 		List<MigrationTransferScheduler.Schedule> schedules) {
 		for (MigrationTransferScheduler.Schedule schedule : schedules) {
-			MigrationTransferMetadata metadata = migrationTransfers.get(
+			MigrationTransferMetadata metadata = state().migrationTransfers.get(
 				schedule.getTransferId());
 			if (metadata == null) {
 				continue;
@@ -941,7 +1011,7 @@ public final class NetworkSlicing {
 	}
 
 	private static int validateSliceId(int sliceId) {
-		if (sliceId < 0 || sliceId >= percentages.length) {
+		if (sliceId < 0 || sliceId >= state().percentages.length) {
 			throw new IllegalArgumentException("Unknown network slice: " + sliceId);
 		}
 		return sliceId;

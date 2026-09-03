@@ -30,6 +30,11 @@ public class TimeKeeper {
 		return instance;
 	}
 
+	/** Installs the timing state owned by the current simulation context. */
+	public static synchronized void setInstance(TimeKeeper timeKeeper) {
+		instance = timeKeeper;
+	}
+
 	public int getUniqueId() {
 		return count++;
 	}
@@ -70,7 +75,7 @@ public class TimeKeeper {
 		return getInstance().getLoopIdToTupleIds();
 	}
 
-	private TimeKeeper() {
+	public TimeKeeper() {
 		count = 1;
 		setEmitTimes(new HashMap<Integer, Double>());
 		setEndTimes(new HashMap<Integer, Double>());

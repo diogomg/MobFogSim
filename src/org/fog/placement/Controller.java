@@ -197,7 +197,7 @@ public class Controller extends SimEntity {
 	}
 
 	public void submitApplication(Application application, int delay) {
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 		getAppLaunchDelays().put(application.getAppId(), delay);
 		for (Sensor sensor : sensors) {
@@ -232,7 +232,7 @@ public class Controller extends SimEntity {
 	private void processAppSubmit(Application application) {
 		System.out.println("Controller " + CloudSim.clock() + " Submitted application "
 			+ application.getAppId());
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 
 		ModulePlacement modulePlacement = new ModulePlacementMapping(getFogDevices(), application,

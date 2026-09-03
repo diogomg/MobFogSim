@@ -46,6 +46,7 @@ import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.MobileUserApplicationFactory;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.SimulationContext;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -80,6 +81,23 @@ public class MobileController extends SimEntity {
 	static final int numOfMobilesPerDept = 4;
 	private static Random rand;
 
+	/** Clears compatibility state before and after an embedded simulation run. */
+	public static void resetRunState() {
+		migrationAble = false;
+		migPointPolicy = 0;
+		stepPolicy = 0;
+		coordDevices = null;
+		migStrategyPolicy = 0;
+		seed = 0;
+		serverCloudlets = new ArrayList<FogDevice>();
+		smartThings = new ArrayList<MobileDevice>();
+		activeSensorApplications.clear();
+		apDevices = new ArrayList<ApDevice>();
+		brokerList = new ArrayList<FogBroker>();
+		brokersByMobileId = new HashMap<Integer, FogBroker>();
+		rand = null;
+	}
+
 	public MobileController() {
 
 	}
@@ -108,7 +126,9 @@ public class MobileController extends SimEntity {
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
 		initializeCPULoads();
-		setRand(new Random(getSeed() * Long.MAX_VALUE));
+		SimulationContext context = SimulationContext.currentOrNull();
+		setRand(context == null ? new Random(getSeed() * Long.MAX_VALUE)
+			: context.random("mobile-controller"));
 		setMigrationAble(migrationAble);
 	}
 
@@ -136,7 +156,9 @@ public class MobileController extends SimEntity {
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
 		connectWithLatencies();
 		initializeCPULoads();
-		setRand(new Random(getSeed() * Long.MAX_VALUE));
+		SimulationContext context = SimulationContext.currentOrNull();
+		setRand(context == null ? new Random(getSeed() * Long.MAX_VALUE)
+			: context.random("mobile-controller"));
 
 	}
 
@@ -207,7 +229,7 @@ public class MobileController extends SimEntity {
 	private void processAppSubmit(Application application) {
 		System.out.println("MobileController 213 processAppSubmit " + CloudSim.clock()
 			+ " Submitted application " + application.getAppId());
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 		List<FogDevice> tempAllDevices = new ArrayList<>();
 		for (FogDevice sc : getServerCloudlets()) {
@@ -246,7 +268,7 @@ public class MobileController extends SimEntity {
 		Application application = (Application) ev.getData();
 		System.out.println(CloudSim.clock() + " Submitted application after migration "
 			+ application.getAppId());
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 		FogDevice sc = (FogDevice) CloudSim.getEntity(ev.getSource());
 		List<FogDevice> tempList = new ArrayList<>();
@@ -316,11 +338,18 @@ public class MobileController extends SimEntity {
 			.println("*********************Stopping simulation********************");
 		System.out.println("CloudSim.clock(): " + CloudSim.clock());
 		System.out.println("Size SmartThings: " + getSmartThings().size());
+		SimulationContext context = SimulationContext.currentOrNull();
+		long wallTime = context == null
+			? Calendar.getInstance().getTimeInMillis()
+			: context.getClock().wallTimeMillis();
 		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
 			getServerCloudlets(), getApDevices(), getSmartThings(),
 			MyStatistics.getInstance(), TimeKeeper.getInstance(), CloudSim.clock(),
-			Calendar.getInstance().getTimeInMillis()
+			wallTime
 				- TimeKeeper.getInstance().getSimulationStartTime());
+		if (context != null) {
+			context.recordMetrics(metrics);
+		}
 		printTimeDetails(metrics);
 		printPowerDetails(metrics);
 		printCostDetails();
@@ -1057,7 +1086,7 @@ public class MobileController extends SimEntity {
 	}
 
 	public void submitApplication(Application application, int delay) {
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 		getAppLaunchDelays().put(application.getAppId(), delay);
 		for (MobileDevice st : getSmartThings()) {
@@ -1087,7 +1116,7 @@ public class MobileController extends SimEntity {
 
 	public void submitApplicationMigration(MobileDevice smartThing, Application application,
 		int delay) {
-		FogUtils.appIdToGeoCoverageMap.put(application.getAppId(), application.getGeoCoverage());
+		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
 		getApplications().put(application.getAppId(), application);
 		getAppLaunchDelays().put(application.getAppId(), delay);
 

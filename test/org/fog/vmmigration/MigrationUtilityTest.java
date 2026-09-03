@@ -21,20 +21,10 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.MobilitySample;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.constants.Directions;
-import org.junit.After;
 import org.junit.Test;
 
 public class MigrationUtilityTest {
 	private static final int RUN_PREDICTION = 8201;
-
-	@After
-	public void resetStaticMigrationState() {
-		Migration.setMigrationPoint(false);
-		Migration.setMigrationZone(false);
-		Migration.setPolicyReplicaVM(0);
-		Migration.setApsAvailable(null);
-		Migration.setServerCloudletsAvailable(null);
-	}
 
 	@Test
 	public void insideConeHandlesDirectionWraparound() {
@@ -55,21 +45,6 @@ public class MigrationUtilityTest {
 		assertTrue(Migration.insideCone(Directions.NORTH, Directions.NORTH));
 		assertTrue(Migration.insideCone(Directions.NORTH, Directions.NORTHWEST));
 		assertFalse(Migration.insideCone(Directions.NORTH, Directions.SOUTH));
-	}
-
-	@Test
-	public void migrationStaticStateRoundTripsAndCanBeReset() {
-		Migration.setMigrationPoint(true);
-		Migration.setMigrationZone(true);
-		Migration.setPolicyReplicaVM(7);
-		Migration.setApsAvailable(Collections.emptyList());
-		Migration.setServerCloudletsAvailable(Collections.emptyList());
-
-		assertTrue(Migration.isMigrationPoint());
-		assertTrue(Migration.isMigrationZone());
-		assertEquals(7, Migration.getPolicyReplicaVM());
-		assertTrue(Migration.getApsAvailable().isEmpty());
-		assertTrue(Migration.getServerCloudletsAvailable().isEmpty());
 	}
 
 	@Test

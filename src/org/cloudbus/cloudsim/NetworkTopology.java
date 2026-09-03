@@ -50,6 +50,17 @@ public class NetworkTopology {
 
 	private static boolean matricesDirty = false;
 
+	/** Clears topology state so a later simulation in this JVM starts cleanly. */
+	public static synchronized void reset() {
+		nextIdx = 0;
+		networkEnabled = false;
+		delayMatrix = null;
+		bwMatrix = null;
+		graph = null;
+		map = null;
+		matricesDirty = false;
+	}
+
 	/**
 	 * Creates the network topology if file exists and if file can be
 	 * succesfully parsed. File is written in the BRITE format and contains

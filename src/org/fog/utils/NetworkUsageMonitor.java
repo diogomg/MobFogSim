@@ -2,9 +2,14 @@ package org.fog.utils;
 
 public class NetworkUsageMonitor {
 
-	private static double tupleUsageByteMilliseconds = 0.0;
-	private static double migrationUsageByteMilliseconds = 0.0;
-	private static double migrationTransferredBytes = 0.0;
+	/** Mutable counters owned by one simulation context. */
+	public static final class Metrics {
+		private double tupleUsageByteMilliseconds;
+		private double migrationUsageByteMilliseconds;
+		private double migrationTransferredBytes;
+	}
+
+	private static Metrics metrics = new Metrics();
 
 	private NetworkUsageMonitor() {
 	}
@@ -13,7 +18,7 @@ public class NetworkUsageMonitor {
 	public static void sendingTuple(double latencyMillis, double tupleBytes) {
 		requireNonNegativeFinite(latencyMillis, "Tuple latency");
 		requireNonNegativeFinite(tupleBytes, "Tuple size");
-		tupleUsageByteMilliseconds += latencyMillis * tupleBytes;
+		metrics.tupleUsageByteMilliseconds += latencyMillis * tupleBytes;
 	}
 
 	/**
@@ -27,32 +32,39 @@ public class NetworkUsageMonitor {
 			"Migration transferred bytes");
 		requireNonNegativeFinite(transferDurationMillis,
 			"Migration transfer duration");
-		migrationTransferredBytes += transferredBytes;
-		migrationUsageByteMilliseconds += transferredBytes
+		metrics.migrationTransferredBytes += transferredBytes;
+		metrics.migrationUsageByteMilliseconds += transferredBytes
 			* transferDurationMillis;
 	}
 
 	public static double getTupleUsageByteMilliseconds() {
-		return tupleUsageByteMilliseconds;
+		return metrics.tupleUsageByteMilliseconds;
 	}
 
 	public static double getMigrationUsageByteMilliseconds() {
-		return migrationUsageByteMilliseconds;
+		return metrics.migrationUsageByteMilliseconds;
 	}
 
 	public static double getMigrationTransferredBytes() {
-		return migrationTransferredBytes;
+		return metrics.migrationTransferredBytes;
 	}
 
 	public static double getTotalUsageByteMilliseconds() {
-		return tupleUsageByteMilliseconds + migrationUsageByteMilliseconds;
+		return metrics.tupleUsageByteMilliseconds
+			+ metrics.migrationUsageByteMilliseconds;
 	}
 
 	/** Clears all counters before a new simulation run or isolated test. */
 	public static void reset() {
-		tupleUsageByteMilliseconds = 0.0;
-		migrationUsageByteMilliseconds = 0.0;
-		migrationTransferredBytes = 0.0;
+		metrics = new Metrics();
+	}
+
+	/** Activates counters owned by a simulation context. */
+	public static void useMetrics(Metrics runMetrics) {
+		if (runMetrics == null) {
+			throw new IllegalArgumentException("Network metrics cannot be null");
+		}
+		metrics = runMetrics;
 	}
 
 	private static void requireNonNegativeFinite(double value,

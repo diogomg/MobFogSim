@@ -8,6 +8,8 @@ RUN_ARGS ?= 1 290538 0 0 3 11 0 61 0 0
 TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
 	org.cloudbus.cloudsim.util.RunOutputManagerTest \
+	org.fog.application.ApplicationContractTest \
+	org.fog.application.selectivity.SelectivityModelTest \
 	org.fog.entities.ActuatorTest \
 	org.fog.entities.AccessPointContentionEventTest \
 	org.fog.entities.FogDeviceChildStateTest \
@@ -28,6 +30,7 @@ TEST_SUITES := \
 	org.fog.vmmobile.AppExampleUserRegistrationTest \
 	org.fog.vmmobile.MobilityDataLoaderTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
+	org.fog.vmmobile.SimulationContextIntegrationTest \
 	org.fog.utils.TimeKeeperTest \
 	org.fog.utils.distribution.RandomizedDistributionTest \
 	org.fog.utils.NetworkSlicingConfigurationTest \

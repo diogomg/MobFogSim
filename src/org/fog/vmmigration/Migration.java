@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -19,20 +18,10 @@ import org.fog.localization.MobilityTimeline;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.constants.*;
 
-public class Migration {
+public final class Migration {
 
-	private static boolean migrationPoint;
-	private static boolean migrationZone;
-	private int location;
-	private ApDevice correntAP;
-	private FogDevice correntServerCloudlet;
-	private MobileDevice correntSmartThing;
-	private ApDevice apAvailable;
-	private FogDevice serverCloudletAvailable;
-	private int flowDirection;
-	private static List<ApDevice> apsAvailable;
-	private static List<FogDevice> serverCloudletsAvailable;
-	private static int policyReplicaVM;
+	private Migration() {
+	}
 
 	/**
 	 * @param args
@@ -53,14 +42,8 @@ public class Migration {
 	// Policy: the closest Ap
 	public static Optional<ApDevice> nextAp(List<ApDevice> apDevices,
 		MobileDevice smartThing) {
-		// It return apDevice list without the smartThing's sourceAp
-		setApsAvailable(apAvailableList(apDevices, smartThing));
-		return Distances.findClosestAp(getApsAvailable(), smartThing);
-	}
-
-	public int nextApFromCloudlet(Set<ApDevice> apDevices, MobileDevice smartThing) {
-
-		return 0;
+		return Distances.findClosestAp(apAvailableList(apDevices, smartThing),
+			smartThing);
 	}
 
 	public static boolean insideCone(int smartThingDirection, int zoneDirection) {//
@@ -158,9 +141,8 @@ public class Migration {
 
 	public static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,
 		MobileDevice smartThing) {
-		// Policy: the closest serverCloudlet
-		setServerCloudletsAvailable(serverClouletsAvailableList(serverCloudlets, smartThing));
-		return Distances.findClosestServerCloudlet(getServerCloudletsAvailable(), smartThing);
+		return Distances.findClosestServerCloudlet(
+			serverClouletsAvailableList(serverCloudlets, smartThing), smartThing);
 	}
 
 	public static boolean isEdgeAp(ApDevice apDevice, MobileDevice smartThing) {
@@ -217,27 +199,6 @@ public class Migration {
 		return Optional.ofNullable(selectedServerCloudlet);
 	}
 
-	public static void lowestLatencyCostServerCloudletILP(List<FogDevice> oldServerCloudlets,
-		List<ApDevice> oldApDevices, MobileDevice smartThing) {
-		List<FogDevice> clusterOfCloudlets = new ArrayList<>();
-		List<Double> costList = new ArrayList<>();
-
-		Double sumCost;
-		Optional<ApDevice> nextAp = nextAp(oldApDevices, smartThing);
-		if (!nextAp.isPresent()) {
-			return;
-		}
-
-		clusterOfCloudlets = serverClouletsAvailableList(oldServerCloudlets, smartThing);
-		for (FogDevice sc : clusterOfCloudlets) {
-			sumCost = sumCostFunction(sc, nextAp.get(), smartThing);
-			costList.add(sumCost);
-		}
-		List<List<Double>> latencyMatrix = getLatencyMatrix(smartThing.getFutureCoord());
-		latencyMatrix.add(costList);
-		setLatencyMatrix(findCluster(smartThing.getFutureCoord()), latencyMatrix);
-	}
-
 	public static double sumCostFunction(FogDevice serverCloudlet, ApDevice nextAp,
 		MobileDevice smartThing) {
 		double sum = -1;
@@ -259,116 +220,4 @@ public class Migration {
 		return sum;
 	}
 
-	private static List<List<Double>> getLatencyMatrix(Coordinate futureCoord) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	static void setLatencyMatrix(int cluster, List<List<Double>> latencyMatrix) {
-
-	}
-
-	static int findCluster(Coordinate stCoord) {
-		return 1;
-	}
-
-	static List<FogDevice> getCluster(int i) {
-		return null;
-	}
-
-	public static boolean isMigrationPoint() {
-		return migrationPoint;
-	}
-
-	public static void setMigrationPoint(boolean migrationPoint) {
-		Migration.migrationPoint = migrationPoint;
-	}
-
-	public static boolean isMigrationZone() {
-		return migrationZone;
-	}
-
-	public static void setMigrationZone(boolean migrationZone) {
-		Migration.migrationZone = migrationZone;
-	}
-
-	public int getLocation() {
-		return location;
-	}
-
-	public void setLocation(int location) {
-		this.location = location;
-	}
-
-	public ApDevice getCorrentAP() {
-		return correntAP;
-	}
-
-	public void setCorrentAP(ApDevice correntAP) {
-		this.correntAP = correntAP;
-	}
-
-	public FogDevice getCorrentServerCloudlet() {
-		return correntServerCloudlet;
-	}
-
-	public void setCorrentServerCloudlet(FogDevice correntServerCloudlet) {
-		this.correntServerCloudlet = correntServerCloudlet;
-	}
-
-	public MobileDevice getCorrentSmartThing() {
-		return correntSmartThing;
-	}
-
-	public void setCorrentSmartThing(MobileDevice correntSmartThing) {
-		this.correntSmartThing = correntSmartThing;
-	}
-
-	public ApDevice getApAvailable() {
-		return apAvailable;
-	}
-
-	public void setApAvailable(ApDevice apAvailable) {
-		this.apAvailable = apAvailable;
-	}
-
-	public FogDevice getServerCloudletAvailable() {
-		return serverCloudletAvailable;
-	}
-
-	public void setServerCloudletAvailable(FogDevice serverCloudletAvailable) {
-		this.serverCloudletAvailable = serverCloudletAvailable;
-	}
-
-	public int getFlowDirection() {
-		return flowDirection;
-	}
-
-	public void setFlowDirection(int flowDirection) {
-		this.flowDirection = flowDirection;
-	}
-
-	public static List<ApDevice> getApsAvailable() {
-		return apsAvailable;
-	}
-
-	public static void setApsAvailable(List<ApDevice> apsAvailable) {
-		Migration.apsAvailable = apsAvailable;
-	}
-
-	public static List<FogDevice> getServerCloudletsAvailable() {
-		return serverCloudletsAvailable;
-	}
-
-	public static void setServerCloudletsAvailable(List<FogDevice> serverCloudletsAvailable) {
-		Migration.serverCloudletsAvailable = serverCloudletsAvailable;
-	}
-
-	public static int getPolicyReplicaVM() {
-		return policyReplicaVM;
-	}
-
-	public static void setPolicyReplicaVM(int policyReplicaVM) {
-		Migration.policyReplicaVM = policyReplicaVM;
-	}
 }

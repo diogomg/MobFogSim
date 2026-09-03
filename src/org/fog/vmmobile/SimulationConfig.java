@@ -261,4 +261,16 @@ public final class SimulationConfig {
 	public RunOutputMode getOutputMode() {
 		return outputMode;
 	}
+
+	/** Returns an equivalent configuration writing beneath the supplied root. */
+	public SimulationConfig withOutputDirectory(Path runOutputDirectory) {
+		if (runOutputDirectory == null) {
+			throw new IllegalArgumentException("Run output directory cannot be null");
+		}
+		return new SimulationConfig(migrationEnabled, seed, migrationPointPolicy,
+			migrationStrategyPolicy, maximumUsers, maximumBandwidth,
+			vmMigrationPolicy, cloudletLatency, travelPredictionTime,
+			mobilityPredictionError, slicingConfiguration, vmDestinationPolicy,
+			mobilityDirectory, mobilityOrderManifest, runOutputDirectory, outputMode);
+	}
 }

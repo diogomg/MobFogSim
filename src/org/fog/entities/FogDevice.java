@@ -1224,9 +1224,11 @@ public class FogDevice extends PowerDatacenter {
 				if (app == null) {
 					continue;
 				}
-				Tuple tuple = applicationMap.get(module.getAppId()).createTuple(edge, getId());
-				updateTimingsOnSending(tuple);
-				sendToSelf(tuple);
+				for (Tuple tuple : applicationMap.get(module.getAppId())
+					.createTuples(edge, getId())) {
+					updateTimingsOnSending(tuple);
+					sendToSelf(tuple);
+				}
 			}
 		}
 		if (applicationMap.isEmpty()) {
@@ -1552,7 +1554,7 @@ public class FogDevice extends PowerDatacenter {
 			return;
 		}
 
-		if (FogUtils.appIdToGeoCoverageMap.containsKey(tuple.getAppId())) {
+		if (FogUtils.getApplicationCoverage().containsKey(tuple.getAppId())) {
 		}
 
 		if (tuple.getDirection() == Tuple.ACTUATOR) {

@@ -16,7 +16,6 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmigration.Migration;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,12 +27,6 @@ public class DistancesTest {
 		CloudSim.init(1, Calendar.getInstance(), false);
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
-	}
-
-	@After
-	public void resetMigrationState() {
-		Migration.setApsAvailable(null);
-		Migration.setServerCloudletsAvailable(null);
 	}
 
 	@Test

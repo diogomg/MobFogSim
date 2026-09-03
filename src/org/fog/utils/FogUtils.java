@@ -3,13 +3,17 @@ package org.fog.utils;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.fog.vmmobile.SimulationContext;
+import org.fog.vmmobile.SimulationIdentifiers;
+
 public class FogUtils {
-	private static int TUPLE_ID = 1;
-	private static int ENTITY_ID = 1;
-	private static int ACTUAL_TUPLE_ID = 1;
+	private static final SimulationIdentifiers LEGACY_IDENTIFIERS =
+		new SimulationIdentifiers();
+	private static final Map<String, GeoCoverage> LEGACY_APPLICATION_COVERAGE =
+		new HashMap<String, GeoCoverage>();
 
 	public static int generateTupleId() {
-		return TUPLE_ID++;
+		return identifiers().nextTupleId();
 	}
 
 	public static String getSensorTypeFromSensorName(String sensorName) {
@@ -17,16 +21,24 @@ public class FogUtils {
 	}
 
 	public static int generateEntityId() {
-		return ENTITY_ID++;
+		return identifiers().nextEntityId();
 	}
 
 	public static int generateActualTupleId() {
-		return ACTUAL_TUPLE_ID++;
+		return identifiers().nextActualTupleId();
 	}
 
-	public static int USER_ID = 1;
+	public static final int MAX = 10000000;
 
-	public static int MAX = 10000000;
+	/** Returns the application coverage registry for the active run. */
+	public static Map<String, GeoCoverage> getApplicationCoverage() {
+		SimulationContext context = SimulationContext.currentOrNull();
+		return context == null ? LEGACY_APPLICATION_COVERAGE
+			: context.getTopology().getApplicationCoverage();
+	}
 
-	public static Map<String, GeoCoverage> appIdToGeoCoverageMap = new HashMap<String, GeoCoverage>();
+	private static SimulationIdentifiers identifiers() {
+		SimulationContext context = SimulationContext.currentOrNull();
+		return context == null ? LEGACY_IDENTIFIERS : context.getIdentifiers();
+	}
 }
