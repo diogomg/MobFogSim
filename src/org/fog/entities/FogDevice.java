@@ -37,6 +37,7 @@ import org.fog.application.Application;
 import org.fog.localization.Coordinate;// myiFogSim
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
+import org.fog.placement.HandoffConnectionRequest;
 import org.fog.placement.MobileController;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
@@ -808,9 +809,16 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void connectServerCloudletSmartThing(SimEvent ev) {
-		MobileDevice smartThing = (MobileDevice) ev.getData();
-		if (smartThing == null
-			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED
+		if (!(ev.getData() instanceof HandoffConnectionRequest)) {
+			return;
+		}
+		HandoffConnectionRequest request =
+			(HandoffConnectionRequest) ev.getData();
+		if (!request.isCurrentFor(this)) {
+			return;
+		}
+		MobileDevice smartThing = request.getMobileDevice();
+		if (smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED
 			|| !connectServerCloudletSmartThing(smartThing)) {
 			return;
 		}
@@ -836,11 +844,6 @@ public class FogDevice extends PowerDatacenter {
 			MyStatistics.getInstance().startDelayAfterNewConnection(smartThing.getMyId(), 0.0);
 			MyStatistics.getInstance().finalDelayAfterNewConnection(smartThing.getMyId(),
 				getCharacteristics().getCpuTime( smartThing.getVmMobileDevice().getSize() * 1024 * 1024 * 8, 0.0));
-		}
-		if (!smartThing.getSourceServerCloudlet().equals(smartThing.getVmLocalServerCloudlet())) {
-			smartThing.getSourceServerCloudlet().desconnectServerCloudletSmartThing(smartThing);
-			smartThing.getVmLocalServerCloudlet().connectServerCloudletSmartThing(smartThing);
-			MyStatistics.getInstance().incrementLowestLatencyCloudletCount();
 		}
 	}
 
@@ -1012,22 +1015,6 @@ public class FogDevice extends PowerDatacenter {
 				// handoff has been occurred first than delivery
 				MyStatistics.getInstance().finalDelayAfterNewConnection(smartThing.getMyId(), CloudSim.clock()
 						+ getCharacteristics().getCpuTime(smartThing.getVmMobileDevice().getSize() * 1024 * 1024 * 8, 0.0));
-				if (smartThing.getSourceServerCloudlet() == null
-					&& !(smartThing.getVmLocalServerCloudlet() instanceof MobileDevice)) {
-					smartThing.setSourceServerCloudlet(smartThing.getVmLocalServerCloudlet());
-					System.out.println("CRASH " + smartThing.getMyId() + "\t source c "
-						+ smartThing.getSourceServerCloudlet()
-						+ "\t local server " + smartThing.getVmLocalServerCloudlet());
-				}
-				if (smartThing.getSourceServerCloudlet() != null
-					&& !(smartThing.getVmLocalServerCloudlet() instanceof MobileDevice)
-					&& !smartThing.getSourceServerCloudlet().equals(
-						smartThing.getVmLocalServerCloudlet())) {
-					smartThing.getSourceServerCloudlet().desconnectServerCloudletSmartThing(
-						smartThing);
-					smartThing.getVmLocalServerCloudlet().connectServerCloudletSmartThing(
-						smartThing);
-				}
 			}
 
 			float migrationLocked = (smartThing.getVmMobileDevice().getSize() * (smartThing

@@ -60,6 +60,7 @@ public class MobileDevice extends FogDevice {
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
 	private int networkSliceId;
+	private long networkAssociationGeneration;
 	private MobileDeviceLifecycle lifecycleState = MobileDeviceLifecycle.ACTIVE;
 
 	@Override
@@ -281,6 +282,7 @@ public class MobileDevice extends FogDevice {
 			manageResources(ev);
 			break;
 		default:
+			super.processOtherEvent(ev);
 			break;
 		}
 	}
@@ -644,6 +646,19 @@ public class MobileDevice extends FogDevice {
 
 	public void setLockedToHandoff(boolean LockedToHandoff) {
 		this.lockedToHandoff = LockedToHandoff;
+	}
+
+	/** Invalidates older delayed events and returns the new association generation. */
+	public long advanceNetworkAssociationGeneration() {
+		if (networkAssociationGeneration == Long.MAX_VALUE) {
+			throw new IllegalStateException(
+				"Network-association generation is exhausted for " + getName());
+		}
+		return ++networkAssociationGeneration;
+	}
+
+	public long getNetworkAssociationGeneration() {
+		return networkAssociationGeneration;
 	}
 
 	public boolean isLockedToMigration() {

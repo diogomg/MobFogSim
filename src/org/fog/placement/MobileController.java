@@ -605,16 +605,23 @@ public class MobileController extends SimEntity {
 								.equals(st.getSourceServerCloudlet())) {
 
 								if (isMigrationAble()) {
+									FogDevice sourceServer = st.getSourceServerCloudlet();
+									ApDevice destinationAccessPoint = st.getDestinationAp();
+									long associationGeneration =
+										st.advanceNetworkAssociationGeneration();
+									HandoffConnectionRequest connectionRequest =
+										new HandoffConnectionRequest(st, sourceServer,
+											destinationAccessPoint, associationGeneration);
 									LogMobile.debug("MobileController.java", st.getName()
 										+ " will be desconnected from " +
-										st.getSourceServerCloudlet().getName() + " by handoff");
-									sendNow(st.getSourceServerCloudlet().getId(),
+										sourceServer.getName() + " by handoff");
+									sendNow(sourceServer.getId(),
 										MobileEvents.MAKE_DECISION_MIGRATION, st);
-									sendNow(st.getSourceServerCloudlet().getId(),
+									sendNow(sourceServer.getId(),
 										MobileEvents.DESCONNECT_ST_TO_SC, st);
-									send(st.getDestinationAp().getServerCloudlet().getId(),
+									send(connectionRequest.getDestinationServer().getId(),
 										handoffTime + delayConnection,
-										MobileEvents.CONNECT_ST_TO_SC, st);
+										MobileEvents.CONNECT_ST_TO_SC, connectionRequest);
 								}
 								if (st.isPostCopyStatus() && !st.isMigStatus()) {
 									if (!st.isMigStatusLive()) {

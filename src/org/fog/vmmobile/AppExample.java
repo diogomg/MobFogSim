@@ -470,13 +470,17 @@ public class AppExample {
 		speed = getRand().nextInt(MaxAndMin.MAX_SPEED - 1) + 1;
 		/*************** Start set of Mobile Sensors ****************/
 		VmMigrationTechnique migrationTechnique = null;
+		BeforeMigration beforeMigration = null;
 
 		if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
 			migrationTechnique = new CompleteVM(getMigrationPointPolicy());
+			beforeMigration = new PrepareCompleteVM();
 		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
 			migrationTechnique = new ContainerVM(getMigrationPointPolicy());
+			beforeMigration = new PrepareContainerVM();
 		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
 			migrationTechnique = new LiveMigration(getMigrationPointPolicy());
+			beforeMigration = new PrepareLiveMigration();
 		}
 
 		DeterministicDistribution distribution0 = new DeterministicDistribution(
@@ -564,6 +568,8 @@ public class AppExample {
 			st.setTempSimulation(0);
 			st.setTimeFinishDeliveryVm(-1);
 			st.setTimeFinishHandoff(0);
+			st.setMigrationTechniquePolicy(getMigrationTechniquePolicy());
+			st.setBeforeMigrate(beforeMigration);
 			st.setSensors(sensors);
 			st.setActuators(actuators);
 			st.setTravelPredicTime(getTravelPredicTimeForST());

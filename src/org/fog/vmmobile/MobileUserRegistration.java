@@ -142,6 +142,7 @@ public final class MobileUserRegistration {
 		user.setParentId(-1);
 		user.setHandoffStatus(false);
 		user.setLockedToHandoff(false);
+		user.advanceNetworkAssociationGeneration();
 	}
 
 	public static void finishUser(MobileDevice user) {

@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.util.RunOutputManager;
+import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
@@ -205,11 +206,13 @@ public final class MigrationCoordinator {
 				"Migration decision dependencies cannot be null");
 		}
 		for (MobileDevice mobileDevice : mobileDevices) {
+			FogDevice accessServer = mobileDevice.getSourceServerCloudlet();
 			if (mobileDevice.getSourceAp() == null
+				|| accessServer == null
 				|| mobileDevice.isLockedToMigration()
 				|| mobileDevice.getVmLocalServerCloudlet() == null
-				|| !mobileDevice.getVmLocalServerCloudlet().getMigrationStrategy()
-					.shouldMigrate(mobileDevice)) {
+				|| accessServer.getMigrationStrategy() == null
+				|| !accessServer.getMigrationStrategy().shouldMigrate(mobileDevice)) {
 				events.sendNow(coordinatorEntityId, MobileEvents.NO_MIGRATION,
 					mobileDevice);
 				continue;
