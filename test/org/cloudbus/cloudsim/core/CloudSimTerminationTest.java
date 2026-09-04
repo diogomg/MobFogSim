@@ -47,6 +47,13 @@ public class CloudSimTerminationTest {
 		assertTrue(entity.isShutdown());
 		assertFalse(entity.wasLateEventProcessed());
 		assertFalse(CloudSim.running());
+		assertEquals(1L, CloudSim.getEventCounters().getTotalDispatched());
+		assertEquals(1L, CloudSim.getEventCounters().getQueuedDispatched());
+		assertEquals(0L, CloudSim.getEventCounters().getPeriodicDispatched());
+		assertEquals(1L, CloudSim.getEventCounters()
+			.getDispatchedForTag(LifecycleEntity.STOP_OR_FAIL));
+		assertEquals(0L, CloudSim.getEventCounters()
+			.getDispatchedForTag(LifecycleEntity.LATE_EVENT));
 		assertEquals("graceful", onlyOutputLine());
 	}
 
@@ -67,7 +74,38 @@ public class CloudSimTerminationTest {
 		assertTrue(entity.isShutdown());
 		assertFalse(entity.wasLateEventProcessed());
 		assertFalse(CloudSim.running());
+		assertEquals(1L, CloudSim.getEventCounters().getTotalDispatched());
+		assertEquals(1L, CloudSim.getEventCounters()
+			.getDispatchedForTag(LifecycleEntity.STOP_OR_FAIL));
 		assertEquals("failure", onlyOutputLine());
+	}
+
+	@Test
+	public void eventCountersSeparateQueuedAndPeriodicDispatches() {
+		CloudSim.init(0, Calendar.getInstance(), false);
+		new CountingEntity("countingEntity");
+
+		CloudSim.startSimulation();
+
+		SimulationEventCounters counters = CloudSim.getEventCounters();
+		assertEquals(5L, counters.getTotalDispatched());
+		assertEquals(2L, counters.getQueuedDispatched());
+		assertEquals(3L, counters.getPeriodicDispatched());
+		assertEquals(5L, counters.getDispatchedForInternalType(SimEvent.SEND));
+		assertEquals(3L, counters.getDispatchedForTag(CountingEntity.PERIODIC));
+		assertEquals(1L, counters.getDispatchedForTag(CountingEntity.ONCE));
+		assertEquals(1L, counters.getDispatchedForTag(CountingEntity.STOP));
+		try {
+			counters.getDispatchedByTag().put(Integer.valueOf(1), Long.valueOf(1L));
+			fail("Counter maps must be immutable");
+		}
+		catch (UnsupportedOperationException expected) {
+			// Expected.
+		}
+
+		CloudSim.init(0, Calendar.getInstance(), false);
+		assertEquals(0L, CloudSim.getEventCounters().getTotalDispatched());
+		CloudSim.finishSimulation();
 	}
 
 	private String onlyOutputLine() throws IOException {
@@ -120,6 +158,36 @@ public class CloudSimTerminationTest {
 
 		private boolean wasLateEventProcessed() {
 			return lateEventProcessed;
+		}
+	}
+
+	private static final class CountingEntity extends SimEntity {
+		private static final int PERIODIC = 8201;
+		private static final int ONCE = 8202;
+		private static final int STOP = 8203;
+
+		private CountingEntity(String name) {
+			super(name);
+		}
+
+		@Override
+		public void startEntity() {
+			CloudSim.sendPeriodic(getId(), getId(), 1.0, 1.0, 4.0,
+				PERIODIC, null);
+			schedule(getId(), 2.5, ONCE);
+			schedule(getId(), 3.5, STOP);
+		}
+
+		@Override
+		public void processEvent(SimEvent event) {
+			if (event.getTag() == STOP) {
+				CloudSim.terminateSimulation();
+			}
+		}
+
+		@Override
+		public void shutdownEntity() {
+			// Nothing to release.
 		}
 	}
 }

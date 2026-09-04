@@ -342,6 +342,21 @@ public class CloudSim {
 	/** Preserves registration order between periodic series at an equal time. */
 	private static long periodicRegistrationOrder;
 
+	/** Events removed from either dispatch source during the current/last run. */
+	private static long dispatchedEventCount;
+
+	/** Ordinary future-queue events removed for dispatch. */
+	private static long dispatchedQueuedEventCount;
+
+	/** Occurrences materialised from compact periodic schedules. */
+	private static long dispatchedPeriodicEventCount;
+
+	/** Dispatched events grouped by CloudSim's internal event type. */
+	private static Map<Integer, Long> dispatchedEventsByInternalType;
+
+	/** Dispatched SEND events grouped by their user-defined tag. */
+	private static Map<Integer, Long> dispatchedEventsByTag;
+
 	/** Entity IDs that have work to process, ordered like the former full scan. */
 	private static TreeSet<Integer> runnableEntities;
 
@@ -381,6 +396,11 @@ public class CloudSim {
 		deferred = new DeferredQueue();
 		periodicEvents = new PriorityQueue<PeriodicEventSchedule>();
 		periodicRegistrationOrder = 0;
+		dispatchedEventCount = 0L;
+		dispatchedQueuedEventCount = 0L;
+		dispatchedPeriodicEventCount = 0L;
+		dispatchedEventsByInternalType = new HashMap<Integer, Long>();
+		dispatchedEventsByTag = new HashMap<Integer, Long>();
 		runnableEntities = new TreeSet<Integer>();
 		waitPredicates = new HashMap<Integer, Predicate>();
 		clock = 0;
@@ -415,6 +435,20 @@ public class CloudSim {
 	 */
 	public static int getNumEntities() {
 		return entities.size();
+	}
+
+	/**
+	 * Returns an immutable counter snapshot for the current or most recently
+	 * completed run. Counters are reset by the next call to {@link #init}.
+	 */
+	public static SimulationEventCounters getEventCounters() {
+		if (dispatchedEventsByInternalType == null
+			|| dispatchedEventsByTag == null) {
+			return SimulationEventCounters.empty();
+		}
+		return new SimulationEventCounters(dispatchedEventCount,
+			dispatchedQueuedEventCount, dispatchedPeriodicEventCount,
+			dispatchedEventsByInternalType, dispatchedEventsByTag);
 	}
 
 	/**
@@ -579,7 +613,9 @@ public class CloudSim {
 			while (periodicEvents.size() > 0
 				&& periodicEvents.peek().getNextTime() == nextEventTime) {
 				PeriodicEventSchedule schedule = periodicEvents.poll();
-				processEvent(schedule.createNextEvent());
+				SimEvent occurrence = schedule.createNextEvent();
+				recordDispatchedEvent(occurrence, true);
+				processEvent(occurrence);
 				if (schedule.advance()) {
 					periodicEvents.add(schedule);
 				}
@@ -592,6 +628,7 @@ public class CloudSim {
 					if (next.eventTime() != nextEventTime) {
 						break;
 					}
+					recordDispatchedEvent(next, false);
 					processEvent(next);
 					toRemove.add(next);
 				}
@@ -619,6 +656,28 @@ public class CloudSim {
 	/** Marks an entity to run on the next clock tick. */
 	private static void markRunnable(int entityId) {
 		runnableEntities.add(entityId);
+	}
+
+	/** Records one event at the boundary where it enters core processing. */
+	private static void recordDispatchedEvent(SimEvent event, boolean periodic) {
+		dispatchedEventCount++;
+		if (periodic) {
+			dispatchedPeriodicEventCount++;
+		}
+		else {
+			dispatchedQueuedEventCount++;
+		}
+		increment(dispatchedEventsByInternalType, event.getType());
+		if (event.getType() == SimEvent.SEND) {
+			increment(dispatchedEventsByTag, event.getTag());
+		}
+	}
+
+	private static void increment(Map<Integer, Long> counts, int key) {
+		Integer boxedKey = Integer.valueOf(key);
+		Long previous = counts.get(boxedKey);
+		counts.put(boxedKey, Long.valueOf(previous == null
+			? 1L : previous.longValue() + 1L));
 	}
 
 	/**

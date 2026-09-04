@@ -160,8 +160,8 @@ public final class SimulationContext implements AutoCloseable {
 			throw new IllegalStateException(
 				"The simulation ended without recording a metric snapshot");
 		}
-		return new SimulationRunResult(metricsSnapshot, cloudSimEntityCount,
-			identifiers);
+		return new SimulationRunResult(metricsSnapshot, CloudSim.getEventCounters(),
+			cloudSimEntityCount, identifiers);
 	}
 
 	@Override

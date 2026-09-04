@@ -84,6 +84,8 @@ public class SimulationContextIntegrationTest {
 			second.getGeneratedTupleCount());
 		assertEquals(first.getGeneratedActualTupleCount(),
 			second.getGeneratedActualTupleCount());
+		assertEquals(first.getEventCounters(), second.getEventCounters());
+		assertEquals(first.toSemanticSnapshot(), second.toSemanticSnapshot());
 		assertMetricSnapshotsEqual(first.getMetrics(), second.getMetrics());
 		assertContextWasReleased();
 	}

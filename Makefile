@@ -36,6 +36,7 @@ TEST_SUITES := \
 	org.fog.vmmobile.MutableStateEncapsulationTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
 	org.fog.vmmobile.SimulationContextIntegrationTest \
+	org.fog.vmmobile.ReferenceSimulationGoldenTest \
 	org.fog.vmmobile.TypedPolicyTest \
 	org.fog.utils.TimeKeeperTest \
 	org.fog.utils.JsonToTopologyTest \
@@ -69,6 +70,7 @@ test:
 	mkdir -p $(TEST_CLASSES)
 	find src test -name '*.java' -print > $(BUILD_DIR)/test-sources.list
 	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(TEST_CLASSES) @$(BUILD_DIR)/test-sources.list
+	cp -R test/resources/. $(TEST_CLASSES)/
 	java -classpath '$(TEST_CLASSPATH)' org.junit.runner.JUnitCore $(TEST_SUITES)
 
 clean:
