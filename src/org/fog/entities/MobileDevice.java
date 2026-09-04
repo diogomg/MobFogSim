@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
-import org.fog.application.AppEdge;
 import org.fog.application.AppModule;
 import org.fog.localization.*;
 import org.fog.placement.MobileController;
@@ -393,35 +392,6 @@ public class MobileDevice extends FogDevice {
 				}
 			}
 		}
-	}
-
-	private void sendPeriodicTuple(SimEvent ev) {
-		AppEdge edge = (AppEdge) ev.getData();
-		String srcModule = edge.getSource();
-		AppModule module = null;
-		for (Vm vm : getHost().getVmList()) {
-			if (((AppModule) vm).getName().equals(srcModule)) {
-				module = (AppModule) vm;
-				break;
-			}
-		}
-		if (module == null)
-			return;
-
-		int instanceCount = getModuleInstanceCount().get(module.getAppId()).get(srcModule);
-
-		/*
-		 * Since tuples sent through a DOWN application edge are anyways
-		 * broadcasted, only UP tuples are replicated
-		 */
-		for (int i = 0; i < ((edge.getDirection() == Tuple.UP) ? instanceCount : 1); i++) {
-			for (Tuple tuple : applicationMap.get(module.getAppId())
-				.createTuples(edge, getId())) {
-				updateTimingsOnSending(tuple);
-				sendToSelf(tuple);
-			}
-		}
-		send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
 	}
 
 	private void updateModuleInstanceCount(SimEvent ev) {

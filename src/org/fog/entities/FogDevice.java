@@ -1128,7 +1128,7 @@ public class FogDevice extends PowerDatacenter {
 	 * @param ev
 	 *        SimEvent instance containing the edge to send tuple on
 	 */
-	private void sendPeriodicTuple(SimEvent ev) {
+	protected void sendPeriodicTuple(SimEvent ev) {
 		AppEdge edge = (AppEdge) ev.getData();
 		String srcModule = edge.getSource();
 		AppModule module = null;
@@ -1141,34 +1141,33 @@ public class FogDevice extends PowerDatacenter {
 		if (module == null)
 			return;
 
-		int instanceCount = getModuleInstanceCount().get(module.getAppId()).get(srcModule);
+		String appId = module.getAppId();
+		Application application = applicationMap.get(appId);
+		if (application == null) {
+			return;
+		}
+
+		Map<String, Integer> applicationInstanceCounts =
+			moduleInstanceCount.get(appId);
+		if (applicationInstanceCounts == null) {
+			return;
+		}
+		Integer instanceCount = applicationInstanceCounts.get(srcModule);
+		if (instanceCount == null || instanceCount <= 0) {
+			return;
+		}
 
 		/*
 		 * Since tuples sent through a DOWN application edge are anyways
 		 * broadcasted, only UP tuples are replicated
 		 */
 		for (int i = 0; i < ((edge.getDirection() == Tuple.UP) ? instanceCount : 1); i++) {
-			if (applicationMap.isEmpty()) {
-				continue;
-			}
-			else {
-				Application app = getApplicationMap().get(module.getAppId());
-				if (app == null) {
-					continue;
-				}
-				for (Tuple tuple : applicationMap.get(module.getAppId())
-					.createTuples(edge, getId())) {
-					updateTimingsOnSending(tuple);
-					sendToSelf(tuple);
-				}
+			for (Tuple tuple : application.createTuples(edge, getId())) {
+				updateTimingsOnSending(tuple);
+				sendToSelf(tuple);
 			}
 		}
-		if (applicationMap.isEmpty()) {
-			return;
-		}
-		else {
-			send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
-		}
+		send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
 	}
 
 	protected void processActuatorJoined(SimEvent ev) {
