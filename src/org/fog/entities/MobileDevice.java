@@ -537,19 +537,25 @@ public class MobileDevice extends FogDevice {
 	}
 
 	public Set<MobileSensor> getSensors() {
-		return sensors;
+		return java.util.Collections.unmodifiableSet(sensors);
 	}
 
 	public void setSensors(Set<MobileSensor> sensors) {
-		this.sensors = sensors;
+		if (sensors == null) {
+			throw new IllegalArgumentException("Mobile sensor set cannot be null");
+		}
+		this.sensors = new java.util.HashSet<MobileSensor>(sensors);
 	}
 
 	public Set<MobileActuator> getActuators() {
-		return actuators;
+		return java.util.Collections.unmodifiableSet(actuators);
 	}
 
 	public void setActuators(Set<MobileActuator> actuators) {
-		this.actuators = actuators;
+		if (actuators == null) {
+			throw new IllegalArgumentException("Mobile actuator set cannot be null");
+		}
+		this.actuators = new java.util.HashSet<MobileActuator>(actuators);
 	}
 
 	public boolean isMigStatus() {

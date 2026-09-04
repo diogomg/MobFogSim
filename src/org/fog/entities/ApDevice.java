@@ -19,7 +19,6 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
-import org.fog.vmmobile.policy.MembershipAction;
 
 public class ApDevice extends FogDevice {
 
@@ -63,21 +62,10 @@ public class ApDevice extends FogDevice {
 		}
 
 		if (getSmartThings().contains(smartThing)) {
-			NetworkSlicing.cancelWirelessTransfers(smartThing);
-			// it'll remove the smartThing from ap-smartThing's set
-			smartThing.getSourceAp().setSmartThings(smartThing,
-				MembershipAction.REMOVE);
-			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() - delay);
-			// remove link
-			NetworkTopology.addLink(smartThing.getSourceAp().getId(), smartThing.getId(), 0.0, 0.0);
-			smartThing.setSourceAp(smartThing.getDestinationAp());
-
-			smartThing.getSourceAp().setSmartThings(smartThing,
-				MembershipAction.ADD);
-			smartThing.getSourceAp().setUplinkLatency(getUplinkLatency() + delay);
-			NetworkTopology.addLink(smartThing.getSourceAp().getId(), smartThing.getId(),
-				NetworkSlicing.getAccessPointUplinkBandwidth(
-					smartThing.getSourceAp(), smartThing), delay);
+			ApDevice destination = smartThing.getDestinationAp();
+			if (!transferMobileDevice(smartThing, destination, delay)) {
+				return;
+			}
 
 			smartThing.setDestinationAp(null);
 			smartThing.setHandoffStatus(false);
@@ -112,7 +100,7 @@ public class ApDevice extends FogDevice {
 			return false;
 		}
 		NetworkSlicing.cancelWirelessTransfers(st);
-		boolean removed = getSmartThings().remove(st);
+		boolean removed = dissociateMobileDevice(st);
 		st.setSourceAp(null);
 		if (removed) {
 			setUplinkLatency(getUplinkLatency() - 0.002);
@@ -121,6 +109,31 @@ public class ApDevice extends FogDevice {
 		// remove link
 		NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
 		return removed;
+	}
+
+	/** Moves both sides of a wireless association as one validated transition. */
+	private boolean transferMobileDevice(MobileDevice mobileDevice,
+		ApDevice destination, double delay) {
+		if (mobileDevice == null || destination == null
+			|| mobileDevice.getSourceAp() != this
+			|| !getSmartThings().contains(mobileDevice)) {
+			return false;
+		}
+		if (!Double.isFinite(delay) || delay < 0.0) {
+			throw new IllegalArgumentException(
+				"Handoff delay must be finite and non-negative");
+		}
+		NetworkSlicing.cancelWirelessTransfers(mobileDevice);
+		dissociateMobileDevice(mobileDevice);
+		destination.associateMobileDevice(mobileDevice);
+		mobileDevice.setSourceAp(destination);
+		setUplinkLatency(Math.max(0.0, getUplinkLatency() - delay));
+		destination.setUplinkLatency(destination.getUplinkLatency() + delay);
+		NetworkTopology.addLink(getId(), mobileDevice.getId(), 0.0, 0.0);
+		NetworkTopology.addLink(destination.getId(), mobileDevice.getId(),
+			NetworkSlicing.getAccessPointUplinkBandwidth(destination, mobileDevice),
+			delay);
+		return true;
 	}
 
 	public static boolean connectApSmartThing(List<ApDevice> apDevices, MobileDevice st,
@@ -142,8 +155,8 @@ public class ApDevice extends FogDevice {
 			return false;
 		}
 
+		apDevice.associateMobileDevice(st);
 		st.setSourceAp(apDevice);
-		apDevice.setSmartThings(st, MembershipAction.ADD);
 		NetworkTopology.addLink(apDevice.getId(), st.getId(),
 			NetworkSlicing.getAccessPointUplinkBandwidth(apDevice, st), delay);
 		LogMobile.debug("ApDevice.java", st.getName() + " was connected to "

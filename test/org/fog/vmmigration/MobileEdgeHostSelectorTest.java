@@ -228,7 +228,7 @@ public class MobileEdgeHostSelectorTest {
 	}
 
 	private static void connect(FogDevice source, FogDevice destination) {
-		source.getNetServerCloudlets().put(destination, 1000.0);
+		source.connectTransportPeer(destination, 1000.0);
 	}
 
 	private static Vm vm(int id, int ram, long bandwidth, long size) {
@@ -259,4 +259,3 @@ public class MobileEdgeHostSelectorTest {
 		}
 	}
 }
-

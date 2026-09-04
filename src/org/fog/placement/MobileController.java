@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -212,8 +213,7 @@ public class MobileController extends SimEntity {
 				continue;
 			}
 			double latency = st.getUplinkLatency();
-			parent.getChildToLatencyMap().put(st.getId(), latency);
-			parent.getChildrenIds().add(st.getId());
+			parent.attachChild(st.getId(), latency);
 		}
 	}
 
@@ -272,8 +272,9 @@ public class MobileController extends SimEntity {
 	private void processAppSubmit(Application application) {
 		System.out.println("MobileController 213 processAppSubmit " + CloudSim.clock()
 			+ " Submitted application " + application.getAppId());
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
 		List<FogDevice> tempAllDevices = new ArrayList<>();
 		for (FogDevice sc : getServerCloudlets()) {
 			tempAllDevices.add(sc);
@@ -311,8 +312,9 @@ public class MobileController extends SimEntity {
 		Application application = (Application) ev.getData();
 		System.out.println(CloudSim.clock() + " Submitted application after migration "
 			+ application.getAppId());
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
 		FogDevice sc = (FogDevice) CloudSim.getEntity(ev.getSource());
 		List<FogDevice> tempList = new ArrayList<>();
 		tempList.add(sc);
@@ -715,9 +717,10 @@ public class MobileController extends SimEntity {
 	}
 
 	public void submitApplication(Application application, int delay) {
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
-		getAppLaunchDelays().put(application.getAppId(), delay);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
+		appLaunchDelays.put(application.getAppId(), delay);
 		for (MobileDevice st : getSmartThings()) {
 			for (Sensor s : st.getSensors()) {
 				if (s.getAppId().equals(application.getAppId()))
@@ -745,9 +748,10 @@ public class MobileController extends SimEntity {
 
 	public void submitApplicationMigration(MobileDevice smartThing, Application application,
 		int delay) {
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
-		getAppLaunchDelays().put(application.getAppId(), delay);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
+		appLaunchDelays.put(application.getAppId(), delay);
 
 		for (AppEdge edge : application.getEdges()) {
 			if (edge.getEdgeType() == AppEdge.ACTUATOR) {
@@ -764,19 +768,26 @@ public class MobileController extends SimEntity {
 	}
 
 	public Map<String, Application> getApplications() {
-		return applications;
+		return Collections.unmodifiableMap(applications);
 	}
 
 	public void setApplications(Map<String, Application> applications) {
-		this.applications = applications;
+		if (applications == null) {
+			throw new IllegalArgumentException("Application map cannot be null");
+		}
+		this.applications = new HashMap<String, Application>(applications);
 	}
 
 	public Map<String, Integer> getAppLaunchDelays() {
-		return appLaunchDelays;
+		return Collections.unmodifiableMap(appLaunchDelays);
 	}
 
 	public void setAppLaunchDelays(Map<String, Integer> appLaunchDelays) {
-		this.appLaunchDelays = appLaunchDelays;
+		if (appLaunchDelays == null) {
+			throw new IllegalArgumentException(
+				"Application launch delay map cannot be null");
+		}
+		this.appLaunchDelays = new HashMap<String, Integer>(appLaunchDelays);
 	}
 
 	public ModuleMapping getModuleMapping() {
@@ -788,11 +799,15 @@ public class MobileController extends SimEntity {
 	}
 
 	public Map<Integer, Double> getGlobalCurrentCpuLoad() {
-		return globalCurrentCpuLoad;
+		return Collections.unmodifiableMap(globalCurrentCpuLoad);
 	}
 
 	public void setGlobalCurrentCpuLoad(Map<Integer, Double> globalCurrentCpuLoad) {
-		this.globalCurrentCpuLoad = globalCurrentCpuLoad;
+		if (globalCurrentCpuLoad == null) {
+			throw new IllegalArgumentException("Global CPU load map cannot be null");
+		}
+		this.globalCurrentCpuLoad =
+			new HashMap<Integer, Double>(globalCurrentCpuLoad);
 	}
 
 	public void setGlobalCPULoad(Map<Integer, Double> currentCpuLoad) {
@@ -859,10 +874,13 @@ public class MobileController extends SimEntity {
 	}
 
 	public List<FogBroker> getBrokerList() {
-		return brokerList;
+		return Collections.unmodifiableList(brokerList);
 	}
 
 	public void setBrokerList(List<FogBroker> brokerList) {
+		if (brokerList == null) {
+			throw new IllegalArgumentException("Broker list cannot be null");
+		}
 		this.brokerList = brokerList;
 	}
 
@@ -904,12 +922,12 @@ public class MobileController extends SimEntity {
 				+ mobileDevice.getName());
 		}
 		brokersByMobileId.put(mobileDevice.getMyId(), broker);
-		getBrokerList().add(broker);
+		brokerList.add(broker);
 	}
 
 	private void removeBrokerFor(MobileDevice mobileDevice, FogBroker broker) {
 		brokersByMobileId.remove(mobileDevice.getMyId());
-		getBrokerList().remove(broker);
+		brokerList.remove(broker);
 	}
 
 	public static int getSeed() {
@@ -921,7 +939,8 @@ public class MobileController extends SimEntity {
 	}
 
 	public static List<FogDevice> getServerCloudlets() {
-		return serverCloudlets;
+		return serverCloudlets == null ? null
+			: Collections.unmodifiableList(serverCloudlets);
 	}
 
 	public static void setServerCloudlets(List<FogDevice> serverCloudlets) {
@@ -929,7 +948,8 @@ public class MobileController extends SimEntity {
 	}
 
 	public static List<MobileDevice> getSmartThings() {
-		return smartThings;
+		return smartThings == null ? null
+			: Collections.unmodifiableList(smartThings);
 	}
 
 	public static void setSmartThings(List<MobileDevice> smartThings) {
@@ -989,7 +1009,7 @@ public class MobileController extends SimEntity {
 	}
 
 	public static List<ApDevice> getApDevices() {
-		return apDevices;
+		return apDevices == null ? null : Collections.unmodifiableList(apDevices);
 	}
 
 	public static void setApDevices(List<ApDevice> apDevices) {

@@ -32,10 +32,7 @@ public class ActuatorTest {
 		Log.disable();
 		CloudSim.init(0, Calendar.getInstance(), false);
 		timeKeeper = TimeKeeper.getInstance();
-		timeKeeper.getEmitTimes().clear();
-		timeKeeper.getLoopIdToCurrentAverage().clear();
-		timeKeeper.getLoopIdToCurrentNum().clear();
-		timeKeeper.getMaxLoopExecutionTime().clear();
+		timeKeeper.resetMeasurements();
 		MobileController.setSmartThings(null);
 	}
 
@@ -95,7 +92,7 @@ public class ActuatorTest {
 
 		@Override
 		public void startEntity() {
-			TimeKeeper.getInstance().getEmitTimes().put(actualTupleId, CloudSim.clock());
+			TimeKeeper.getInstance().recordEmission(actualTupleId, CloudSim.clock());
 			schedule(actuatorId, 10.0, FogEvents.TUPLE_ARRIVAL, tuple);
 			schedule(getId(), 11.0, STOP);
 		}

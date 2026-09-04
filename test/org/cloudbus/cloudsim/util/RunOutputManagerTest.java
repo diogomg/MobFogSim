@@ -87,7 +87,7 @@ public class RunOutputManagerTest {
 		MyStatistics.setInstance(statistics);
 		statistics.setToPrint("test-policy");
 		statistics.setFileMap("outputLatencies/7/latencies.txt", 7);
-		statistics.getMyCount().put(7, 0);
+		statistics.initialiseLatencyCounter(7);
 		statistics.putLantencyFileName("header", 7);
 		try (PrintWriter average = RunOutputManager.getInstance()
 			.newSummaryPrintWriter("averages/all_test-policy", true)) {
@@ -128,7 +128,7 @@ public class RunOutputManagerTest {
 		MyStatistics.setInstance(statistics);
 		statistics.setToPrint("summary-policy");
 		statistics.setFileMap("outputLatencies/7/latencies.txt", 7);
-		statistics.getMyCount().put(7, 0);
+		statistics.initialiseLatencyCounter(7);
 		statistics.putLantencyFileName("header", 7);
 		statistics.putLatencyFileValue(1.0, 2.0, "app", 7, "server", "tuple");
 		try (PrintWriter average = RunOutputManager.getInstance()

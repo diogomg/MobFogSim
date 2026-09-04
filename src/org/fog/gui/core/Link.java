@@ -1,7 +1,6 @@
 package org.fog.gui.core;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -11,12 +10,6 @@ import java.util.Map;
 public class Link extends Edge implements Serializable {
 	private static final long serialVersionUID = -356975278987708987L;
 
-	private Node dest = null;
-
-	private double latency = 0.0;
-	private String name = "";
-	private long bandwidth = 0;
-
 	/**
 	 * Constructor.
 	 * 
@@ -25,74 +18,21 @@ public class Link extends Edge implements Serializable {
 	 */
 	public Link(Node to) {
 		super(to);
-		this.dest = to;
 	}
 
 	/** physical topology link */
 	public Link(Node to, double latency) {
 		super(to, latency);
-		this.dest = to;
-		this.latency = latency;
 	}
 
 	/** virtual virtual edge */
 	public Link(Node to, String name, long bw) {
 		super(to, name, bw);
-		this.dest = to;
-		this.name = name;
-		this.bandwidth = bw;
 	}
 
 	/** copy edge */
 	public Link(Node to, Map<String, Object> info) {
 		super(to, info);
-		this.dest = to;
-		if (info.get("name") != null) {
-			this.name = (String) info.get("name");
-		}
-		if (info.get("bandwidth") != null) {
-			this.bandwidth = (long) info.get("bandwidth");
-		}
-		if (info.get("latency") != null) {
-			this.latency = (double) info.get("latency");
-		}
-	}
-
-	public Node getNode() {
-		return dest;
-	}
-
-	public long getBandwidth() {
-		return bandwidth;
-	}
-
-	public double getLatency() {
-		return latency;
-	}
-
-	public Map<String, Object> getInfo() {
-		Map<String, Object> info = new HashMap<String, Object>();
-		info.put("name", this.name);
-		info.put("bandwidth", this.bandwidth);
-		info.put("latency", this.latency);
-		return info;
-	}
-
-	public void setInfo(Map<String, Object> info) {
-		if (info.get("name") != null) {
-			this.name = (String) info.get("name");
-		}
-		if (info.get("bandwidth") != null) {
-			this.bandwidth = (long) info.get("bandwidth");
-		}
-		if (info.get("latency") != null) {
-			this.latency = (double) info.get("latency");
-		}
-	}
-
-	@Override
-	public String toString() {
-		return "Edge [dest=" + dest + "]";
 	}
 
 }

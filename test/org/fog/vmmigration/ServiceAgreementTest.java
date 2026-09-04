@@ -24,7 +24,7 @@ public class ServiceAgreementTest {
 		CloudSim.init(1, Calendar.getInstance(), false);
 		source = new FogDevice("source", 0, 0, 0);
 		destination = new FogDevice("destination", 0, 0, 1);
-		source.getNetServerCloudlets().put(destination, 1000.0);
+		source.connectTransportPeer(destination, 1000.0);
 		destination.setAvailable(true);
 		mobileDevice = new MobileDevice("mobile", 0, 0, 0, 0, 0);
 		mobileDevice.setVmLocalServerCloudlet(source);

@@ -1,5 +1,6 @@
 package org.fog.placement;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,11 +16,26 @@ public class ModuleMapping {
 	}
 
 	public Map<String, Map<String, Integer>> getModuleMapping() {
-		return moduleMapping;
+		Map<String, Map<String, Integer>> snapshot =
+			new HashMap<String, Map<String, Integer>>();
+		for (Map.Entry<String, Map<String, Integer>> entry
+			: moduleMapping.entrySet()) {
+			snapshot.put(entry.getKey(), Collections.unmodifiableMap(
+				new HashMap<String, Integer>(entry.getValue())));
+		}
+		return Collections.unmodifiableMap(snapshot);
 	}
 
 	public void setModuleMapping(Map<String, Map<String, Integer>> moduleMapping) {
-		this.moduleMapping = moduleMapping;
+		if (moduleMapping == null) {
+			throw new IllegalArgumentException("Module mapping cannot be null");
+		}
+		this.moduleMapping = new HashMap<String, Map<String, Integer>>();
+		for (Map.Entry<String, Map<String, Integer>> entry
+			: moduleMapping.entrySet()) {
+			this.moduleMapping.put(entry.getKey(),
+				new HashMap<String, Integer>(entry.getValue()));
+		}
 	}
 
 	protected ModuleMapping() {
@@ -45,10 +61,46 @@ public class ModuleMapping {
 	 * @param instanceCount
 	 */
 	public void addModuleToDevice(String moduleName, String deviceName, int instanceCount) {
-		if (!getModuleMapping().containsKey(deviceName))
-			getModuleMapping().put(deviceName, new HashMap<String, Integer>());
-		if (!getModuleMapping().get(deviceName).containsKey(moduleName))
-			getModuleMapping().get(deviceName).put(moduleName, instanceCount);
+		if (moduleName == null || moduleName.trim().isEmpty()
+			|| deviceName == null || deviceName.trim().isEmpty()) {
+			throw new IllegalArgumentException(
+				"Module and device names cannot be empty");
+		}
+		if (instanceCount < 0) {
+			throw new IllegalArgumentException("Instance count cannot be negative");
+		}
+		if (!moduleMapping.containsKey(deviceName))
+			moduleMapping.put(deviceName, new HashMap<String, Integer>());
+		if (!moduleMapping.get(deviceName).containsKey(moduleName))
+			moduleMapping.get(deviceName).put(moduleName, instanceCount);
+	}
+
+	public boolean removeDevice(String deviceName) {
+		return moduleMapping.remove(deviceName) != null;
+	}
+
+	/** Moves VM placement between devices without exposing intermediate state. */
+	public void moveModule(String sourceDeviceName, String destinationDeviceName,
+		String moduleName, int instanceCount) {
+		if (sourceDeviceName == null || sourceDeviceName.trim().isEmpty()) {
+			throw new IllegalArgumentException("Source device name cannot be empty");
+		}
+		if (moduleName == null || moduleName.trim().isEmpty()
+			|| destinationDeviceName == null
+			|| destinationDeviceName.trim().isEmpty() || instanceCount < 0) {
+			throw new IllegalArgumentException(
+				"Destination, module, and non-negative count are required");
+		}
+		moduleMapping.remove(sourceDeviceName);
+		Map<String, Integer> destination =
+			moduleMapping.get(destinationDeviceName);
+		if (destination == null) {
+			destination = new HashMap<String, Integer>();
+			moduleMapping.put(destinationDeviceName, destination);
+		}
+		if (!destination.containsKey(moduleName)) {
+			destination.put(moduleName, instanceCount);
+		}
 	}
 
 }

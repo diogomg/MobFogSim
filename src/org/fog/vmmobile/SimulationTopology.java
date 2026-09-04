@@ -1,6 +1,7 @@
 package org.fog.vmmobile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,30 +26,63 @@ public final class SimulationTopology {
 		new HashMap<String, GeoCoverage>();
 
 	public List<MobileDevice> getMobileDevices() {
-		return mobileDevices;
+		return Collections.unmodifiableList(mobileDevices);
 	}
 
 	public List<FogDevice> getServerCloudlets() {
-		return serverCloudlets;
+		return Collections.unmodifiableList(serverCloudlets);
 	}
 
 	public List<ApDevice> getAccessPoints() {
-		return accessPoints;
+		return Collections.unmodifiableList(accessPoints);
 	}
 
 	public List<FogBroker> getBrokers() {
-		return brokers;
+		return Collections.unmodifiableList(brokers);
 	}
 
 	public List<String> getApplicationIds() {
-		return applicationIds;
+		return Collections.unmodifiableList(applicationIds);
 	}
 
 	public List<Application> getApplications() {
-		return applications;
+		return Collections.unmodifiableList(applications);
 	}
 
 	public Map<String, GeoCoverage> getApplicationCoverage() {
-		return applicationCoverage;
+		return Collections.unmodifiableMap(applicationCoverage);
+	}
+
+	/* Package-private registries keep legacy orchestration inside this owner. */
+	List<MobileDevice> mobileDeviceRegistry() {
+		return mobileDevices;
+	}
+
+	List<FogDevice> serverCloudletRegistry() {
+		return serverCloudlets;
+	}
+
+	List<ApDevice> accessPointRegistry() {
+		return accessPoints;
+	}
+
+	List<FogBroker> brokerRegistry() {
+		return brokers;
+	}
+
+	List<String> applicationIdRegistry() {
+		return applicationIds;
+	}
+
+	List<Application> applicationRegistry() {
+		return applications;
+	}
+
+	public void registerApplicationCoverage(String applicationId,
+		GeoCoverage coverage) {
+		if (applicationId == null || applicationId.trim().isEmpty()) {
+			throw new IllegalArgumentException("Application ID cannot be empty");
+		}
+		applicationCoverage.put(applicationId, coverage);
 	}
 }

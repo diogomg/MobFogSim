@@ -28,7 +28,7 @@ public class ModulePlacementMapping extends ModulePlacement {
 				getCurrentCpuLoad().put(device.getId(),
 					getCurrentCpuLoad().get(device.getId()) + (module.getMips() * numModules));
 				createModuleInstanceOnDevice(module, device);
-				getModuleInstanceCountMap().get(device.getId()).put(moduleName,
+				moduleInstanceCountRegistry().get(device.getId()).put(moduleName,
 					mapping.get(deviceName).get(moduleName));
 			}
 		}
@@ -47,7 +47,7 @@ public class ModulePlacementMapping extends ModulePlacement {
 			getCurrentCpuLoad().put(serverCloudlet.getId(),
 				getCurrentCpuLoad().get(serverCloudlet.getId()) + (module.getMips() * numModules));
 			createModuleInstanceOnDevice(module, serverCloudlet);
-			getModuleInstanceCountMap().get(serverCloudlet.getId()).put(moduleName,
+			moduleInstanceCountRegistry().get(serverCloudlet.getId()).put(moduleName,
 				mapping.get(serverCloudlet.getName()).get(moduleName));
 			return;
 		}
@@ -63,7 +63,8 @@ public class ModulePlacementMapping extends ModulePlacement {
 		this.setDeviceToModuleMap(new HashMap<Integer, List<AppModule>>());
 		this.setModuleInstanceCountMap(new HashMap<Integer, Map<String, Integer>>());
 		for (FogDevice device : getFogDevices())
-			getModuleInstanceCountMap().put(device.getId(), new HashMap<String, Integer>());
+			moduleInstanceCountRegistry().put(device.getId(),
+				new HashMap<String, Integer>());
 		mapModules();
 	}
 
@@ -77,7 +78,8 @@ public class ModulePlacementMapping extends ModulePlacement {
 		this.setDeviceToModuleMap(new HashMap<Integer, List<AppModule>>());
 		this.setModuleInstanceCountMap(new HashMap<Integer, Map<String, Integer>>());
 		for (FogDevice device : getFogDevices()) {
-			if (getModuleInstanceCountMap().put(device.getId(), new HashMap<String, Integer>()) == null) {
+			if (moduleInstanceCountRegistry().put(device.getId(),
+				new HashMap<String, Integer>()) == null) {
 				System.out.println(getModuleInstanceCountMap() + " - " + device.getName());
 			}
 			mapModulesMigrate(device);

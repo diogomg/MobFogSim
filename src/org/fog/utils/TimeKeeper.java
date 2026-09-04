@@ -1,5 +1,7 @@
 package org.fog.utils;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,74 @@ public class TimeKeeper {
 		}
 	}
 
+	/** Records the timestamp at which an end-to-end tuple was emitted. */
+	public void recordEmission(int tupleId, double emissionTime) {
+		if (!Double.isFinite(emissionTime)) {
+			throw new IllegalArgumentException("Emission time must be finite");
+		}
+		emitTimes.put(tupleId, emissionTime);
+	}
+
+	public Double getEmissionTime(int tupleId) {
+		return emitTimes.get(tupleId);
+	}
+
+	public Double consumeEmissionTime(int tupleId) {
+		return emitTimes.remove(tupleId);
+	}
+
+	/** Initialises aggregate timing for a loop and reports whether it was new. */
+	public boolean initialiseLoopTiming(int loopId) {
+		if (loopIdToCurrentAverage.containsKey(loopId)) {
+			return false;
+		}
+		loopIdToCurrentAverage.put(loopId, 0.0);
+		loopIdToCurrentNum.put(loopId, 0);
+		maxLoopExecutionTime.put(loopId, 0.0);
+		return true;
+	}
+
+	/** Records one loop delay and reports whether it established a new maximum. */
+	public boolean recordLoopDelay(int loopId, double delay) {
+		if (!Double.isFinite(delay) || delay < 0.0) {
+			throw new IllegalArgumentException(
+				"Loop delay must be finite and non-negative");
+		}
+		initialiseLoopTiming(loopId);
+		double currentAverage = loopIdToCurrentAverage.get(loopId);
+		int currentCount = loopIdToCurrentNum.get(loopId);
+		loopIdToCurrentAverage.put(loopId,
+			(currentAverage * currentCount + delay) / (currentCount + 1));
+		loopIdToCurrentNum.put(loopId, currentCount + 1);
+		double previousMaximum = maxLoopExecutionTime.get(loopId);
+		if (delay > previousMaximum) {
+			maxLoopExecutionTime.put(loopId, delay);
+			return true;
+		}
+		return false;
+	}
+
+	/** Explicit test/adapter boundary for a tuple CPU start timestamp. */
+	public void recordTupleCpuStart(int tupleId, double startTime) {
+		if (!Double.isFinite(startTime)) {
+			throw new IllegalArgumentException("CPU start time must be finite");
+		}
+		tupleIdToCpuStartTime.put(tupleId, startTime);
+	}
+
+	/** Clears measurements while retaining the singleton identity. */
+	public void resetMeasurements() {
+		emitTimes.clear();
+		endTimes.clear();
+		loopIdToTupleIds.clear();
+		tupleIdToCpuStartTime.clear();
+		tupleTypeToAverageCpuTime.clear();
+		tupleTypeToExecutedTupleCount.clear();
+		maxLoopExecutionTime.clear();
+		loopIdToCurrentAverage.clear();
+		loopIdToCurrentNum.clear();
+	}
+
 	public Map<Integer, List<Integer>> loopIdToTupleIds() {
 		return getInstance().getLoopIdToTupleIds();
 	}
@@ -97,53 +167,71 @@ public class TimeKeeper {
 	}
 
 	public Map<Integer, Double> getEmitTimes() {
-		return emitTimes;
+		return Collections.unmodifiableMap(emitTimes);
 	}
 
 	public void setEmitTimes(Map<Integer, Double> emitTimes) {
-		this.emitTimes = emitTimes;
+		this.emitTimes = copyMap(emitTimes, "Emission time map");
 	}
 
 	public Map<Integer, Double> getEndTimes() {
-		return endTimes;
+		return Collections.unmodifiableMap(endTimes);
 	}
 
 	public void setEndTimes(Map<Integer, Double> endTimes) {
-		this.endTimes = endTimes;
+		this.endTimes = copyMap(endTimes, "End time map");
 	}
 
 	public Map<Integer, List<Integer>> getLoopIdToTupleIds() {
-		return loopIdToTupleIds;
+		Map<Integer, List<Integer>> snapshot =
+			new HashMap<Integer, List<Integer>>();
+		for (Map.Entry<Integer, List<Integer>> entry
+			: loopIdToTupleIds.entrySet()) {
+			snapshot.put(entry.getKey(), Collections.unmodifiableList(
+				new ArrayList<Integer>(entry.getValue())));
+		}
+		return Collections.unmodifiableMap(snapshot);
 	}
 
 	public void setLoopIdToTupleIds(Map<Integer, List<Integer>> loopIdToTupleIds) {
-		this.loopIdToTupleIds = loopIdToTupleIds;
+		if (loopIdToTupleIds == null) {
+			throw new IllegalArgumentException("Loop tuple map cannot be null");
+		}
+		this.loopIdToTupleIds = new HashMap<Integer, List<Integer>>();
+		for (Map.Entry<Integer, List<Integer>> entry
+			: loopIdToTupleIds.entrySet()) {
+			this.loopIdToTupleIds.put(entry.getKey(),
+				new ArrayList<Integer>(entry.getValue()));
+		}
 	}
 
 	public Map<String, Double> getTupleTypeToAverageCpuTime() {
-		return tupleTypeToAverageCpuTime;
+		return Collections.unmodifiableMap(tupleTypeToAverageCpuTime);
 	}
 
 	public void setTupleTypeToAverageCpuTime(
 		Map<String, Double> tupleTypeToAverageCpuTime) {
-		this.tupleTypeToAverageCpuTime = tupleTypeToAverageCpuTime;
+		this.tupleTypeToAverageCpuTime = copyMap(tupleTypeToAverageCpuTime,
+			"Tuple CPU average map");
 	}
 
 	public Map<String, Integer> getTupleTypeToExecutedTupleCount() {
-		return tupleTypeToExecutedTupleCount;
+		return Collections.unmodifiableMap(tupleTypeToExecutedTupleCount);
 	}
 
 	public void setTupleTypeToExecutedTupleCount(
 		Map<String, Integer> tupleTypeToExecutedTupleCount) {
-		this.tupleTypeToExecutedTupleCount = tupleTypeToExecutedTupleCount;
+		this.tupleTypeToExecutedTupleCount = copyMap(
+			tupleTypeToExecutedTupleCount, "Tuple execution count map");
 	}
 
 	public Map<Integer, Double> getTupleIdToCpuStartTime() {
-		return tupleIdToCpuStartTime;
+		return Collections.unmodifiableMap(tupleIdToCpuStartTime);
 	}
 
 	public void setTupleIdToCpuStartTime(Map<Integer, Double> tupleIdToCpuStartTime) {
-		this.tupleIdToCpuStartTime = tupleIdToCpuStartTime;
+		this.tupleIdToCpuStartTime = copyMap(tupleIdToCpuStartTime,
+			"Tuple CPU start map");
 	}
 
 	public long getSimulationStartTime() {
@@ -155,27 +243,38 @@ public class TimeKeeper {
 	}
 
 	public Map<Integer, Double> getLoopIdToCurrentAverage() {
-		return loopIdToCurrentAverage;
+		return Collections.unmodifiableMap(loopIdToCurrentAverage);
 	}
 
 	public void setLoopIdToCurrentAverage(Map<Integer, Double> loopIdToCurrentAverage) {
-		this.loopIdToCurrentAverage = loopIdToCurrentAverage;
+		this.loopIdToCurrentAverage = copyMap(loopIdToCurrentAverage,
+			"Loop average map");
 	}
 
 	public Map<Integer, Integer> getLoopIdToCurrentNum() {
-		return loopIdToCurrentNum;
+		return Collections.unmodifiableMap(loopIdToCurrentNum);
 	}
 
 	public void setLoopIdToCurrentNum(Map<Integer, Integer> loopIdToCurrentNum) {
-		this.loopIdToCurrentNum = loopIdToCurrentNum;
+		this.loopIdToCurrentNum = copyMap(loopIdToCurrentNum,
+			"Loop count map");
 	}
 
 	public Map<Integer, Double> getMaxLoopExecutionTime() {
-		return maxLoopExecutionTime;
+		return Collections.unmodifiableMap(maxLoopExecutionTime);
 	}
 
 	public void setMaxLoopExecutionTime(Map<Integer, Double> maxLoopExecutionTime) {
-		this.maxLoopExecutionTime = maxLoopExecutionTime;
+		this.maxLoopExecutionTime = copyMap(maxLoopExecutionTime,
+			"Maximum loop execution map");
+	}
+
+	private static <K, V> Map<K, V> copyMap(Map<K, V> values,
+		String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return new HashMap<K, V>(values);
 	}
 
 }

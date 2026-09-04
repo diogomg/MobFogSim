@@ -2,6 +2,7 @@ package org.fog.gui.core;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,15 +24,30 @@ public class Graph implements Serializable {
 	}
 
 	public Graph(Map<Node, List<Edge>> adjacencyList) {
-		this.adjacencyList = adjacencyList;
+		setAdjacencyList(adjacencyList);
 	}
 
 	public void setAdjacencyList(Map<Node, List<Edge>> adjacencyList) {
-		this.adjacencyList = adjacencyList;
+		if (adjacencyList == null) {
+			throw new IllegalArgumentException("Adjacency list cannot be null");
+		}
+		Map<Node, List<Edge>> copy = new HashMap<Node, List<Edge>>();
+		for (Entry<Node, List<Edge>> entry : adjacencyList.entrySet()) {
+			if (entry.getKey() == null || entry.getValue() == null) {
+				throw new IllegalArgumentException(
+					"Graph nodes and edge lists cannot be null");
+			}
+			copy.put(entry.getKey(), new ArrayList<Edge>(entry.getValue()));
+		}
+		this.adjacencyList = copy;
 	}
 
 	public Map<Node, List<Edge>> getAdjacencyList() {
-		return adjacencyList;
+		Map<Node, List<Edge>> view = new HashMap<Node, List<Edge>>();
+		for (Entry<Node, List<Edge>> entry : adjacencyList.entrySet()) {
+			view.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+		}
+		return Collections.unmodifiableMap(view);
 	}
 
 	/**
@@ -39,6 +55,12 @@ public class Graph implements Serializable {
 	 * of the adjacency list a new entry is added
 	 */
 	public void addEdge(Node key, Edge value) {
+		if (key == null) {
+			throw new IllegalArgumentException("Graph node cannot be null");
+		}
+		if (value != null && value.getNode() == null) {
+			throw new IllegalArgumentException("Edge destination cannot be null");
+		}
 
 		if (adjacencyList.containsKey(key)) {
 			if (adjacencyList.get(key) == null) {
@@ -78,8 +100,14 @@ public class Graph implements Serializable {
 		}
 
 		edges.remove(value);
-		// remove bidirectional
+		if (value.getEdgeType() != Edge.EdgeType.PHYSICAL) {
+			return;
+		}
+		// Physical topology links are logically bidirectional.
 		List<Edge> reverseEdges = adjacencyList.get(value.getNode());
+		if (reverseEdges == null) {
+			return;
+		}
 		List<Edge> toRemove = new ArrayList<Edge>();
 		for (Edge edge : reverseEdges) {
 			if (edge.getNode().equals(key)) {
@@ -119,8 +147,11 @@ public class Graph implements Serializable {
 	}
 
 	public String toJsonString() {
-		String jsonText = Bridge.graphToJson(this);
-		return jsonText;
+		return Bridge.graphToJson(this);
+	}
+
+	public String toJsonString(TopologyType type) {
+		return Bridge.graphToJson(this, type);
 	}
 
 	@Override

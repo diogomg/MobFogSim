@@ -71,11 +71,9 @@ public class GraphicSDNExample {
 			CloudSim.stopSimulation();
 
 			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
-			// append("====== RUNNING ERROR ======");
+		} catch (Exception error) {
+			throw new IllegalStateException("SDN simulation failed", error);
 		}
-		return false;
 	}
 
 	public void output() {
@@ -94,9 +92,9 @@ public class GraphicSDNExample {
 
 			append("CloudSim SDN finished!");
 
-		} catch (Exception e) {
-			e.printStackTrace();
-			append("====== OUTPUT ERROR ======");
+		} catch (Exception error) {
+			throw new IllegalStateException(
+				"Could not format SDN simulation output", error);
 		}
 	}
 
@@ -162,8 +160,9 @@ public class GraphicSDNExample {
 				new VmAllocationPolicyCombinedLeastFullFirst(hostList), storageList, 0, nos);
 
 			nos.setDatacenter(datacenter);
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (Exception error) {
+			throw new IllegalStateException(
+				"Could not create SDN datacentre '" + name + "'", error);
 		}
 
 		return datacenter;
@@ -181,9 +180,8 @@ public class GraphicSDNExample {
 		SDNBroker broker = null;
 		try {
 			broker = new SDNBroker("Broker");
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
+		} catch (Exception error) {
+			throw new IllegalStateException("Could not create SDN broker", error);
 		}
 		return broker;
 	}

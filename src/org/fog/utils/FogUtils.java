@@ -1,6 +1,7 @@
 package org.fog.utils;
 
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 import org.fog.vmmobile.SimulationContext;
@@ -33,8 +34,23 @@ public class FogUtils {
 	/** Returns the application coverage registry for the active run. */
 	public static Map<String, GeoCoverage> getApplicationCoverage() {
 		SimulationContext context = SimulationContext.currentOrNull();
-		return context == null ? LEGACY_APPLICATION_COVERAGE
-			: context.getTopology().getApplicationCoverage();
+		return Collections.unmodifiableMap(context == null
+			? LEGACY_APPLICATION_COVERAGE
+			: context.getTopology().getApplicationCoverage());
+	}
+
+	/** Registers application coverage in the current run's topology. */
+	public static void registerApplicationCoverage(String applicationId,
+		GeoCoverage coverage) {
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context == null) {
+			if (applicationId == null || applicationId.trim().isEmpty()) {
+				throw new IllegalArgumentException("Application ID cannot be empty");
+			}
+			LEGACY_APPLICATION_COVERAGE.put(applicationId, coverage);
+			return;
+		}
+		context.getTopology().registerApplicationCoverage(applicationId, coverage);
 	}
 
 	private static SimulationIdentifiers identifiers() {

@@ -1,12 +1,10 @@
 package org.fog.utils;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Pe;
@@ -21,144 +19,75 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.FogDeviceCharacteristics;
 import org.fog.entities.PhysicalTopology;
 import org.fog.entities.Sensor;
+import org.fog.gui.core.ActuatorGui;
+import org.fog.gui.core.Bridge;
+import org.fog.gui.core.Edge;
+import org.fog.gui.core.FogDeviceGui;
+import org.fog.gui.core.Graph;
+import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeType;
+import org.fog.gui.core.SensorGui;
+import org.fog.gui.core.TopologyException;
+import org.fog.gui.core.TopologyType;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
-import org.fog.utils.distribution.DeterministicDistribution;
-import org.fog.utils.distribution.Distribution;
-import org.fog.utils.distribution.NormalDistribution;
-import org.fog.utils.distribution.UniformDistribution;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 
-public class JsonToTopology {
+/** Builds simulator entities from a fully validated physical topology graph. */
+public final class JsonToTopology {
 
-	private static List<FogDevice> fogDevices = new ArrayList<FogDevice>();
-	private static List<Sensor> sensors = new ArrayList<Sensor>();
-	private static List<Actuator> actuators = new ArrayList<Actuator>();
-
-	private static boolean isFogDevice(String name) {
-		for (FogDevice fogDevice : fogDevices) {
-			if (fogDevice.getName().equalsIgnoreCase(name))
-				return true;
-		}
-		return false;
-
-	}
-
-	private static FogDevice getFogDevice(String name) {
-		for (FogDevice fogDevice : fogDevices) {
-			if (fogDevice.getName().equalsIgnoreCase(name))
-				return fogDevice;
-		}
-		return null;
-	}
-
-	private static boolean isActuator(String name) {
-		for (Actuator actuator : actuators) {
-			if (actuator.getName().equalsIgnoreCase(name))
-				return true;
-		}
-		return false;
-	}
-
-	private static Actuator getActuator(String name) {
-		for (Actuator actuator : actuators) {
-			if (actuator.getName().equalsIgnoreCase(name))
-				return actuator;
-		}
-		return null;
-	}
-
-	private static boolean isSensor(String name) {
-		for (Sensor sensor : sensors) {
-			if (sensor.getName().equalsIgnoreCase(name))
-				return true;
-		}
-		return false;
-	}
-
-	private static Sensor getSensor(String name) {
-		for (Sensor sensor : sensors) {
-			if (sensor.getName().equalsIgnoreCase(name))
-				return sensor;
-		}
-		return null;
+	private JsonToTopology() {
 	}
 
 	public static PhysicalTopology getPhysicalTopology(int userId, String appId,
 		String physicalTopologyFile) throws Exception {
+		Graph graph = Bridge.jsonToGraph(physicalTopologyFile,
+			TopologyType.PHYSICAL);
+		List<FogDevice> fogDevices = new ArrayList<FogDevice>();
+		List<Sensor> sensors = new ArrayList<Sensor>();
+		List<Actuator> actuators = new ArrayList<Actuator>();
+		Map<String, FogDevice> fogByName = new HashMap<String, FogDevice>();
+		Map<String, Sensor> sensorByName = new HashMap<String, Sensor>();
+		Map<String, Actuator> actuatorByName = new HashMap<String, Actuator>();
 
-		fogDevices = new ArrayList<FogDevice>();
-		sensors = new ArrayList<Sensor>();
-		actuators = new ArrayList<Actuator>();
-
-		try {
-			JSONObject doc = (JSONObject) JSONValue.parse(new FileReader(physicalTopologyFile));
-			JSONArray nodes = (JSONArray) doc.get("nodes");
-			@SuppressWarnings("unchecked") Iterator<JSONObject> iter = nodes.iterator();
-			while (iter.hasNext()) {
-				JSONObject node = iter.next();
-				NodeType nodeType = NodeType.fromExternal(
-					(String) node.get("type"));
-				String nodeName = (String) node.get("name");
-
-				if (nodeType == NodeType.FOG_DEVICE) {
-					long mips = (Long) node.get("mips");
-					int ram = new BigDecimal((Long) node.get("ram")).intValueExact();
-					long upBw = new BigDecimal((Long) node.get("upBw")).intValueExact();
-					long downBw = new BigDecimal((Long) node.get("downBw")).intValueExact();
-					int level = new BigDecimal((Long) node.get("level")).intValue();
-					double ratePerMips = new BigDecimal((Double) node.get("ratePerMips"))
-						.doubleValue();
-
-					FogDevice fogDevice = createFogDevice(nodeName, mips, ram,
-						upBw, downBw, level, ratePerMips);
-					fogDevice.setParentId(-1);
-
-					fogDevices.add(fogDevice);
-
-				} else if (nodeType == NodeType.SENSOR) {
-					String sensorType = node.get("sensorType").toString();
-					int distType = new BigDecimal((Long) node.get("distribution")).intValue();
-					Distribution distribution = null;
-					if (distType == Distribution.DETERMINISTIC)
-						distribution = new DeterministicDistribution(new BigDecimal(
-							(Double) node.get("value")).doubleValue());
-					else if (distType == Distribution.NORMAL) {
-						distribution = new NormalDistribution(new BigDecimal(
-							(Double) node.get("mean")).doubleValue(),
-							new BigDecimal((Double) node.get("stdDev")).doubleValue());
-					} else if (distType == Distribution.UNIFORM) {
-						distribution = new UniformDistribution(new BigDecimal(
-							(Double) node.get("min")).doubleValue(),
-							new BigDecimal((Double) node.get("max")).doubleValue());
-					}
-					System.out.println("Sensor type : " + sensorType);
-					sensors.add(new Sensor(nodeName, sensorType, userId, appId, distribution));
-				} else if (nodeType == NodeType.ACTUATOR) {
-					String actuatorType = node.get("actuatorType").toString();
-					actuators.add(new Actuator(nodeName, userId, appId, actuatorType));
-				} else {
-					throw new IllegalArgumentException(
-						"Unsupported physical topology node type " + nodeType);
-				}
+		for (Node node : graph.getAdjacencyList().keySet()) {
+			if (node.getNodeType() == NodeType.FOG_DEVICE) {
+				FogDeviceGui definition = (FogDeviceGui) node;
+				FogDevice device = createFogDevice(definition);
+				device.setParentId(-1);
+				fogDevices.add(device);
+				fogByName.put(node.getName(), device);
 			}
-
-			JSONArray links = (JSONArray) doc.get("links");
-			@SuppressWarnings("unchecked") Iterator<JSONObject> linksIter = links.iterator();
-			while (linksIter.hasNext()) {
-				JSONObject link = linksIter.next();
-				String src = (String) link.get("source");
-				String dst = (String) link.get("destination");
-				double lat = (Double) link.get("latency");
-
-				connectEntities(src, dst, lat);
+			else if (node.getNodeType() == NodeType.SENSOR) {
+				SensorGui definition = (SensorGui) node;
+				Sensor sensor = new Sensor(node.getName(),
+					definition.getSensorType(), userId, appId,
+					definition.getDistribution());
+				sensors.add(sensor);
+				sensorByName.put(node.getName(), sensor);
 			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			else if (node.getNodeType() == NodeType.ACTUATOR) {
+				ActuatorGui definition = (ActuatorGui) node;
+				Actuator actuator = new Actuator(node.getName(), userId, appId,
+					definition.getActuatorType());
+				actuators.add(actuator);
+				actuatorByName.put(node.getName(), actuator);
+			}
+			else {
+				throw new TopologyException("Physical simulator topology "
+					+ physicalTopologyFile + " cannot instantiate node '"
+					+ node.getName() + "' of type " + node.getNodeType());
+			}
 		}
+
+		for (Map.Entry<Node, List<Edge>> entry
+			: graph.getAdjacencyList().entrySet()) {
+			for (Edge edge : entry.getValue()) {
+				connectEntities(entry.getKey().getName(), edge.getNode().getName(),
+					edge.getLatency(), fogByName, sensorByName, actuatorByName,
+					physicalTopologyFile);
+			}
+		}
+
 		PhysicalTopology physicalTopology = new PhysicalTopology();
 		physicalTopology.setFogDevices(fogDevices);
 		physicalTopology.setActuators(actuators);
@@ -166,84 +95,93 @@ public class JsonToTopology {
 		return physicalTopology;
 	}
 
-	private static FogDevice createFogDevice(String nodeName, long mips,
-		int ram, long upBw, long downBw, int level, double ratePerMips) {
-
+	private static FogDevice createFogDevice(FogDeviceGui definition)
+		throws Exception {
 		List<Pe> peList = new ArrayList<Pe>();
+		peList.add(new Pe(0, new PeProvisionerOverbooking(
+			definition.getMips())));
 
-		// 3. Create PEs and add these into a list.
-		// need to store Pe id and MIPS Rating
-		peList.add(new Pe(0, new PeProvisionerOverbooking(mips)));
-
-		int hostId = FogUtils.generateEntityId();
-		long storage = 1000000; // host storage
-		int bw = 10000;
-
-		PowerHost host = new PowerHost(hostId, new RamProvisionerSimple(ram),
-			new BwProvisionerOverbooking(bw), storage, peList,
+		long storage = 1000000;
+		int bandwidth = 10000;
+		PowerHost host = new PowerHost(FogUtils.generateEntityId(),
+			new RamProvisionerSimple(definition.getRam()),
+			new BwProvisionerOverbooking(bandwidth), storage, peList,
 			new StreamOperatorScheduler(peList),
 			new PowerModelLinear(107.339, 83.4333));
-
 		List<Host> hostList = new ArrayList<Host>();
 		hostList.add(host);
-
-		String arch = "x86"; // system architecture
-		String os = "Linux"; // operating system
-		String vmm = "Xen";
-		double time_zone = 10.0; // time zone this resource located
-		double cost = 3.0; // the cost of using processing in this resource
-		double costPerMem = 0.05; // the cost of using memory in this resource
-		double costPerStorage = 0.001; // the cost of using storage in this resource
-		double costPerBw = 0.0; // the cost of using bw in this resource
-		// we are not adding SAN devices by now
 		LinkedList<Storage> storageList = new LinkedList<Storage>();
-
-		FogDeviceCharacteristics characteristics = new FogDeviceCharacteristics(
-			arch, os, vmm, host, time_zone, cost, costPerMem,
-			costPerStorage, costPerBw);
-
-		FogDevice fogdevice = null;
-		try {
-			fogdevice = new FogDevice(nodeName, characteristics,
-				new AppModuleAllocationPolicy(hostList), storageList, 10, upBw, downBw, 0,
-				ratePerMips);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		fogdevice.setLevel(level);
-		return fogdevice;
+		FogDeviceCharacteristics characteristics =
+			new FogDeviceCharacteristics("x86", "Linux", "Xen", host, 10.0,
+				3.0, 0.05, 0.001, 0.0);
+		FogDevice device = new FogDevice(definition.getName(), characteristics,
+			new AppModuleAllocationPolicy(hostList), storageList, 10,
+			definition.getUpBw(), definition.getDownBw(), 0,
+			definition.getRatePerMips());
+		device.setLevel(definition.getLevel());
+		return device;
 	}
 
-	private static void connectEntities(String src, String dst, double lat) {
-		if (isFogDevice(src) && isFogDevice(dst)) {
-			FogDevice srcDev = getFogDevice(src);
-			FogDevice destDev = getFogDevice(dst);
-			FogDevice southernDev = (srcDev.getLevel() > destDev.getLevel()) ? srcDev : destDev;
-			FogDevice northernDev = (srcDev.getLevel() > destDev.getLevel()) ? destDev : srcDev;
-			southernDev.setUplinkLatency(lat);
-			southernDev.setParentId(northernDev.getId());
-		} else if (isFogDevice(src) && isSensor(dst)) {
-			FogDevice srcDev = getFogDevice(src);
-			Sensor sensor = getSensor(dst);
-			sensor.setLatency(lat);
-			sensor.setGatewayDeviceId(srcDev.getId());
-		} else if (isSensor(src) && isFogDevice(dst)) {
-			FogDevice fogDevice = getFogDevice(dst);
-			Sensor sensor = getSensor(src);
-			sensor.setLatency(lat);
-			sensor.setGatewayDeviceId(fogDevice.getId());
-		} else if (isFogDevice(src) && isActuator(dst)) {
-			FogDevice fogDevice = getFogDevice(src);
-			Actuator actuator = getActuator(dst);
-			actuator.setLatency(lat);
-			actuator.setGatewayDeviceId(fogDevice.getId());
-		} else if (isActuator(src) && isFogDevice(dst)) {
-			FogDevice fogDevice = getFogDevice(dst);
-			Actuator actuator = getActuator(src);
-			actuator.setLatency(lat);
-			actuator.setGatewayDeviceId(fogDevice.getId());
-		}
+	private static void connectEntities(String sourceName,
+		String destinationName, double latency,
+		Map<String, FogDevice> fogByName, Map<String, Sensor> sensorByName,
+		Map<String, Actuator> actuatorByName, String topologyFile) {
+		FogDevice sourceFog = fogByName.get(sourceName);
+		FogDevice destinationFog = fogByName.get(destinationName);
+		Sensor sourceSensor = sensorByName.get(sourceName);
+		Sensor destinationSensor = sensorByName.get(destinationName);
+		Actuator sourceActuator = actuatorByName.get(sourceName);
+		Actuator destinationActuator = actuatorByName.get(destinationName);
 
+		if (sourceFog != null && destinationFog != null) {
+			FogDevice southern = sourceFog.getLevel() > destinationFog.getLevel()
+				? sourceFog : destinationFog;
+			FogDevice northern = southern == sourceFog
+				? destinationFog : sourceFog;
+			if (sourceFog.getLevel() == destinationFog.getLevel()) {
+				throw invalidLink(topologyFile, sourceName, destinationName,
+					"fog devices at the same level have no parent direction");
+			}
+			southern.setUplinkLatency(latency);
+			southern.setParentId(northern.getId());
+			return;
+		}
+		if (sourceFog != null && destinationSensor != null) {
+			connectSensor(destinationSensor, sourceFog, latency);
+			return;
+		}
+		if (sourceSensor != null && destinationFog != null) {
+			connectSensor(sourceSensor, destinationFog, latency);
+			return;
+		}
+		if (sourceFog != null && destinationActuator != null) {
+			connectActuator(destinationActuator, sourceFog, latency);
+			return;
+		}
+		if (sourceActuator != null && destinationFog != null) {
+			connectActuator(sourceActuator, destinationFog, latency);
+			return;
+		}
+		throw invalidLink(topologyFile, sourceName, destinationName,
+			"only fog-to-fog and fog-to-peripheral links are supported");
+	}
+
+	private static void connectSensor(Sensor sensor, FogDevice fogDevice,
+		double latency) {
+		sensor.setLatency(latency);
+		sensor.setGatewayDeviceId(fogDevice.getId());
+	}
+
+	private static void connectActuator(Actuator actuator, FogDevice fogDevice,
+		double latency) {
+		actuator.setLatency(latency);
+		actuator.setGatewayDeviceId(fogDevice.getId());
+	}
+
+	private static TopologyException invalidLink(String topologyFile,
+		String source, String destination, String reason) {
+		return new TopologyException("Physical simulator topology "
+			+ topologyFile + " has invalid link '" + source + "' -> '"
+			+ destination + "': " + reason);
 	}
 }

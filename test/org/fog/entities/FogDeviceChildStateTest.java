@@ -24,9 +24,7 @@ public class FogDeviceChildStateTest {
 		ChildAwareFogDevice parent = new ChildAwareFogDevice("parent");
 		FogDevice child = new FogDevice("child", 0, 0, 1);
 
-		parent.attach(child.getId());
-		parent.getChildToLatencyMap().put(child.getId(), 4.5);
-		parent.getChildToOperatorsMap().get(child.getId()).add("processor");
+		parent.attachChild(child.getId(), 4.5);
 
 		parent.detach(child.getId());
 
@@ -41,10 +39,6 @@ public class FogDeviceChildStateTest {
 			setChildrenIds(new ArrayList<Integer>());
 			setChildToLatencyMap(new HashMap<Integer, Double>());
 			setChildToOperatorsMap(new HashMap<Integer, List<String>>());
-		}
-
-		private void attach(int childId) {
-			addChild(childId);
 		}
 
 		private void detach(int childId) {

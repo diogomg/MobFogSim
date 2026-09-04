@@ -8,8 +8,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -33,6 +34,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.fog.gui.core.Bridge;
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.GraphView;
+import org.fog.gui.core.TopologyType;
 import org.fog.gui.dialog.AddActuator;
 import org.fog.gui.dialog.AddFogDevice;
 import org.fog.gui.dialog.AddLink;
@@ -112,7 +114,7 @@ public class FogGui extends JFrame {
 		// ---------- Start ActionListener ----------
 		ActionListener readPhyTopoListener = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				physicalTopologyFile = importFile("josn");
+				physicalTopologyFile = importFile("json");
 				checkImportStatus();
 			}
 		};
@@ -172,20 +174,28 @@ public class FogGui extends JFrame {
 		};
 		ActionListener importPhyTopoListener = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String fileName = importFile("josn");
-				Graph phyGraph = Bridge.jsonToGraph(fileName, 0);
-				physicalGraph = phyGraph;
-				physicalCanvas.setGraph(physicalGraph);
-				physicalCanvas.repaint();
+				String fileName = importFile("json");
+				if (fileName.isEmpty()) {
+					return;
+				}
+				try {
+					physicalGraph = Bridge.jsonToGraph(fileName,
+						TopologyType.PHYSICAL);
+					physicalCanvas.setGraph(physicalGraph);
+					physicalCanvas.repaint();
+				}
+				catch (RuntimeException error) {
+					showFailure("Could not import physical topology", error);
+				}
 			}
 		};
 
 		ActionListener savePhyTopoListener = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					saveFile("json", physicalGraph);
-				} catch (IOException e1) {
-					e1.printStackTrace();
+					saveFile("json", physicalGraph, TopologyType.PHYSICAL);
+				} catch (IOException | RuntimeException error) {
+					showFailure("Could not save physical topology", error);
 				}
 			}
 		};
@@ -349,8 +359,7 @@ public class FogGui extends JFrame {
 		// mode (to create graph from file)
 		ActionListener actionSwitcher = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				try {
-					String cmd = e.getActionCommand();
+				String cmd = e.getActionCommand();
 					if ("Canvas".equals(cmd)) {
 						btnSensor.setVisible(true);
 						btnActuator.setVisible(true);
@@ -391,9 +400,6 @@ public class FogGui extends JFrame {
 
 						mode = "i";
 					}
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
 			}
 		};
 		JRadioButtonMenuItem manualMode = new JRadioButtonMenuItem("Canvas");
@@ -516,7 +522,8 @@ public class FogGui extends JFrame {
 	}
 
 	/** save network topology */
-	private void saveFile(String type, Graph graph) throws IOException {
+	private void saveFile(String type, Graph graph, TopologyType topologyType)
+		throws IOException {
 		JFileChooser fileopen = new JFileChooser();
 		FileFilter filter = new FileNameExtensionFilter(type.toUpperCase() + " Files", type);
 		fileopen.addChoosableFileFilter(filter);
@@ -524,14 +531,22 @@ public class FogGui extends JFrame {
 		int ret = fileopen.showSaveDialog(panel);
 
 		if (ret == JFileChooser.APPROVE_OPTION) {
-			String jsonText = graph.toJsonString();
-			System.out.println(jsonText);
+			String jsonText = graph.toJsonString(topologyType);
 			String path = fileopen.getSelectedFile().toString();
 			File file = new File(path);
-			FileOutputStream out = new FileOutputStream(file);
-			out.write(jsonText.getBytes());
-			out.close();
+			Files.write(file.toPath(), jsonText.getBytes(StandardCharsets.UTF_8));
 		}
+	}
+
+	private void showFailure(String summary, Throwable error) {
+		Throwable cause = error;
+		while (cause.getCause() != null) {
+			cause = cause.getCause();
+		}
+		String detail = cause.getMessage() == null
+			? cause.getClass().getSimpleName() : cause.getMessage();
+		JOptionPane.showMessageDialog(panel, summary + ":\n" + detail,
+			"Error", JOptionPane.ERROR_MESSAGE);
 	}
 
 	private static void setUIFont(javax.swing.plaf.FontUIResource f) {
@@ -559,8 +574,15 @@ public class FogGui extends JFrame {
 	public static void main(String args[]) throws InterruptedException {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				FogGui sdn = new FogGui();
-				sdn.setVisible(true);
+				try {
+					FogGui sdn = new FogGui();
+					sdn.setVisible(true);
+				}
+				catch (RuntimeException error) {
+					JOptionPane.showMessageDialog(null,
+						"Could not start Fog GUI:\n" + error.getMessage(),
+						"Startup error", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		});
 	}

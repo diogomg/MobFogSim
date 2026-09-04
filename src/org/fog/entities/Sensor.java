@@ -113,7 +113,7 @@ public class Sensor extends SimEntity {
 
 				int tupleId = TimeKeeper.getInstance().getUniqueId();
 				TimeKeeper.getInstance().registerLoop(loop.getLoopId());
-				TimeKeeper.getInstance().getEmitTimes().put(tupleId, CloudSim.clock());
+				TimeKeeper.getInstance().recordEmission(tupleId, CloudSim.clock());
 				return tupleId;
 			}
 		}

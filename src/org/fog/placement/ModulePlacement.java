@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,19 +52,19 @@ public abstract class ModulePlacement {
 
 	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device) {
 		AppModule module = null;
-		if (getModuleToDeviceMap().containsKey(_module.getName()))
+		if (moduleToDeviceMap.containsKey(_module.getName()))
 			module = new AppModule(_module);
 		else
 			module = _module;
 		if (canBeCreated(device, module)) {
 			System.out.println("Creating " + module.getName() + " on device " + device.getName());
-			if (!getDeviceToModuleMap().containsKey(device.getId()))
-				getDeviceToModuleMap().put(device.getId(), new ArrayList<AppModule>());
-			getDeviceToModuleMap().get(device.getId()).add(module);
+			if (!deviceToModuleMap.containsKey(device.getId()))
+				deviceToModuleMap.put(device.getId(), new ArrayList<AppModule>());
+			deviceToModuleMap.get(device.getId()).add(module);
 
-			if (!getModuleToDeviceMap().containsKey(module.getName()))
-				getModuleToDeviceMap().put(module.getName(), new ArrayList<Integer>());
-			getModuleToDeviceMap().get(module.getName()).add(device.getId());
+			if (!moduleToDeviceMap.containsKey(module.getName()))
+				moduleToDeviceMap.put(module.getName(), new ArrayList<Integer>());
+			moduleToDeviceMap.get(module.getName()).add(device.getId());
 			return true;
 		} else {
 			System.out.println("Creating " + module.getName() + " on device " + device.getName()
@@ -91,11 +93,11 @@ public abstract class ModulePlacement {
 	}
 
 	public List<FogDevice> getFogDevices() {
-		return fogDevices;
+		return Collections.unmodifiableList(fogDevices);
 	}
 
 	public void setFogDevices(List<FogDevice> fogDevices) {
-		this.fogDevices = fogDevices;
+		this.fogDevices = copyList(fogDevices, "Fog device list");
 	}
 
 	public Application getApplication() {
@@ -107,35 +109,93 @@ public abstract class ModulePlacement {
 	}
 
 	public Map<String, List<Integer>> getModuleToDeviceMap() {
-		return moduleToDeviceMap;
+		return immutableListMap(moduleToDeviceMap);
 	}
 
 	public void setModuleToDeviceMap(Map<String, List<Integer>> moduleToDeviceMap) {
-		this.moduleToDeviceMap = moduleToDeviceMap;
+		this.moduleToDeviceMap = copyListMap(moduleToDeviceMap,
+			"Module-to-device map");
 	}
 
 	public Map<Integer, List<AppModule>> getDeviceToModuleMap() {
-		return deviceToModuleMap;
+		return immutableListMap(deviceToModuleMap);
 	}
 
 	public void setDeviceToModuleMap(Map<Integer, List<AppModule>> deviceToModuleMap) {
-		this.deviceToModuleMap = deviceToModuleMap;
+		this.deviceToModuleMap = copyListMap(deviceToModuleMap,
+			"Device-to-module map");
 	}
 
 	public Map<Integer, Map<String, Integer>> getModuleInstanceCountMap() {
-		return moduleInstanceCountMap;
+		return immutableMapMap(moduleInstanceCountMap);
 	}
 
 	public void setModuleInstanceCountMap(Map<Integer, Map<String, Integer>> moduleInstanceCountMap) {
-		this.moduleInstanceCountMap = moduleInstanceCountMap;
+		this.moduleInstanceCountMap = copyMapMap(moduleInstanceCountMap,
+			"Module instance count map");
 	}
 
 	public List<MobileDevice> getMobileDevices() {
-		return mobileDevices;
+		return mobileDevices == null ? null
+			: Collections.unmodifiableList(mobileDevices);
 	}
 
 	public void setMobileDevices(List<MobileDevice> mobileDevices) {
-		this.mobileDevices = mobileDevices;
+		this.mobileDevices = mobileDevices == null ? null
+			: new ArrayList<MobileDevice>(mobileDevices);
+	}
+
+	protected Map<Integer, Map<String, Integer>> moduleInstanceCountRegistry() {
+		return moduleInstanceCountMap;
+	}
+
+	private static <T> List<T> copyList(List<T> values, String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return new ArrayList<T>(values);
+	}
+
+	private static <K, V> Map<K, List<V>> copyListMap(
+		Map<K, List<V>> values, String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		Map<K, List<V>> copy = new HashMap<K, List<V>>();
+		for (Map.Entry<K, List<V>> entry : values.entrySet()) {
+			copy.put(entry.getKey(), new ArrayList<V>(entry.getValue()));
+		}
+		return copy;
+	}
+
+	private static <K, V> Map<K, List<V>> immutableListMap(
+		Map<K, List<V>> values) {
+		Map<K, List<V>> copy = copyListMap(values, "Map");
+		for (Map.Entry<K, List<V>> entry : copy.entrySet()) {
+			entry.setValue(Collections.unmodifiableList(entry.getValue()));
+		}
+		return Collections.unmodifiableMap(copy);
+	}
+
+	private static <K, L, V> Map<K, Map<L, V>> copyMapMap(
+		Map<K, Map<L, V>> values, String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		Map<K, Map<L, V>> copy = new HashMap<K, Map<L, V>>();
+		for (Map.Entry<K, Map<L, V>> entry : values.entrySet()) {
+			copy.put(entry.getKey(), new HashMap<L, V>(entry.getValue()));
+		}
+		return copy;
+	}
+
+	private static <K, L, V> Map<K, Map<L, V>> immutableMapMap(
+		Map<K, Map<L, V>> values) {
+		Map<K, Map<L, V>> copy = copyMapMap(values, "Map");
+		for (Map.Entry<K, Map<L, V>> entry : copy.entrySet()) {
+			entry.setValue(Collections.unmodifiableMap(entry.getValue()));
+		}
+		return Collections.unmodifiableMap(copy);
 	}
 
 }

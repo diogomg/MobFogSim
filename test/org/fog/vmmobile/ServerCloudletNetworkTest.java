@@ -66,7 +66,7 @@ public class ServerCloudletNetworkTest {
 		topologyService.createServerCloudletAdjacency(
 			Arrays.asList(first, second, third));
 
-		first.getNetServerCloudlets().remove(third);
+		first.disconnectTransportPeer(third);
 
 		assertFalse(first.getNetServerCloudlets().containsKey(third));
 		assertTrue(second.getNetServerCloudlets().containsKey(third));

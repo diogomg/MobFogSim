@@ -1,6 +1,7 @@
 package org.fog.application;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class Application {
 			mips, ram, bw, size, vmm, new TupleScheduler(mips, 1),
 			new HashMap<Pair<String, String>, SelectivityModel>());
 
-		getModules().add(module);
+		modules.add(module);
 
 	}
 
@@ -90,7 +91,7 @@ public class Application {
 			mips, ram, bw, size, vmm, new TupleScheduler(mips, 1),
 			new HashMap<Pair<String, String>, SelectivityModel>());
 
-		getModules().add(module);
+		modules.add(module);
 
 	}
 
@@ -101,7 +102,10 @@ public class Application {
 	 */
 	public void addAppModule(AppModule userVm) {
 
-		getModules().add(userVm);
+		if (userVm == null) {
+			throw new IllegalArgumentException("Application module cannot be null");
+		}
+		modules.add(userVm);
 	}
 
 	/**
@@ -119,8 +123,7 @@ public class Application {
 		double tupleNwLength, String tupleType, int direction, int edgeType) {
 		AppEdge edge = new AppEdge(source, destination, tupleCpuLength, tupleNwLength,
 			tupleType, direction, edgeType);
-		getEdges().add(edge);
-		getEdgeMap().put(edge.getTupleType(), edge);
+		registerEdge(edge);
 	}
 
 	/**
@@ -139,8 +142,7 @@ public class Application {
 		double tupleNwLength, String tupleType, int direction, int edgeType) {
 		AppEdge edge = new AppEdge(source, destination, periodicity, tupleCpuLength,
 			tupleNwLength, tupleType, direction, edgeType);
-		getEdges().add(edge);
-		getEdgeMap().put(edge.getTupleType(), edge);
+		registerEdge(edge);
 	}
 
 	/**
@@ -183,8 +185,7 @@ public class Application {
 			throw new IllegalArgumentException("No output edge from " + moduleName
 				+ " produces tuple type " + outputTupleType);
 		}
-		module.getSelectivityMap().put(new Pair<String, String>(inputTupleType, outputTupleType),
-			selectivityModel);
+		module.addSelectivity(inputTupleType, outputTupleType, selectivityModel);
 	}
 
 	/**
@@ -199,7 +200,7 @@ public class Application {
 			if (edge.isPeriodic() && edge.getSource().equals(srcModule))
 				result.add(edge);
 		}
-		return result;
+		return Collections.unmodifiableList(result);
 	}
 
 	public Application(String appId, int userId) {
@@ -221,7 +222,7 @@ public class Application {
 		setLoops(loops);
 		setEdgeMap(new HashMap<String, AppEdge>());
 		for (AppEdge edge : edges) {
-			getEdgeMap().put(edge.getTupleType(), edge);
+			registerEdgeInMap(edge);
 		}
 	}
 
@@ -367,19 +368,25 @@ public class Application {
 	}
 
 	public List<AppModule> getModules() {
-		return modules;
+		return Collections.unmodifiableList(modules);
 	}
 
 	public void setModules(List<AppModule> modules) {
-		this.modules = modules;
+		if (modules == null) {
+			throw new IllegalArgumentException("Application modules cannot be null");
+		}
+		this.modules = new ArrayList<AppModule>(modules);
 	}
 
 	public List<AppEdge> getEdges() {
-		return edges;
+		return Collections.unmodifiableList(edges);
 	}
 
 	public void setEdges(List<AppEdge> edges) {
-		this.edges = edges;
+		if (edges == null) {
+			throw new IllegalArgumentException("Application edges cannot be null");
+		}
+		this.edges = new ArrayList<AppEdge>(edges);
 	}
 
 	public GeoCoverage getGeoCoverage() {
@@ -391,11 +398,14 @@ public class Application {
 	}
 
 	public List<AppLoop> getLoops() {
-		return loops;
+		return Collections.unmodifiableList(loops);
 	}
 
 	public void setLoops(List<AppLoop> loops) {
-		this.loops = loops;
+		if (loops == null) {
+			throw new IllegalArgumentException("Application loops cannot be null");
+		}
+		this.loops = new ArrayList<AppLoop>(loops);
 	}
 
 	public int getUserId() {
@@ -407,11 +417,27 @@ public class Application {
 	}
 
 	public Map<String, AppEdge> getEdgeMap() {
-		return edgeMap;
+		return Collections.unmodifiableMap(edgeMap);
 	}
 
 	public void setEdgeMap(Map<String, AppEdge> edgeMap) {
-		this.edgeMap = edgeMap;
+		if (edgeMap == null) {
+			throw new IllegalArgumentException("Application edge map cannot be null");
+		}
+		this.edgeMap = new HashMap<String, AppEdge>(edgeMap);
+	}
+
+	private void registerEdge(AppEdge edge) {
+		edges.add(edge);
+		registerEdgeInMap(edge);
+	}
+
+	private void registerEdgeInMap(AppEdge edge) {
+		if (edge == null || edge.getTupleType() == null
+			|| edge.getTupleType().trim().isEmpty()) {
+			throw new IllegalArgumentException("Application edge and tuple type are required");
+		}
+		edgeMap.put(edge.getTupleType(), edge);
 	}
 
 	public String getPlacementStrategy() {

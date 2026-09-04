@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -121,8 +122,13 @@ public class MyStatistics {
 
 	public void putLatencyFileValue(double latency, double time, String appId, int smartThingMyId,
 		String serverCloudletName, String tupleType) {
-		int i = getMyCount().get(smartThingMyId) + 1;
-		getMyCount().put(smartThingMyId, i);
+		Integer current = myCount.get(smartThingMyId);
+		if (current == null) {
+			throw new IllegalStateException("Latency counter is not initialised for user "
+				+ smartThingMyId);
+		}
+		int i = current + 1;
+		myCount.put(smartThingMyId, i);
 		BufferedFileManager.writeLine(getFileMap().get(smartThingMyId),
 			Integer.toString(i) + " - " + Double.toString(time) + " - "
 				+ Double.toString(latency) + " - " + appId + " - smartThingMyId: "
@@ -134,7 +140,7 @@ public class MyStatistics {
 	}
 
 	public void startWithoutConnetion(int id, double clock) {
-		getInitialTimeWithoutConnection().put(id, clock);
+		initialTimeWithoutConnection.put(id, clock);
 	}
 
 	public void finalWithoutConnection(int id, double clock) {
@@ -151,7 +157,7 @@ public class MyStatistics {
 	}
 
 	public void startWithoutVmTime(int id, double clock) {
-		getInitialWithoutVmTime().put(id, clock);
+		initialWithoutVmTime.put(id, clock);
 	}
 
 	public void finalWithoutVmTime(int id, double clock) {
@@ -169,7 +175,7 @@ public class MyStatistics {
 	}
 
 	public void startDelayAfterNewConnection(int id, double clock) {
-		getInitialTimeDelayAfterNewConnection().put(id, clock);
+		initialTimeDelayAfterNewConnection.put(id, clock);
 	}
 
 	public void finalDelayAfterNewConnection(int id, double clock) {// T8
@@ -225,6 +231,21 @@ public class MyStatistics {
 
 	public int nextTupleId() {
 		return ++myCountTuple;
+	}
+
+	public void initialiseLatencyCounter(int mobileDeviceId) {
+		myCount.put(mobileDeviceId, 0);
+	}
+
+	/** Discards unfinished intervals when a migration is aborted or completed. */
+	public void discardOpenIntervals(int mobileDeviceId) {
+		initialWithoutVmTime.remove(mobileDeviceId);
+		initialTimeDelayAfterNewConnection.remove(mobileDeviceId);
+		initialTimeWithoutConnection.remove(mobileDeviceId);
+	}
+
+	public void discardWithoutVmInterval(int mobileDeviceId) {
+		initialWithoutVmTime.remove(mobileDeviceId);
 	}
 
 	private static double runningMean(double currentMean, int currentCount,
@@ -285,7 +306,7 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, File> getFileMap() {
-		return fileMap;
+		return Collections.unmodifiableMap(fileMap);
 	}
 
 	public void setFileMap(String name, int id) {
@@ -307,11 +328,11 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getTupleLatency() {
-		return tupleLatency;
+		return Collections.unmodifiableMap(tupleLatency);
 	}
 
 	public void setTupleLatency(Map<Integer, Double> tupleLatency) {
-		this.tupleLatency = tupleLatency;
+		this.tupleLatency = copyMap(tupleLatency, "Tuple latency map");
 	}
 
 	public int getMyCountTuple() {
@@ -323,19 +344,21 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getWithoutConnectionTime() {
-		return withoutConnectionTime;
+		return Collections.unmodifiableMap(withoutConnectionTime);
 	}
 
 	public void setWithoutConnectionTime(Map<Integer, Double> withoutConnectionTime) {
-		this.withoutConnectionTime = withoutConnectionTime;
+		this.withoutConnectionTime = copyMap(withoutConnectionTime,
+			"Without-connection time map");
 	}
 
 	public Map<Integer, Double> getInitialTimeWithoutConnection() {
-		return initialTimeWithoutConnection;
+		return Collections.unmodifiableMap(initialTimeWithoutConnection);
 	}
 
 	public void setInitialTimeWithoutConnection(Map<Integer, Double> initialTimeWithoutConnection) {
-		this.initialTimeWithoutConnection = initialTimeWithoutConnection;
+		this.initialTimeWithoutConnection = copyMap(initialTimeWithoutConnection,
+			"Initial without-connection time map");
 	}
 
 	public double getAverageWithoutConnection() {
@@ -355,55 +378,60 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getPowerHistory() {
-		return powerHistory;
+		return Collections.unmodifiableMap(powerHistory);
 	}
 
 	public void setPowerHistory(Map<Integer, Double> powerHistory) {
-		this.powerHistory = powerHistory;
+		this.powerHistory = copyMap(powerHistory, "Power history map");
 	}
 
 	public Map<Integer, Double> getEnergyHistory() {
-		return energyHistory;
+		return Collections.unmodifiableMap(energyHistory);
 	}
 
 	public void setEnergyHistory(Map<Integer, Double> energyHistory) {
-		this.energyHistory = energyHistory;
+		this.energyHistory = copyMap(energyHistory, "Energy history map");
 	}
 
 	public Map<Integer, Double> getMaxWithoutConnectionTime() {
-		return maxWithoutConnectionTime;
+		return Collections.unmodifiableMap(maxWithoutConnectionTime);
 	}
 
 	public void setMaxWithoutConnectionTime(
 		Map<Integer, Double> maxWithoutConnectionTime) {
-		this.maxWithoutConnectionTime = maxWithoutConnectionTime;
+		this.maxWithoutConnectionTime = copyMap(maxWithoutConnectionTime,
+			"Maximum without-connection time map");
 	}
 
 	public Map<Integer, Double> getInitialTimeDelayAfterNewConnection() {
-		return initialTimeDelayAfterNewConnection;
+		return Collections.unmodifiableMap(initialTimeDelayAfterNewConnection);
 	}
 
 	public void setInitialTimeDelayAfterNewConnection(
 		Map<Integer, Double> initialTimeDelayAfterNewConnection) {
-		this.initialTimeDelayAfterNewConnection = initialTimeDelayAfterNewConnection;
+		this.initialTimeDelayAfterNewConnection = copyMap(
+			initialTimeDelayAfterNewConnection,
+			"Initial post-connection delay map");
 	}
 
 	public Map<Integer, Double> getDelayAfterNewConnection() {
-		return DelayAfterNewConnection;
+		return Collections.unmodifiableMap(DelayAfterNewConnection);
 	}
 
 	public void setDelayAfterNewConnection(
 		Map<Integer, Double> delayAfterNewConnection) {
-		DelayAfterNewConnection = delayAfterNewConnection;
+		DelayAfterNewConnection = copyMap(delayAfterNewConnection,
+			"Post-connection delay map");
 	}
 
 	public Map<Integer, Double> getMaxDelayAfterNewConnection() {
-		return maxDelayAfterNewConnection;
+		return Collections.unmodifiableMap(maxDelayAfterNewConnection);
 	}
 
 	public void setMaxDelayAfterNewConnection(
 		Map<Integer, Double> maxDelayAfterNewConnection) {
-		this.maxDelayAfterNewConnection = maxDelayAfterNewConnection;
+		this.maxDelayAfterNewConnection = copyMap(maxDelayAfterNewConnection,
+			"Maximum post-connection delay map");
 	}
 
 	public double getAverageDelayAfterNewConnection() {
@@ -424,19 +452,21 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getWithoutVmTime() {
-		return withoutVmTime;
+		return Collections.unmodifiableMap(withoutVmTime);
 	}
 
 	public void setWithoutVmTime(Map<Integer, Double> withoutVmTime) {
-		this.withoutVmTime = withoutVmTime;
+		this.withoutVmTime = copyMap(withoutVmTime,
+			"Without-VM time map");
 	}
 
 	public Map<Integer, Double> getMaxWithoutVmTime() {
-		return maxWithoutVmTime;
+		return Collections.unmodifiableMap(maxWithoutVmTime);
 	}
 
 	public void setMaxWithoutVmTime(Map<Integer, Double> maxWithoutVmTime) {
-		this.maxWithoutVmTime = maxWithoutVmTime;
+		this.maxWithoutVmTime = copyMap(maxWithoutVmTime,
+			"Maximum without-VM time map");
 	}
 
 	public double getAverageWithoutVmTime() {
@@ -456,27 +486,29 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getInitialWithoutVmTime() {
-		return initialWithoutVmTime;
+		return Collections.unmodifiableMap(initialWithoutVmTime);
 	}
 
 	public void setInitialWithoutVmTime(Map<Integer, Double> initialWithoutVmTime) {
-		this.initialWithoutVmTime = initialWithoutVmTime;
+		this.initialWithoutVmTime = copyMap(initialWithoutVmTime,
+			"Initial without-VM time map");
 	}
 
 	public Map<Integer, Double> getMigrationTime() {
-		return migrationTime;
+		return Collections.unmodifiableMap(migrationTime);
 	}
 
 	public void setMigrationTime(Map<Integer, Double> migrationTime) {
-		this.migrationTime = migrationTime;
+		this.migrationTime = copyMap(migrationTime, "Migration time map");
 	}
 
 	public Map<Integer, Double> getMaxMigrationTime() {
-		return maxMigrationTime;
+		return Collections.unmodifiableMap(maxMigrationTime);
 	}
 
 	public void setMaxMigrationTime(Map<Integer, Double> maxMigrationTime) {
-		this.maxMigrationTime = maxMigrationTime;
+		this.maxMigrationTime = copyMap(maxMigrationTime,
+			"Maximum migration time map");
 	}
 
 	public double getAverageMigrationTime() {
@@ -488,19 +520,19 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getDowntime() {
-		return downtime;
+		return Collections.unmodifiableMap(downtime);
 	}
 
 	public void setDowntime(Map<Integer, Double> downtime) {
-		this.downtime = downtime;
+		this.downtime = copyMap(downtime, "Downtime map");
 	}
 
 	public Map<Integer, Double> getMaxDowntime() {
-		return maxDowntime;
+		return Collections.unmodifiableMap(maxDowntime);
 	}
 
 	public void setMaxDowntime(Map<Integer, Double> maxDowntime) {
-		this.maxDowntime = maxDowntime;
+		this.maxDowntime = copyMap(maxDowntime, "Maximum downtime map");
 	}
 
 	public double getAverageDowntime() {
@@ -512,11 +544,12 @@ public class MyStatistics {
 	}
 
 	public Map<Integer, Double> getInitialDowntime() {
-		return initialDowntime;
+		return Collections.unmodifiableMap(initialDowntime);
 	}
 
 	public void setInitialDowntime(Map<Integer, Double> initialDowntime) {
-		this.initialDowntime = initialDowntime;
+		this.initialDowntime = copyMap(initialDowntime,
+			"Initial downtime map");
 	}
 
 	public int getMyCountMigrationTime() {
@@ -560,11 +593,19 @@ public class MyStatistics {
 	}
 
 	public void setMyCount(Map<Integer, Integer> myCount) {
-		this.myCount = myCount;
+		this.myCount = copyMap(myCount, "Latency counter map");
 	}
 
 	public Map<Integer, Integer> getMyCount() {
-		return myCount;
+		return Collections.unmodifiableMap(myCount);
+	}
+
+	private static <K, V> Map<K, V> copyMap(Map<K, V> values,
+		String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return new HashMap<K, V>(values);
 	}
 
 	public long getMyCountLostTuple() {

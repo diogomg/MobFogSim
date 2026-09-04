@@ -71,12 +71,15 @@ public class FogDevice extends PowerDatacenter {
 	protected Queue<Tuple> northTupleQueue;
 	protected Queue<Pair<Tuple, Integer>> southTupleQueue;
 
-	protected List<String> activeApplications;
+	protected List<String> activeApplications = new ArrayList<String>();
 	protected List<MobilitySample> mobilityPath = new ArrayList<MobilitySample>();
 
-	protected Map<String, Application> applicationMap;
-	protected Map<String, List<String>> appToModulesMap;
-	protected Map<Integer, Double> childToLatencyMap;
+	protected Map<String, Application> applicationMap =
+		new HashMap<String, Application>();
+	protected Map<String, List<String>> appToModulesMap =
+		new HashMap<String, List<String>>();
+	protected Map<Integer, Double> childToLatencyMap =
+		new HashMap<Integer, Double>();
 
 	protected Map<Integer, Integer> cloudTrafficMap;
 
@@ -95,9 +98,10 @@ public class FogDevice extends PowerDatacenter {
 	/**
 	 * IDs of the children Fog devices
 	 */
-	protected List<Integer> childrenIds;
+	protected List<Integer> childrenIds = new ArrayList<Integer>();
 
-	protected Map<Integer, List<String>> childToOperatorsMap;
+	protected Map<Integer, List<String>> childToOperatorsMap =
+		new HashMap<Integer, List<String>>();
 
 	/**
 	 * Flag denoting whether the link southwards from this FogDevice is busy
@@ -112,7 +116,8 @@ public class FogDevice extends PowerDatacenter {
 	protected double uplinkBandwidth;
 	protected double downlinkBandwidth;
 	protected double uplinkLatency;
-	protected List<Pair<Integer, Double>> associatedActuatorIds;
+	protected List<Pair<Integer, Double>> associatedActuatorIds =
+		new ArrayList<Pair<Integer, Double>>();
 
 	protected double energyConsumption;
 	protected double lastUtilizationUpdateTime;
@@ -123,16 +128,18 @@ public class FogDevice extends PowerDatacenter {
 
 	protected double totalCost;
 
-	protected Map<String, Map<String, Integer>> moduleInstanceCount;
+	protected Map<String, Map<String, Integer>> moduleInstanceCount =
+		new HashMap<String, Map<String, Integer>>();
 
 	protected Coordinate coord;
-	protected Set<ApDevice> apDevices;
-	protected Set<MobileDevice> smartThings;
-	protected Set<MobileDevice> smartThingsWithVm;
-	protected Set<FogDevice> serverCloudlets;
+	protected Set<ApDevice> apDevices = new HashSet<ApDevice>();
+	protected Set<MobileDevice> smartThings = new HashSet<MobileDevice>();
+	protected Set<MobileDevice> smartThingsWithVm = new HashSet<MobileDevice>();
+	protected Set<FogDevice> serverCloudlets = new HashSet<FogDevice>();
 	protected boolean available;
 	protected Service service;
-	private HashMap<FogDevice, Double> netServerCloudlets;
+	private Map<FogDevice, Double> netServerCloudlets =
+		new HashMap<FogDevice, Double>();
 	protected DecisionMigration migrationStrategy;
 	protected MigrationTechniquePolicy policyReplicaVM =
 		MigrationTechniquePolicy.COMPLETE_VM;
@@ -153,17 +160,33 @@ public class FogDevice extends PowerDatacenter {
 		this.myId = myId;
 	}
 
-	public HashMap<FogDevice, Double> getNetServerCloudlets() {
-		return netServerCloudlets;
+	public Map<FogDevice, Double> getNetServerCloudlets() {
+		return Collections.unmodifiableMap(netServerCloudlets);
 	}
 
-	public void setNetServerCloudlets(HashMap<FogDevice, Double> netServerCloudlets) {
+	public void setNetServerCloudlets(Map<FogDevice, Double> netServerCloudlets) {
 		if (netServerCloudlets == null) {
 			throw new IllegalArgumentException(
 				"Server cloudlet adjacency map cannot be null");
 		}
 		this.netServerCloudlets =
 			new HashMap<FogDevice, Double>(netServerCloudlets);
+	}
+
+	public void connectTransportPeer(FogDevice peer, double bandwidth) {
+		if (peer == null || peer == this) {
+			throw new IllegalArgumentException(
+				"Transport peer must be a different device");
+		}
+		if (!Double.isFinite(bandwidth) || bandwidth < 0.0) {
+			throw new IllegalArgumentException(
+				"Transport bandwidth must be finite and non-negative");
+		}
+		netServerCloudlets.put(peer, bandwidth);
+	}
+
+	public boolean disconnectTransportPeer(FogDevice peer) {
+		return peer != null && netServerCloudlets.remove(peer) != null;
 	}
 
 	public Service getService() {
@@ -183,7 +206,18 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Set<MobileDevice> getSmartThings() {
-		return smartThings;
+		return Collections.unmodifiableSet(smartThings);
+	}
+
+	public boolean associateMobileDevice(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			throw new IllegalArgumentException("Mobile device cannot be null");
+		}
+		return smartThings.add(mobileDevice);
+	}
+
+	public boolean dissociateMobileDevice(MobileDevice mobileDevice) {
+		return mobileDevice != null && smartThings.remove(mobileDevice);
 	}
 
 	public void setSmartThings(MobileDevice st, int action) {
@@ -195,15 +229,41 @@ public class FogDevice extends PowerDatacenter {
 			throw new IllegalArgumentException("Membership action cannot be null");
 		}
 		if (action == MembershipAction.ADD) {
-			this.smartThings.add(st);
+			associateMobileDevice(st);
 		}
 		else {
-			this.smartThings.remove(st);
+			dissociateMobileDevice(st);
 		}
 	}
 
 	public Set<ApDevice> getApDevices() {
-		return apDevices;
+		return Collections.unmodifiableSet(apDevices);
+	}
+
+	public boolean attachAccessPoint(ApDevice accessPoint) {
+		if (accessPoint == null) {
+			throw new IllegalArgumentException("Access point cannot be null");
+		}
+		if (accessPoint.getServerCloudlet() != null
+			&& accessPoint.getServerCloudlet() != this) {
+			throw new IllegalStateException("Access point " + accessPoint.getName()
+				+ " is already attached to "
+				+ accessPoint.getServerCloudlet().getName());
+		}
+		accessPoint.setServerCloudlet(this);
+		accessPoint.setParentId(getId());
+		return apDevices.add(accessPoint);
+	}
+
+	public boolean detachAccessPoint(ApDevice accessPoint) {
+		if (accessPoint == null || !apDevices.remove(accessPoint)) {
+			return false;
+		}
+		if (accessPoint.getServerCloudlet() == this) {
+			accessPoint.setServerCloudlet(null);
+			accessPoint.setParentId(-1);
+		}
+		return true;
 	}
 
 	public void setApDevices(ApDevice ap, int action) {
@@ -215,10 +275,10 @@ public class FogDevice extends PowerDatacenter {
 			throw new IllegalArgumentException("Membership action cannot be null");
 		}
 		if (action == MembershipAction.ADD) {
-			this.apDevices.add(ap);
+			attachAccessPoint(ap);
 		}
 		else {
-			this.apDevices.remove(ap);
+			detachAccessPoint(ap);
 		}
 	}
 
@@ -708,10 +768,11 @@ public class FogDevice extends PowerDatacenter {
 					+ " is missing from the current VM host");
 			return;
 		}
-		getApplicationMap().put(app.getAppId(), app);
+		installApplication(app);
 
-		if (smartThing.getVmLocalServerCloudlet().getApplicationMap().remove(app.getAppId()) == null) {
-			getApplicationMap().remove(app.getAppId());
+		if (smartThing.getVmLocalServerCloudlet()
+			.removeApplication(app.getAppId()) == null) {
+			removeApplication(app.getAppId());
 			scheduleMigrationAbort(smartThing,
 				"application " + app.getAppId() + " could not be removed from "
 					+ smartThing.getVmLocalServerCloudlet().getName());
@@ -721,17 +782,10 @@ public class FogDevice extends PowerDatacenter {
 		MobileController mobileController = (MobileController) CloudSim
 			.getEntity("MobileController");
 
-		mobileController.getModuleMapping().addModuleToDevice(
-			((AppModule) smartThing.getVmMobileDevice()).getName(), getName(), 1);
+		mobileController.getModuleMapping().moveModule(
+			smartThing.getVmLocalServerCloudlet().getName(), getName(),
+			((AppModule) smartThing.getVmMobileDevice()).getName(), 1);
 		System.out.println("Antes de entrar no submitApplicationMigration - " + getName());
-		mobileController.getModuleMapping().getModuleMapping()
-			.remove(smartThing.getVmLocalServerCloudlet().getName());
-		if (!mobileController.getModuleMapping().getModuleMapping().containsKey(getName())) {
-			mobileController.getModuleMapping().getModuleMapping()
-				.put(getName(), new HashMap<String, Integer>());
-			mobileController.getModuleMapping().getModuleMapping().get(getName())
-				.put("AppModuleVm_" + smartThing.getName(), 1);
-		}
 		mobileController.submitApplicationMigration(smartThing, app, 1);
 
 		sendNow(mobileController.getId(), MobileEvents.APP_SUBMIT_MIGRATE, app);
@@ -776,7 +830,6 @@ public class FogDevice extends PowerDatacenter {
 			smartThing.setMigStatusLive(false);
 			if (MyStatistics.getInstance().getInitialWithoutVmTime().get(smartThing.getMyId()) != null) {
 				MyStatistics.getInstance().finalWithoutVmTime(smartThing.getMyId(), CloudSim.clock());
-				MyStatistics.getInstance().getInitialWithoutVmTime().remove(smartThing.getMyId());
 			}
 			LogMobile.debug("FogDevice.java", smartThing.getName()
 				+ " had migStatus to false - connectServerCloudlet");
@@ -817,14 +870,16 @@ public class FogDevice extends PowerDatacenter {
 				+ st.getSourceServerCloudlet().getName());
 		}
 
-		st.setSourceServerCloudlet(this);
-
-		setSmartThings(st, MembershipAction.ADD);
-		st.setParentId(getId());
 		double latency = st.getUplinkLatency();
+		if (!Double.isFinite(latency) || latency < 0.0) {
+			throw new IllegalArgumentException(
+				"Mobile-device uplink latency must be finite and non-negative");
+		}
 
-		getChildToLatencyMap().put(st.getId(), latency);
-		addChild(st.getId());
+		st.setSourceServerCloudlet(this);
+		associateMobileDevice(st);
+		st.setParentId(getId());
+		attachChild(st.getId(), latency);
 		setUplinkLatency(getUplinkLatency() + 0.123812950236);//
 		LogMobile.debug("FogDevice.java", st.getName() + " was connected to " + getName());
 
@@ -835,7 +890,7 @@ public class FogDevice extends PowerDatacenter {
 		if (st == null || st.getSourceServerCloudlet() != this) {
 			return false;
 		}
-		boolean removed = getSmartThings().remove(st);
+		boolean removed = dissociateMobileDevice(st);
 		st.setSourceServerCloudlet(null);
 		if (st.getParentId() == getId()) {
 			st.setParentId(-1);
@@ -844,7 +899,7 @@ public class FogDevice extends PowerDatacenter {
 		if (removed) {
 			setUplinkLatency(getUplinkLatency() - 0.123812950236);
 		}
-		removeChild(st.getId());
+		detachChild(st.getId());
 		LogMobile.debug("FogDevice.java", st.getName() + " was desconnected to " + getName());
 		return removed;
 
@@ -948,11 +1003,10 @@ public class FogDevice extends PowerDatacenter {
 				smartThing.setMigStatus(false);
 				smartThing.setPostCopyStatus(false);
 				smartThing.setMigStatusLive(false);
-				if (MyStatistics.getInstance().getInitialWithoutVmTime().get(smartThing.getMyId()) != null) {
-					MyStatistics.getInstance().finalWithoutVmTime(smartThing.getMyId(), CloudSim.clock());
-					System.out.println("finalWithoutVmTime: " + CloudSim.clock());
-					MyStatistics.getInstance().getInitialWithoutVmTime() .remove(smartThing.getMyId());
-				}
+					if (MyStatistics.getInstance().getInitialWithoutVmTime().get(smartThing.getMyId()) != null) {
+						MyStatistics.getInstance().finalWithoutVmTime(smartThing.getMyId(), CloudSim.clock());
+						System.out.println("finalWithoutVmTime: " + CloudSim.clock());
+					}
 				LogMobile.debug("FogDevice.java", smartThing.getName()
 					+ " had migStatus to false - deliveryVM");
 				// handoff has been occurred first than delivery
@@ -1133,13 +1187,12 @@ public class FogDevice extends PowerDatacenter {
 	protected void processActuatorJoined(SimEvent ev) {
 		int actuatorId = ev.getSource();
 		double delay = (double) ev.getData();
-		getAssociatedActuatorIds().add(new Pair<Integer, Double>(actuatorId, delay));
+		associateActuator(actuatorId, delay);
 	}
 
 	protected void updateActiveApplications(SimEvent ev) {
 		Application app = (Application) ev.getData();
-		if (!getActiveApplications().contains(app.getAppId()))
-			getActiveApplications().add(app.getAppId());
+		activateApplication(app.getAppId());
 		System.out.println(" Apps " + getActiveApplications());
 	}
 
@@ -1239,7 +1292,7 @@ public class FogDevice extends PowerDatacenter {
 						for (Tuple resTuple : resultantTuples) {
 							resTuple.setModuleCopyMap(new HashMap<String, Integer>(tuple
 								.getModuleCopyMap()));
-							resTuple.getModuleCopyMap().put(((AppModule) vm).getName(), vm.getId());
+							resTuple.recordModuleCopy(((AppModule) vm).getName(), vm.getId());
 							updateTimingsOnSending(resTuple);
 							sendToSelf(resTuple);
 						}
@@ -1265,7 +1318,7 @@ public class FogDevice extends PowerDatacenter {
 				int tupleId = TimeKeeper.getInstance().getUniqueId();
 				resTuple.setActualTupleId(tupleId);
 				TimeKeeper.getInstance().registerLoop(loop.getLoopId());
-				TimeKeeper.getInstance().getEmitTimes().put(tupleId, CloudSim.clock());
+				TimeKeeper.getInstance().recordEmission(tupleId, CloudSim.clock());
 			}
 		}
 	}
@@ -1318,22 +1371,17 @@ public class FogDevice extends PowerDatacenter {
 
 	protected void processAppSubmit(SimEvent ev) {
 		Application app = (Application) ev.getData();
-		applicationMap.put(app.getAppId(), app);
+		installApplication(app);
 	}
 
 	protected void addChild(int childId) {
 		if (CloudSim.getEntityName(childId).toLowerCase().contains("sensor"))
 			return;
-		if (!getChildrenIds().contains(childId) && childId != getId())
-			getChildrenIds().add(childId);
-		if (!getChildToOperatorsMap().containsKey(childId))
-			getChildToOperatorsMap().put(childId, new ArrayList<String>());
+		addChildRecord(childId);
 	}
 
 	protected void removeChild(int childId) {
-		getChildrenIds().remove(Integer.valueOf(childId));
-		getChildToOperatorsMap().remove(childId);
-		getChildToLatencyMap().remove(childId);
+		detachChild(childId);
 	}
 
 	protected void updateCloudTraffic() {
@@ -1520,36 +1568,22 @@ public class FogDevice extends PowerDatacenter {
 		List<AppLoop> loops = app.getLoops();
 		for (AppLoop loop : loops) {
 			if (loop.hasEdge(srcModule, destModule) && loop.isEndModule(destModule)) {
-				Double startTime = TimeKeeper.getInstance().getEmitTimes()
-					.get(tuple.getActualTupleId());
+				TimeKeeper timeKeeper = TimeKeeper.getInstance();
+				Double startTime = timeKeeper.getEmissionTime(
+					tuple.getActualTupleId());
 				if (startTime == null)
 					break;
-				if (!TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.containsKey(loop.getLoopId())) {
-					TimeKeeper.getInstance().getLoopIdToCurrentAverage().put(loop.getLoopId(), 0.0);
-					TimeKeeper.getInstance().getLoopIdToCurrentNum().put(loop.getLoopId(), 0);
-					TimeKeeper.getInstance().getMaxLoopExecutionTime().put(loop.getLoopId(), 0.0);
+				if (timeKeeper.initialiseLoopTiming(loop.getLoopId())) {
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopId.txt");
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopMaxId.txt");
 				}
-				double currentAverage = TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.get(loop.getLoopId());
-				int currentCount = TimeKeeper.getInstance().getLoopIdToCurrentNum()
-					.get(loop.getLoopId());
-				double delay = CloudSim.clock()
-					- TimeKeeper.getInstance().getEmitTimes().get(tuple.getActualTupleId());// +plusLatency);
-				if (delay > TimeKeeper.getInstance().getMaxLoopExecutionTime()
-					.get(loop.getLoopId())) {
-					TimeKeeper.getInstance().getMaxLoopExecutionTime().put(loop.getLoopId(), delay);
+				double delay = CloudSim.clock() - startTime;
+				if (timeKeeper.recordLoopDelay(loop.getLoopId(), delay)) {
 					printResults(String.valueOf(delay), loop.getLoopId() + "LoopMaxId.txt");
 				}
-				TimeKeeper.getInstance().getEmitTimes().remove(tuple.getActualTupleId());
-				double newAverage = (currentAverage * currentCount + delay) / (currentCount + 1);
-				TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.put(loop.getLoopId(), newAverage);
-				TimeKeeper.getInstance().getLoopIdToCurrentNum()
-					.put(loop.getLoopId(), currentCount + 1);
-				printResults(String.valueOf(newAverage), loop.getLoopId() + "LoopId.txt");
+				timeKeeper.consumeEmissionTime(tuple.getActualTupleId());
+				printResults(String.valueOf(timeKeeper.getLoopIdToCurrentAverage()
+					.get(loop.getLoopId())), loop.getLoopId() + "LoopId.txt");
 				break;
 			}
 		}
@@ -1618,8 +1652,8 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	protected void updateNorthTupleQueue() {
-		if (!getNorthTupleQueue().isEmpty()) {
-			Tuple tuple = getNorthTupleQueue().poll();
+		if (!northTupleQueue.isEmpty()) {
+			Tuple tuple = northTupleQueue.poll();
 			sendUpFreeLink(tuple);
 		} else {
 			setNorthLinkBusy(false);
@@ -1651,8 +1685,8 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	protected void updateSouthTupleQueue() {
-		if (!getSouthTupleQueue().isEmpty()) {
-			Pair<Tuple, Integer> pair = getSouthTupleQueue().poll();
+		if (!southTupleQueue.isEmpty()) {
+			Pair<Tuple, Integer> pair = southTupleQueue.poll();
 			sendDownFreeLink(pair.getFirst(), pair.getSecond());
 		} else {
 			setSouthLinkBusy(false);
@@ -1747,11 +1781,44 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public List<Integer> getChildrenIds() {
-		return childrenIds;
+		return Collections.unmodifiableList(childrenIds);
 	}
 
 	public void setChildrenIds(List<Integer> childrenIds) {
-		this.childrenIds = childrenIds;
+		if (childrenIds == null) {
+			throw new IllegalArgumentException("Child ID list cannot be null");
+		}
+		this.childrenIds = new ArrayList<Integer>(childrenIds);
+	}
+
+	/** Adds or updates a child and its latency as one state transition. */
+	public void attachChild(int childId, double latency) {
+		if (childId == getId()) {
+			throw new IllegalArgumentException("A fog device cannot be its own child");
+		}
+		if (!Double.isFinite(latency) || latency < 0.0) {
+			throw new IllegalArgumentException(
+				"Child latency must be finite and non-negative");
+		}
+		addChildRecord(childId);
+		childToLatencyMap.put(childId, latency);
+	}
+
+	/** Removes all state associated with a child. */
+	public boolean detachChild(int childId) {
+		boolean removed = childrenIds.remove(Integer.valueOf(childId));
+		childToOperatorsMap.remove(childId);
+		childToLatencyMap.remove(childId);
+		return removed;
+	}
+
+	private void addChildRecord(int childId) {
+		if (!childrenIds.contains(childId) && childId != getId()) {
+			childrenIds.add(childId);
+		}
+		if (!childToOperatorsMap.containsKey(childId)) {
+			childToOperatorsMap.put(childId, new ArrayList<String>());
+		}
 	}
 
 	public double getUplinkBandwidth() {
@@ -1795,11 +1862,25 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public List<String> getActiveApplications() {
-		return activeApplications;
+		return Collections.unmodifiableList(activeApplications);
 	}
 
 	public void setActiveApplications(List<String> activeApplications) {
-		this.activeApplications = activeApplications;
+		if (activeApplications == null) {
+			throw new IllegalArgumentException(
+				"Active application list cannot be null");
+		}
+		this.activeApplications = new ArrayList<String>(activeApplications);
+	}
+
+	public boolean activateApplication(String applicationId) {
+		if (applicationId == null || applicationId.trim().isEmpty()) {
+			throw new IllegalArgumentException("Application ID cannot be empty");
+		}
+		if (activeApplications.contains(applicationId)) {
+			return false;
+		}
+		return activeApplications.add(applicationId);
 	}
 
 	public List<MobilitySample> getMobilityPath() {
@@ -1835,35 +1916,74 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Map<Integer, List<String>> getChildToOperatorsMap() {
-		return childToOperatorsMap;
+		Map<Integer, List<String>> snapshot =
+			new HashMap<Integer, List<String>>();
+		for (Map.Entry<Integer, List<String>> entry
+			: childToOperatorsMap.entrySet()) {
+			snapshot.put(entry.getKey(), Collections.unmodifiableList(
+				new ArrayList<String>(entry.getValue())));
+		}
+		return Collections.unmodifiableMap(snapshot);
 	}
 
 	public void setChildToOperatorsMap(Map<Integer, List<String>> childToOperatorsMap) {
-		this.childToOperatorsMap = childToOperatorsMap;
+		if (childToOperatorsMap == null) {
+			throw new IllegalArgumentException(
+				"Child operator map cannot be null");
+		}
+		this.childToOperatorsMap = new HashMap<Integer, List<String>>();
+		for (Map.Entry<Integer, List<String>> entry
+			: childToOperatorsMap.entrySet()) {
+			this.childToOperatorsMap.put(entry.getKey(),
+				new ArrayList<String>(entry.getValue()));
+		}
 	}
 
 	public Map<String, Application> getApplicationMap() {
-		return applicationMap;
+		return Collections.unmodifiableMap(applicationMap);
 	}
 
 	public void setApplicationMap(Map<String, Application> applicationMap) {
-		this.applicationMap = applicationMap;
+		if (applicationMap == null) {
+			throw new IllegalArgumentException("Application map cannot be null");
+		}
+		this.applicationMap =
+			new HashMap<String, Application>(applicationMap);
+	}
+
+	public void installApplication(Application application) {
+		if (application == null || application.getAppId() == null
+			|| application.getAppId().trim().isEmpty()) {
+			throw new IllegalArgumentException("Application and its ID are required");
+		}
+		applicationMap.put(application.getAppId(), application);
+	}
+
+	public Application removeApplication(String applicationId) {
+		return applicationMap.remove(applicationId);
 	}
 
 	public Queue<Tuple> getNorthTupleQueue() {
-		return northTupleQueue;
+		return new LinkedList<Tuple>(northTupleQueue);
 	}
 
 	public void setNorthTupleQueue(Queue<Tuple> northTupleQueue) {
-		this.northTupleQueue = northTupleQueue;
+		if (northTupleQueue == null) {
+			throw new IllegalArgumentException("North tuple queue cannot be null");
+		}
+		this.northTupleQueue = new LinkedList<Tuple>(northTupleQueue);
 	}
 
 	public Queue<Pair<Tuple, Integer>> getSouthTupleQueue() {
-		return southTupleQueue;
+		return new LinkedList<Pair<Tuple, Integer>>(southTupleQueue);
 	}
 
 	public void setSouthTupleQueue(Queue<Pair<Tuple, Integer>> southTupleQueue) {
-		this.southTupleQueue = southTupleQueue;
+		if (southTupleQueue == null) {
+			throw new IllegalArgumentException("South tuple queue cannot be null");
+		}
+		this.southTupleQueue =
+			new LinkedList<Pair<Tuple, Integer>>(southTupleQueue);
 	}
 
 	public double getDownlinkBandwidth() {
@@ -1875,11 +1995,25 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public List<Pair<Integer, Double>> getAssociatedActuatorIds() {
-		return associatedActuatorIds;
+		return Collections.unmodifiableList(associatedActuatorIds);
 	}
 
 	public void setAssociatedActuatorIds(List<Pair<Integer, Double>> associatedActuatorIds) {
-		this.associatedActuatorIds = associatedActuatorIds;
+		if (associatedActuatorIds == null) {
+			throw new IllegalArgumentException(
+				"Associated actuator list cannot be null");
+		}
+		this.associatedActuatorIds =
+			new ArrayList<Pair<Integer, Double>>(associatedActuatorIds);
+	}
+
+	public void associateActuator(int actuatorId, double delay) {
+		if (!Double.isFinite(delay) || delay < 0.0) {
+			throw new IllegalArgumentException(
+				"Actuator delay must be finite and non-negative");
+		}
+		associatedActuatorIds.add(
+			new Pair<Integer, Double>(actuatorId, delay));
 	}
 
 	public double getEnergyConsumption() {
@@ -1891,11 +2025,15 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Map<Integer, Double> getChildToLatencyMap() {
-		return childToLatencyMap;
+		return Collections.unmodifiableMap(childToLatencyMap);
 	}
 
 	public void setChildToLatencyMap(Map<Integer, Double> childToLatencyMap) {
-		this.childToLatencyMap = childToLatencyMap;
+		if (childToLatencyMap == null) {
+			throw new IllegalArgumentException("Child latency map cannot be null");
+		}
+		this.childToLatencyMap =
+			new HashMap<Integer, Double>(childToLatencyMap);
 	}
 
 	public int getLevel() {
@@ -1923,12 +2061,29 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Map<String, Map<String, Integer>> getModuleInstanceCount() {
-		return moduleInstanceCount;
+		Map<String, Map<String, Integer>> snapshot =
+			new HashMap<String, Map<String, Integer>>();
+		for (Map.Entry<String, Map<String, Integer>> entry
+			: moduleInstanceCount.entrySet()) {
+			snapshot.put(entry.getKey(), Collections.unmodifiableMap(
+				new HashMap<String, Integer>(entry.getValue())));
+		}
+		return Collections.unmodifiableMap(snapshot);
 	}
 
 	public void setModuleInstanceCount(
 		Map<String, Map<String, Integer>> moduleInstanceCount) {
-		this.moduleInstanceCount = moduleInstanceCount;
+		if (moduleInstanceCount == null) {
+			throw new IllegalArgumentException(
+				"Module instance count cannot be null");
+		}
+		this.moduleInstanceCount =
+			new HashMap<String, Map<String, Integer>>();
+		for (Map.Entry<String, Map<String, Integer>> entry
+			: moduleInstanceCount.entrySet()) {
+			this.moduleInstanceCount.put(entry.getKey(),
+				new HashMap<String, Integer>(entry.getValue()));
+		}
 	}
 
 	public DecisionMigration getMigrationStrategy() {
@@ -1961,7 +2116,19 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Set<FogDevice> getServerCloudlets() {
-		return serverCloudlets;
+		return Collections.unmodifiableSet(serverCloudlets);
+	}
+
+	public boolean attachServerCloudlet(FogDevice serverCloudlet) {
+		if (serverCloudlet == null || serverCloudlet == this) {
+			throw new IllegalArgumentException(
+				"Server cloudlet must be a different device");
+		}
+		return serverCloudlets.add(serverCloudlet);
+	}
+
+	public boolean detachServerCloudlet(FogDevice serverCloudlet) {
+		return serverCloudlet != null && serverCloudlets.remove(serverCloudlet);
 	}
 
 	public void setServerCloudlets(FogDevice sc, int action) {// myiFogSim
@@ -1973,10 +2140,10 @@ public class FogDevice extends PowerDatacenter {
 			throw new IllegalArgumentException("Membership action cannot be null");
 		}
 		if (action == MembershipAction.ADD) {
-			this.serverCloudlets.add(sc);
+			attachServerCloudlet(sc);
 		}
 		else {
-			this.serverCloudlets.remove(sc);
+			detachServerCloudlet(sc);
 		}
 	}
 
@@ -1989,7 +2156,18 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Set<MobileDevice> getSmartThingsWithVm() {
-		return smartThingsWithVm;
+		return Collections.unmodifiableSet(smartThingsWithVm);
+	}
+
+	public boolean registerHostedMobileVm(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			throw new IllegalArgumentException("Mobile device cannot be null");
+		}
+		return smartThingsWithVm.add(mobileDevice);
+	}
+
+	public boolean unregisterHostedMobileVm(MobileDevice mobileDevice) {
+		return mobileDevice != null && smartThingsWithVm.remove(mobileDevice);
 	}
 
 	public void setSmartThingsWithVm(MobileDevice st, int action) {// myiFogSim
@@ -2002,10 +2180,10 @@ public class FogDevice extends PowerDatacenter {
 			throw new IllegalArgumentException("Membership action cannot be null");
 		}
 		if (action == MembershipAction.ADD) {
-			this.smartThingsWithVm.add(st);
+			registerHostedMobileVm(st);
 		}
 		else {
-			this.smartThingsWithVm.remove(st);
+			unregisterHostedMobileVm(st);
 		}
 	}
 

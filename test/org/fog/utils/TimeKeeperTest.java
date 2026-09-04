@@ -19,9 +19,7 @@ public class TimeKeeperTest {
 	public void resetTimeKeeper() {
 		CloudSim.init(0, Calendar.getInstance(), false);
 		timeKeeper = TimeKeeper.getInstance();
-		timeKeeper.getTupleIdToCpuStartTime().clear();
-		timeKeeper.getTupleTypeToAverageCpuTime().clear();
-		timeKeeper.getTupleTypeToExecutedTupleCount().clear();
+		timeKeeper.resetMeasurements();
 	}
 
 	@Test
@@ -41,7 +39,7 @@ public class TimeKeeperTest {
 			new UtilizationModelFull(), new UtilizationModelFull(),
 			new UtilizationModelFull());
 		tuple.setTupleType(tupleType);
-		timeKeeper.getTupleIdToCpuStartTime().put(id, -duration);
+		timeKeeper.recordTupleCpuStart(id, -duration);
 		timeKeeper.tupleEndedExecution(tuple);
 	}
 }

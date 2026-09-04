@@ -191,10 +191,16 @@ public class AddAppEdge extends JDialog {
 			public void actionPerformed(ActionEvent e) {
 
 				String name = "default";
-				long bandwidth = 0;
+				double cpuLength = 0.0;
+				double networkLength = 0.0;
 				boolean catchedError = false;
 
-				if (tupleType.getText() == null || tupleType.getText().isEmpty()) {
+				if (sourceNode.getSelectedItem() == null
+					|| targetNode.getSelectedItem() == null) {
+					catchedError = true;
+					prompt("Please select node", "Error");
+				} else if (tupleType.getText() == null
+					|| tupleType.getText().trim().isEmpty()) {
 					catchedError = true;
 					prompt("Please enter Tuple Type", "Error");
 				} else if (tupleCpuLen.getText() == null || tupleCpuLen.getText().isEmpty()) {
@@ -205,24 +211,30 @@ public class AddAppEdge extends JDialog {
 					prompt("Please enter Tuple NW Length", "Error");
 				}
 				else {
-					name = ((Node) sourceNode.getSelectedItem()).getName() + "-"
-						+ ((Node) sourceNode.getSelectedItem()).getName();
+					try {
+						cpuLength = Double.parseDouble(tupleCpuLen.getText());
+						networkLength = Double.parseDouble(tupleNwLen.getText());
+						if (!Double.isFinite(cpuLength) || cpuLength < 0.0
+							|| !Double.isFinite(networkLength)
+							|| networkLength < 0.0) {
+							throw new NumberFormatException();
+						}
+					}
+					catch (NumberFormatException error) {
+						catchedError = true;
+						prompt("Tuple lengths must be finite, non-negative numbers",
+							"Error");
+					}
 				}
 
 				if (!catchedError) {
-					if (sourceNode.getSelectedItem() == null
-						|| targetNode.getSelectedItem() == null) {
-						prompt("Please select node", "Error");
-					} else {
-
-						Node source = (Node) sourceNode.getSelectedItem();
-						Node target = (Node) targetNode.getSelectedItem();
-
-						Edge edge = new Edge(target, name, bandwidth);
-						graph.addEdge(source, edge);
-
-						setVisible(false);
-					}
+					Node source = (Node) sourceNode.getSelectedItem();
+					Node target = (Node) targetNode.getSelectedItem();
+					name = source.getName() + "-" + target.getName();
+					Edge edge = new Edge(target, name,
+						tupleType.getText().trim(), cpuLength, networkLength);
+					graph.addEdge(source, edge);
+					setVisible(false);
 				}
 
 			}

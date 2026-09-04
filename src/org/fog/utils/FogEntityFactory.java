@@ -52,16 +52,14 @@ public class FogEntityFactory {
 		FogDeviceCharacteristics characteristics = new FogDeviceCharacteristics(
 			arch, os, vmm, host, time_zone, cost, costPerMem, costPerStorage, costPerBw);
 
-		FogDevice fogdevice = null;
 		try {
-			fogdevice = new FogDevice(name, characteristics,
+			return new FogDevice(name, characteristics,
 				new AppModuleAllocationPolicy(hostList), storageList, 10, uplinkBandwidth,
 				downlinkBandwidth, latency, ratePerMips);
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (Exception error) {
+			throw new IllegalStateException(
+				"Could not create fog device '" + name + "'", error);
 		}
-
-		return fogdevice;
 	}
 
 }

@@ -33,10 +33,12 @@ TEST_SUITES := \
 	org.fog.vmmobile.AppExampleParametersTest \
 	org.fog.vmmobile.AppExampleUserRegistrationTest \
 	org.fog.vmmobile.MobilityDataLoaderTest \
+	org.fog.vmmobile.MutableStateEncapsulationTest \
 	org.fog.vmmobile.ServerCloudletNetworkTest \
 	org.fog.vmmobile.SimulationContextIntegrationTest \
 	org.fog.vmmobile.TypedPolicyTest \
 	org.fog.utils.TimeKeeperTest \
+	org.fog.utils.JsonToTopologyTest \
 	org.fog.utils.TransportLinkIdTest \
 	org.fog.utils.distribution.RandomizedDistributionTest \
 	org.fog.utils.NetworkSlicingConfigurationTest \

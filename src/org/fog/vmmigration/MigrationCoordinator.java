@@ -107,9 +107,7 @@ public final class MigrationCoordinator {
 		}
 		NetworkSlicing.releaseBandwidth(mobileDevice);
 		MyStatistics statistics = MyStatistics.getInstance();
-		statistics.getInitialWithoutVmTime().remove(mobileDevice.getMyId());
-		statistics.getInitialTimeDelayAfterNewConnection().remove(mobileDevice.getMyId());
-		statistics.getInitialTimeWithoutConnection().remove(mobileDevice.getMyId());
+		statistics.discardOpenIntervals(mobileDevice.getMyId());
 		mobileDevice.setMigStatus(false);
 		mobileDevice.setPostCopyStatus(false);
 		mobileDevice.setMigStatusLive(false);
@@ -276,10 +274,7 @@ public final class MigrationCoordinator {
 	}
 
 	private static void clearTimingStarts(MobileDevice mobileDevice) {
-		MyStatistics statistics = MyStatistics.getInstance();
-		statistics.getInitialWithoutVmTime().remove(mobileDevice.getMyId());
-		statistics.getInitialTimeDelayAfterNewConnection().remove(mobileDevice.getMyId());
-		statistics.getInitialTimeWithoutConnection().remove(mobileDevice.getMyId());
+		MyStatistics.getInstance().discardOpenIntervals(mobileDevice.getMyId());
 	}
 
 	private static void writeDecision(MobileDevice mobileDevice) {

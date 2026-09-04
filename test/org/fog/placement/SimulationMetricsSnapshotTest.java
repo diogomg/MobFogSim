@@ -11,6 +11,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -99,17 +100,24 @@ public class SimulationMetricsSnapshotTest {
 		timeKeeper.registerLoop(7);
 		timeKeeper.registerLoop(42);
 		timeKeeper.registerLoop(99);
-		timeKeeper.getLoopIdToCurrentAverage().put(7, 10.0);
-		timeKeeper.getLoopIdToCurrentAverage().put(42, 30.0);
-		timeKeeper.getLoopIdToCurrentAverage().put(99, Double.NaN);
-		timeKeeper.getMaxLoopExecutionTime().put(42, 50.0);
-		timeKeeper.getTupleTypeToAverageCpuTime().put("sensor", Double.NaN);
+		Map<Integer, Double> loopAverages = new HashMap<Integer, Double>();
+		loopAverages.put(7, 10.0);
+		loopAverages.put(42, 30.0);
+		loopAverages.put(99, Double.NaN);
+		timeKeeper.setLoopIdToCurrentAverage(loopAverages);
+		Map<Integer, Double> loopMaximums = new HashMap<Integer, Double>();
+		loopMaximums.put(42, 50.0);
+		timeKeeper.setMaxLoopExecutionTime(loopMaximums);
+		Map<String, Double> tupleCpuTimes = new HashMap<String, Double>();
+		tupleCpuTimes.put("sensor", Double.NaN);
+		timeKeeper.setTupleTypeToAverageCpuTime(tupleCpuTimes);
 
 		SimulationMetricsSnapshot snapshot = capture(
 			Collections.<FogDevice>emptyList(),
 			Collections.<ApDevice>emptyList(), 100.0, 1L);
-		statistics.getPowerHistory().put(8, 99.0);
-		timeKeeper.getLoopIdToCurrentAverage().put(7, 999.0);
+		statistics.recordPowerAndEnergy(8, 99.0, 99.0);
+		loopAverages.put(7, 999.0);
+		timeKeeper.setLoopIdToCurrentAverage(loopAverages);
 
 		assertEquals(Arrays.asList(7, 42),
 			new ArrayList<Integer>(snapshot.getMobilePowerHistory().keySet()));

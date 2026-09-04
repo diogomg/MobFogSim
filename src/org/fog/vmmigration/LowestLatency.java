@@ -1,5 +1,7 @@
 package org.fog.vmmigration;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,19 +86,19 @@ public class LowestLatency implements DecisionMigration {
 	}
 
 	public List<FogDevice> getServerCloudlets() {
-		return serverCloudlets;
+		return Collections.unmodifiableList(serverCloudlets);
 	}
 
 	public void setServerCloudlets(List<FogDevice> serverCloudlets) {
-		this.serverCloudlets = serverCloudlets;
+		this.serverCloudlets = new ArrayList<FogDevice>(serverCloudlets);
 	}
 
 	public List<ApDevice> getApDevices() {
-		return apDevices;
+		return Collections.unmodifiableList(apDevices);
 	}
 
 	public void setApDevices(List<ApDevice> apDevices) {
-		this.apDevices = apDevices;
+		this.apDevices = new ArrayList<ApDevice>(apDevices);
 	}
 
 	public int getMigPointPolicy() {

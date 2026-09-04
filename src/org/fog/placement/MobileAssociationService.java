@@ -56,7 +56,16 @@ public final class MobileAssociationService {
 				.desconnectServerCloudletSmartThing(mobileDevice);
 		}
 		if (mobileDevice.getSourceServerCloudlet() == null) {
-			sourceAp.getServerCloudlet().connectServerCloudletSmartThing(mobileDevice);
+			try {
+				sourceAp.getServerCloudlet()
+					.connectServerCloudletSmartThing(mobileDevice);
+			}
+			catch (RuntimeException error) {
+				MobileUserRegistration.disconnectNetwork(mobileDevice);
+				MobileUserRegistration.awaitAssociation(mobileDevice);
+				throw new IllegalStateException("Could not complete network association for "
+					+ mobileDevice.getName(), error);
+			}
 		}
 		return previousState;
 	}

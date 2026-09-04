@@ -92,7 +92,7 @@ public class MobileControllerDelayedEntryTest {
 		accessPoints.add(accessPoint);
 		AppExample.addSmartThing(users, new Coordinate(), 0);
 		MobileDevice user = users.get(0);
-		MyStatistics.getInstance().getMyCount().put(user.getMyId(), 0);
+		MyStatistics.getInstance().initialiseLatencyCounter(user.getMyId());
 		user.setCoord(0, 0);
 		user.setTravelTimeId(0);
 		MobileUserRegistration.preparePendingUser(user);
@@ -193,7 +193,7 @@ public class MobileControllerDelayedEntryTest {
 
 		AppExample.addSmartThing(users, new Coordinate(), 0);
 		MobileDevice user = users.get(0);
-		MyStatistics.getInstance().getMyCount().put(user.getMyId(), 0);
+		MyStatistics.getInstance().initialiseLatencyCounter(user.getMyId());
 		user.setMobilityPath(Arrays.asList(
 			new MobilitySample(2.5, 0, 1500, 1500, 1),
 			new MobilitySample(5.0, 0, 1200, 1200, 1),

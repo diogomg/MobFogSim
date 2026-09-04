@@ -1,6 +1,7 @@
 package org.fog.application;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +84,18 @@ public class AppModule extends PowerVm {
 	}
 
 	public void subscribeActuator(int id, String tuplyType) {
-		if (!getActuatorSubscriptions().containsKey(tuplyType))
-			getActuatorSubscriptions().put(tuplyType, new ArrayList<Integer>());
-		getActuatorSubscriptions().get(tuplyType).add(id);
+		if (!actuatorSubscriptions.containsKey(tuplyType))
+			actuatorSubscriptions.put(tuplyType, new ArrayList<Integer>());
+		actuatorSubscriptions.get(tuplyType).add(id);
+	}
+
+	public void addSelectivity(String inputTupleType, String outputTupleType,
+		SelectivityModel selectivityModel) {
+		if (selectivityModel == null) {
+			throw new IllegalArgumentException("Selectivity model cannot be null");
+		}
+		selectivityMap.put(new Pair<String, String>(inputTupleType,
+			outputTupleType), selectivityModel);
 	}
 
 	public String getName() {
@@ -97,11 +107,15 @@ public class AppModule extends PowerVm {
 	}
 
 	public Map<Pair<String, String>, SelectivityModel> getSelectivityMap() {
-		return selectivityMap;
+		return Collections.unmodifiableMap(selectivityMap);
 	}
 
 	public void setSelectivityMap(Map<Pair<String, String>, SelectivityModel> selectivityMap) {
-		this.selectivityMap = selectivityMap;
+		if (selectivityMap == null) {
+			throw new IllegalArgumentException("Selectivity map cannot be null");
+		}
+		this.selectivityMap =
+			new HashMap<Pair<String, String>, SelectivityModel>(selectivityMap);
 	}
 
 	public String getAppId() {
@@ -113,11 +127,27 @@ public class AppModule extends PowerVm {
 	}
 
 	public Map<String, List<Integer>> getActuatorSubscriptions() {
-		return actuatorSubscriptions;
+		Map<String, List<Integer>> snapshot =
+			new HashMap<String, List<Integer>>();
+		for (Map.Entry<String, List<Integer>> entry
+			: actuatorSubscriptions.entrySet()) {
+			snapshot.put(entry.getKey(), Collections.unmodifiableList(
+				new ArrayList<Integer>(entry.getValue())));
+		}
+		return Collections.unmodifiableMap(snapshot);
 	}
 
 	public void setActuatorSubscriptions(Map<String, List<Integer>> actuatorSubscriptions) {
-		this.actuatorSubscriptions = actuatorSubscriptions;
+		if (actuatorSubscriptions == null) {
+			throw new IllegalArgumentException(
+				"Actuator subscriptions cannot be null");
+		}
+		this.actuatorSubscriptions = new HashMap<String, List<Integer>>();
+		for (Map.Entry<String, List<Integer>> entry
+			: actuatorSubscriptions.entrySet()) {
+			this.actuatorSubscriptions.put(entry.getKey(),
+				new ArrayList<Integer>(entry.getValue()));
+		}
 	}
 
 	@Override

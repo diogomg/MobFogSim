@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -249,8 +250,8 @@ public class AppExample {
 		ModuleMapping moduleMapping = ModuleMapping.createModuleMapping();
 
 		mobileController = new MobileController("MobileController",
-			getServerCloudlets(), getApDevices(), getSmartThings(),
-			getBrokerList(), moduleMapping, getMigrationPointPolicy(),
+			serverCloudlets, apDevices, smartThings,
+			brokerList, moduleMapping, getMigrationPointPolicy(),
 			getMigrationStrategyPolicy(), getStepPolicy(), getCoordDevices(),
 			getSeed(), isMigrationAble());
 		TimeKeeper.getInstance().setSimulationStartTime(
@@ -325,7 +326,7 @@ public class AppExample {
 				}
 			}
 			MyStatistics.getInstance().putLantencyFileName("Time-latency", st.getMyId());
-			MyStatistics.getInstance().getMyCount().put(st.getMyId(), 0);
+			MyStatistics.getInstance().initialiseLatencyCounter(st.getMyId());
 		}
 
 		for (MobileDevice st : getSmartThings()) {
@@ -392,12 +393,12 @@ public class AppExample {
 
 	static void useSimulationContext(SimulationContext context) {
 		SimulationTopology topology = context.getTopology();
-		setSmartThings(topology.getMobileDevices());
-		setServerCloudlets(topology.getServerCloudlets());
-		setApDevices(topology.getAccessPoints());
-		setBrokerList(topology.getBrokers());
-		setAppIdList(topology.getApplicationIds());
-		setApplicationList(topology.getApplications());
+		smartThings = topology.mobileDeviceRegistry();
+		serverCloudlets = topology.serverCloudletRegistry();
+		apDevices = topology.accessPointRegistry();
+		brokerList = topology.brokerRegistry();
+		appIdList = topology.applicationIdRegistry();
+		applicationList = topology.applicationRegistry();
 	}
 
 	static void releaseSimulationContext(SimulationContext context) {
@@ -943,27 +944,28 @@ public class AppExample {
 	}
 
 	public static List<MobileDevice> getSmartThings() {
-		return smartThings;
+		return Collections.unmodifiableList(smartThings);
 	}
 
 	public static void setSmartThings(List<MobileDevice> smartThings) {
-		AppExample.smartThings = smartThings;
+		AppExample.smartThings = requireList(smartThings, "Mobile device list");
 	}
 
 	public static List<FogDevice> getServerCloudlets() {
-		return serverCloudlets;
+		return Collections.unmodifiableList(serverCloudlets);
 	}
 
 	public static void setServerCloudlets(List<FogDevice> serverCloudlets) {
-		AppExample.serverCloudlets = serverCloudlets;
+		AppExample.serverCloudlets = requireList(serverCloudlets,
+			"Server cloudlet list");
 	}
 
 	public static List<ApDevice> getApDevices() {
-		return apDevices;
+		return Collections.unmodifiableList(apDevices);
 	}
 
 	public static void setApDevices(List<ApDevice> apDevices) {
-		AppExample.apDevices = apDevices;
+		AppExample.apDevices = requireList(apDevices, "Access point list");
 	}
 
 	public static int getMigPointPolicy() {
@@ -1035,27 +1037,35 @@ public class AppExample {
 	}
 
 	public static List<FogBroker> getBrokerList() {
-		return brokerList;
+		return Collections.unmodifiableList(brokerList);
 	}
 
 	public static void setBrokerList(List<FogBroker> brokerList) {
-		AppExample.brokerList = brokerList;
+		AppExample.brokerList = requireList(brokerList, "Broker list");
 	}
 
 	public static List<String> getAppIdList() {
-		return appIdList;
+		return Collections.unmodifiableList(appIdList);
 	}
 
 	public static void setAppIdList(List<String> appIdList) {
-		AppExample.appIdList = appIdList;
+		AppExample.appIdList = requireList(appIdList, "Application ID list");
 	}
 
 	public static List<Application> getApplicationList() {
-		return applicationList;
+		return Collections.unmodifiableList(applicationList);
 	}
 
 	public static void setApplicationList(List<Application> applicationList) {
-		AppExample.applicationList = applicationList;
+		AppExample.applicationList = requireList(applicationList,
+			"Application list");
+	}
+
+	private static <T> List<T> requireList(List<T> values, String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return values;
 	}
 
 	public static int getSeed() {

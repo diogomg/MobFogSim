@@ -1,6 +1,7 @@
 package org.fog.entities;
 
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 import org.cloudbus.cloudsim.Cloudlet;
@@ -114,11 +115,21 @@ public class Tuple extends Cloudlet {
 	}
 
 	public Map<String, Integer> getModuleCopyMap() {
-		return moduleCopyMap;
+		return Collections.unmodifiableMap(moduleCopyMap);
 	}
 
 	public void setModuleCopyMap(Map<String, Integer> moduleCopyMap) {
-		this.moduleCopyMap = moduleCopyMap;
+		if (moduleCopyMap == null) {
+			throw new IllegalArgumentException("Module copy map cannot be null");
+		}
+		this.moduleCopyMap = new HashMap<String, Integer>(moduleCopyMap);
+	}
+
+	public void recordModuleCopy(String moduleName, int vmId) {
+		if (moduleName == null || moduleName.trim().isEmpty()) {
+			throw new IllegalArgumentException("Module name cannot be empty");
+		}
+		moduleCopyMap.put(moduleName, vmId);
 	}
 
 	public double getInitialTime() {

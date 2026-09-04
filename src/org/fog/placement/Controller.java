@@ -1,6 +1,8 @@
 package org.fog.placement;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,8 +67,7 @@ public class Controller extends SimEntity {
 			if (parent == null)
 				continue;
 			double latency = fogDevice.getUplinkLatency();
-			parent.getChildToLatencyMap().put(fogDevice.getId(), latency);
-			parent.getChildrenIds().add(fogDevice.getId());
+			parent.attachChild(fogDevice.getId(), latency);
 		}
 	}
 
@@ -197,9 +198,10 @@ public class Controller extends SimEntity {
 	}
 
 	public void submitApplication(Application application, int delay) {
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
-		getAppLaunchDelays().put(application.getAppId(), delay);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
+		appLaunchDelays.put(application.getAppId(), delay);
 		for (Sensor sensor : sensors) {
 			if (application.getAppId().equals(sensor.getAppId())) {
 				sensor.setApp(application);
@@ -232,8 +234,9 @@ public class Controller extends SimEntity {
 	private void processAppSubmit(Application application) {
 		System.out.println("Controller " + CloudSim.clock() + " Submitted application "
 			+ application.getAppId());
-		FogUtils.getApplicationCoverage().put(application.getAppId(), application.getGeoCoverage());
-		getApplications().put(application.getAppId(), application);
+		FogUtils.registerApplicationCoverage(application.getAppId(),
+			application.getGeoCoverage());
+		applications.put(application.getAppId(), application);
 
 		ModulePlacement modulePlacement = new ModulePlacementMapping(getFogDevices(), application,
 			getModuleMapping(), globalCurrentCpuLoad);
@@ -257,27 +260,28 @@ public class Controller extends SimEntity {
 	}
 
 	public List<FogDevice> getFogDevices() {
-		return fogDevices;
+		return Collections.unmodifiableList(fogDevices);
 	}
 
 	public void setFogDevices(List<FogDevice> fogDevices) {
-		this.fogDevices = fogDevices;
+		this.fogDevices = copyList(fogDevices, "Fog device list");
 	}
 
 	public Map<String, Integer> getAppLaunchDelays() {
-		return appLaunchDelays;
+		return Collections.unmodifiableMap(appLaunchDelays);
 	}
 
 	public void setAppLaunchDelays(Map<String, Integer> appLaunchDelays) {
-		this.appLaunchDelays = appLaunchDelays;
+		this.appLaunchDelays = copyMap(appLaunchDelays,
+			"Application launch delay map");
 	}
 
 	public Map<String, Application> getApplications() {
-		return applications;
+		return Collections.unmodifiableMap(applications);
 	}
 
 	public void setApplications(Map<String, Application> applications) {
-		this.applications = applications;
+		this.applications = copyMap(applications, "Application map");
 	}
 
 	public ModuleMapping getModuleMapping() {
@@ -289,28 +293,45 @@ public class Controller extends SimEntity {
 	}
 
 	public List<Sensor> getSensors() {
-		return sensors;
+		return Collections.unmodifiableList(sensors);
 	}
 
 	public void setSensors(List<Sensor> sensors) {
 		for (Sensor sensor : sensors)
 			sensor.setControllerId(getId());
-		this.sensors = sensors;
+		this.sensors = copyList(sensors, "Sensor list");
 	}
 
 	public List<Actuator> getActuators() {
-		return actuators;
+		return Collections.unmodifiableList(actuators);
 	}
 
 	public void setActuators(List<Actuator> actuators) {
-		this.actuators = actuators;
+		this.actuators = copyList(actuators, "Actuator list");
 	}
 
 	public Map<Integer, Double> getGlobalCurrentCpuLoad() {
-		return globalCurrentCpuLoad;
+		return globalCurrentCpuLoad == null ? null
+			: Collections.unmodifiableMap(globalCurrentCpuLoad);
 	}
 
 	public void setGlobalCurrentCpuLoad(Map<Integer, Double> globalCurrentCpuLoad) {
-		this.globalCurrentCpuLoad = globalCurrentCpuLoad;
+		this.globalCurrentCpuLoad = globalCurrentCpuLoad == null ? null
+			: new HashMap<Integer, Double>(globalCurrentCpuLoad);
+	}
+
+	private static <T> List<T> copyList(List<T> values, String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return new ArrayList<T>(values);
+	}
+
+	private static <K, V> Map<K, V> copyMap(Map<K, V> values,
+		String description) {
+		if (values == null) {
+			throw new IllegalArgumentException(description + " cannot be null");
+		}
+		return new HashMap<K, V>(values);
 	}
 }

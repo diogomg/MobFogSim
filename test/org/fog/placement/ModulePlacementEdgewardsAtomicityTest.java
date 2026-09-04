@@ -61,7 +61,7 @@ public class ModulePlacementEdgewardsAtomicityTest {
 		assertEquals(15.0, moduleLoad(placement, parent, "unrelated"), DELTA);
 		assertEquals(60.0, moduleLoad(placement, parent, "processor"), DELTA);
 		assertEquals(Integer.valueOf(2), moduleInstances(placement, parent, "processor"));
-		assertSame(placement.getCurrentModuleInstanceNum(),
+		assertEquals(placement.getCurrentModuleInstanceNum(),
 			placement.getModuleInstanceCountMap());
 	}
 

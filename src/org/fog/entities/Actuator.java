@@ -102,22 +102,15 @@ public class Actuator extends SimEntity {
 					"Received tuple " + tuple.getCloudletId() + " on " + tuple.getDestModuleName()
 						+ ". TupleSource: " + tuple.getSrcModuleName());
 
-				Double startTime = TimeKeeper.getInstance().getEmitTimes()
-					.get(tuple.getActualTupleId());
+				TimeKeeper timeKeeper = TimeKeeper.getInstance();
+				Double startTime = timeKeeper.getEmissionTime(
+					tuple.getActualTupleId());
 				if (startTime == null)
 					break;
-				if (!TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.containsKey(loop.getLoopId())) {
-					TimeKeeper.getInstance().getLoopIdToCurrentAverage().put(loop.getLoopId(), 0.0);
-					TimeKeeper.getInstance().getLoopIdToCurrentNum().put(loop.getLoopId(), 0);
-					TimeKeeper.getInstance().getMaxLoopExecutionTime().put(loop.getLoopId(), 0.0);
+				if (timeKeeper.initialiseLoopTiming(loop.getLoopId())) {
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopId.txt");
 					printResults(String.valueOf(0), loop.getLoopId() + "LoopMaxId.txt");
 				}
-				double currentAverage = TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.get(loop.getLoopId());
-				int currentCount = TimeKeeper.getInstance().getLoopIdToCurrentNum()
-					.get(loop.getLoopId());
 				double delay = CloudSim.clock() - startTime;
 				MobileDevice mobileGateway = getMobileGateway();
 				if (isActiveMobileDevice(mobileGateway)) {
@@ -125,19 +118,10 @@ public class Actuator extends SimEntity {
 					recordMobileLatency(delay, app, tuple, mobileGateway);
 				}
 
-				if (delay > TimeKeeper.getInstance().getMaxLoopExecutionTime()
-					.get(loop.getLoopId())) {
-					TimeKeeper.getInstance().getMaxLoopExecutionTime()
-						.put(loop.getLoopId(), delay);
+				if (timeKeeper.recordLoopDelay(loop.getLoopId(), delay)) {
 					printResults(String.valueOf(delay), loop.getLoopId() + "LoopMaxId.txt");
 				}
-				TimeKeeper.getInstance().getEmitTimes().remove(tuple.getActualTupleId());
-				double newAverage = (currentAverage * currentCount + delay)
-					/ (currentCount + 1);
-				TimeKeeper.getInstance().getLoopIdToCurrentAverage()
-					.put(loop.getLoopId(), newAverage);
-				TimeKeeper.getInstance().getLoopIdToCurrentNum()
-					.put(loop.getLoopId(), currentCount + 1);
+				timeKeeper.consumeEmissionTime(tuple.getActualTupleId());
 				printResults(String.valueOf(delay), loop.getLoopId() + "LoopId.txt");
 				break;
 			}

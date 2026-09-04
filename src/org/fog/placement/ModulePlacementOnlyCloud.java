@@ -35,21 +35,22 @@ public class ModulePlacementOnlyCloud extends ModulePlacement {
 
 	private void computeModuleInstanceCounts() {
 		FogDevice cloud = getDeviceById(CloudSim.getEntityId("cloud"));
-		getModuleInstanceCountMap().put(cloud.getId(), new HashMap<String, Integer>());
+		moduleInstanceCountRegistry().put(cloud.getId(),
+			new HashMap<String, Integer>());
 
 		for (Sensor sensor : getSensors()) {
 			String sensorType = sensor.getSensorName();
 			if (!getModuleInstanceCountMap().get(cloud.getId()).containsKey(sensorType))
-				getModuleInstanceCountMap().get(cloud.getId()).put(sensorType, 0);
-			getModuleInstanceCountMap().get(cloud.getId()).put(sensorType,
+				moduleInstanceCountRegistry().get(cloud.getId()).put(sensorType, 0);
+			moduleInstanceCountRegistry().get(cloud.getId()).put(sensorType,
 				getModuleInstanceCountMap().get(cloud.getId()).get(sensorType) + 1);
 		}
 
 		for (Actuator actuator : getActuators()) {
 			String actuatorType = actuator.getActuatorType();
 			if (!getModuleInstanceCountMap().get(cloud.getId()).containsKey(actuatorType))
-				getModuleInstanceCountMap().get(cloud.getId()).put(actuatorType, 0);
-			getModuleInstanceCountMap().get(cloud.getId()).put(actuatorType,
+				moduleInstanceCountRegistry().get(cloud.getId()).put(actuatorType, 0);
+			moduleInstanceCountRegistry().get(cloud.getId()).put(actuatorType,
 				getModuleInstanceCountMap().get(cloud.getId()).get(actuatorType) + 1);
 		}
 
@@ -65,7 +66,8 @@ public class ModulePlacementOnlyCloud extends ModulePlacement {
 							getModuleInstanceCountMap().get(cloudId).get(edge.getSource()));
 					}
 				}
-				getModuleInstanceCountMap().get(cloudId).put(module.getName(), maxInstances);
+				moduleInstanceCountRegistry().get(cloudId).put(module.getName(),
+					maxInstances);
 			}
 		}
 		System.out.println(getModuleInstanceCountMap());

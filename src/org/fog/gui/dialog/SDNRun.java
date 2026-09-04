@@ -16,6 +16,7 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -72,7 +73,7 @@ public class SDNRun extends JDialog {
 	}
 
 	private void initUI() {
-		ImageIcon ii = new ImageIcon(this.getClass().getResource("/src/1.gif"));
+		ImageIcon ii = new ImageIcon(this.getClass().getResource("/images/1.gif"));
 		imageLabel = new JLabel(ii);
 		imageLabel.setAlignmentX(CENTER_ALIGNMENT);
 		msgLabel = new JLabel("Simulation is executing");
@@ -100,33 +101,31 @@ public class SDNRun extends JDialog {
 			workloads, outputArea);
 
 		SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+			@Override
 			protected Boolean doInBackground() throws Exception {
-				boolean success = false;
-				success = sdn.simulate();
-				if (success) {
-					sdn.output();
-					append("<<<<<<<<<< Simulation completed >>>>>>>>>");
-				} else {
-					append("<<<<<<<<<< Running Error >>>>>>>>>>");
-				}
-				return success;
+				return sdn.simulate();
 			}
 
+			@Override
 			protected void done() {
-				boolean status;
 				try {
-					status = get();
-					panel.remove(space);
-					panel.remove(imageLabel);
-					panel.remove(msgLabel);
-					pane.setVisible(true);
-					panel.revalidate();
-					panel.repaint();
-
-				} catch (InterruptedException e) {
-
-				} catch (ExecutionException e) {
-
+					if (get()) {
+						sdn.output();
+						append("<<<<<<<<<< Simulation completed >>>>>>>>>");
+					}
+				}
+				catch (InterruptedException error) {
+					Thread.currentThread().interrupt();
+					showFailure("Simulation was interrupted", error);
+				}
+				catch (ExecutionException error) {
+					showFailure("Simulation failed", rootCause(error));
+				}
+				catch (RuntimeException error) {
+					showFailure("Could not display simulation results", error);
+				}
+				finally {
+					showOutput();
 				}
 			}
 		};
@@ -135,6 +134,31 @@ public class SDNRun extends JDialog {
 
 	private void append(String content) {
 		outputArea.append(content + "\n");
+	}
+
+	private void showOutput() {
+		panel.remove(space);
+		panel.remove(imageLabel);
+		panel.remove(msgLabel);
+		pane.setVisible(true);
+		panel.revalidate();
+		panel.repaint();
+	}
+
+	private void showFailure(String summary, Throwable error) {
+		String detail = error == null || error.getMessage() == null
+			? "No further details are available." : error.getMessage();
+		append("<<<<<<<<<< " + summary + ": " + detail + " >>>>>>>>>>");
+		JOptionPane.showMessageDialog(this, summary + ":\n" + detail,
+			"Simulation error", JOptionPane.ERROR_MESSAGE);
+	}
+
+	private static Throwable rootCause(Throwable error) {
+		Throwable cause = error;
+		while (cause.getCause() != null) {
+			cause = cause.getCause();
+		}
+		return cause;
 	}
 
 	/** below only used for testing reading file to textarea */
@@ -161,14 +185,12 @@ public class SDNRun extends JDialog {
 
 	private void readFile(String path, JTextArea area) {
 
-		try {
-			FileReader reader = new FileReader(path);
-			BufferedReader br = new BufferedReader(reader);
+		try (FileReader reader = new FileReader(path);
+			BufferedReader br = new BufferedReader(reader)) {
 			area.read(br, null);
-			br.close();
 			area.requestFocus();
-		} catch (Exception e2) {
-			System.out.println(e2);
+		} catch (Exception error) {
+			showFailure("Could not read output file " + path, error);
 		}
 	}
 
