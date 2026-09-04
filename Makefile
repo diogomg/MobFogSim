@@ -4,6 +4,7 @@ MAIN_SOURCE_LIST := $(BUILD_DIR)/main-sources.list
 MAIN_CLASSPATH := $(MAIN_CLASSES):jars/*:jars/commons-math3-3.5/*
 TEST_CLASSES := build/test-classes
 TEST_CLASSPATH := $(TEST_CLASSES):jars/*:jars/commons-math3-3.5/*
+P0_REGRESSION_SUITES := org.fog.placement.P0CorrectnessRegressionTest
 RUN_ARGS ?= 1 290538 0 0 3 11 0 61 0 0
 TEST_SUITES := \
 	org.cloudbus.cloudsim.core.CloudSimTerminationTest \
@@ -20,6 +21,7 @@ TEST_SUITES := \
 	org.fog.localization.DistancesTest \
 	org.fog.placement.MobileControllerDelayedEntryTest \
 	org.fog.placement.OrchestrationServicesTest \
+	org.fog.placement.P0CorrectnessRegressionTest \
 	org.fog.placement.SimulationMetricsSnapshotTest \
 	org.fog.placement.ModulePlacementEdgewardsAtomicityTest \
 	org.fog.vmmigration.MigrationTechniqueTest \
@@ -52,7 +54,7 @@ TEST_SUITES := \
 	org.fog.utils.NetworkSlicingEventIntegrationTest \
 	org.fog.utils.NetworkUsageMonitorTest
 
-.PHONY: compile run test clean
+.PHONY: compile compile-tests run test demonstrate-p0-defects clean
 
 compile:
 	rm -rf $(MAIN_CLASSES)
@@ -65,13 +67,20 @@ compile:
 run: compile
 	java -Xmx10g -Dfile.encoding=UTF-8 -classpath '$(MAIN_CLASSPATH)' org.fog.vmmobile.AppExample $(RUN_ARGS)
 
-test:
+compile-tests:
 	rm -rf $(TEST_CLASSES)
 	mkdir -p $(TEST_CLASSES)
 	find src test -name '*.java' -print > $(BUILD_DIR)/test-sources.list
 	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(TEST_CLASSES) @$(BUILD_DIR)/test-sources.list
 	cp -R test/resources/. $(TEST_CLASSES)/
+
+test: compile-tests
 	java -classpath '$(TEST_CLASSPATH)' org.junit.runner.JUnitCore $(TEST_SUITES)
+
+# Expected to fail until C1-C5 are fixed; each resolved case joins the normal suite.
+demonstrate-p0-defects: compile-tests
+	java -Dmobfogsim.runKnownP0Defects=true -classpath '$(TEST_CLASSPATH)' \
+		org.junit.runner.JUnitCore $(P0_REGRESSION_SUITES)
 
 clean:
 	rm -rf $(BUILD_DIR)
