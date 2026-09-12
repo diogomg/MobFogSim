@@ -15,10 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Map;
-import java.util.TreeMap;
 
-import org.cloudbus.cloudsim.core.SimulationEventCounters;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,7 +72,7 @@ public class ReferenceSimulationGoldenTest {
 		throws Exception {
 		SimulationRunResult result = runQuietly(referenceCase.configuration(
 			temporaryDirectory.resolve(referenceCase.name)));
-		String actual = characterisation(result);
+		String actual = result.toCharacterisationText();
 		String expected = readResource(referenceCase.resourcePath());
 		assertEquals("Reference characterisation changed for " + referenceCase.name,
 			expected, actual);
@@ -95,7 +92,7 @@ public class ReferenceSimulationGoldenTest {
 		try {
 			SimulationRunResult result = runQuietly(
 				referenceCase.configuration(output));
-			System.out.print(characterisation(result));
+			System.out.print(result.toCharacterisationText());
 		}
 		finally {
 			deleteTree(output);
@@ -139,40 +136,6 @@ public class ReferenceSimulationGoldenTest {
 			}
 		}
 		return text.toString();
-	}
-
-	private static String characterisation(SimulationRunResult result) {
-		TreeMap<String, String> values = new TreeMap<String, String>(
-			result.toSemanticSnapshot().getValues());
-		SimulationEventCounters counters = result.getEventCounters();
-		values.put("events.dispatched.total",
-			Long.toString(counters.getTotalDispatched()));
-		values.put("events.dispatched.queued",
-			Long.toString(counters.getQueuedDispatched()));
-		values.put("events.dispatched.periodic",
-			Long.toString(counters.getPeriodicDispatched()));
-		addCounterMap(values, "events.by_internal_type",
-			counters.getDispatchedByInternalType());
-		addCounterMap(values, "events.by_tag",
-			counters.getDispatchedByTag());
-		StringBuilder text = new StringBuilder();
-		for (Map.Entry<String, String> entry : values.entrySet()) {
-			text.append(entry.getKey()).append('=').append(entry.getValue())
-				.append('\n');
-		}
-		return text.toString();
-	}
-
-	private static void addCounterMap(Map<String, String> values, String prefix,
-		Map<Integer, Long> counters) {
-		values.put(prefix + ".count", Integer.toString(counters.size()));
-		int index = 0;
-		for (Map.Entry<Integer, Long> entry : counters.entrySet()) {
-			String item = prefix + "." + String.format(java.util.Locale.ROOT,
-				"%04d", index++);
-			values.put(item + ".key", Integer.toString(entry.getKey().intValue()));
-			values.put(item + ".value", Long.toString(entry.getValue().longValue()));
-		}
 	}
 
 	private static void deleteTree(Path root) throws IOException {

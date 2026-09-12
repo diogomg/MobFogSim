@@ -100,6 +100,21 @@ public class AppExampleParametersTest {
 	}
 
 	@Test
+	public void summarizesEveryEffectiveParameterOnOneLine() {
+		SimulationConfig configuration = SimulationConfig.parse(new String[] {
+			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
+			"1", "10,20,30,40", "40,30,20,10", "0", "1", "full"
+		});
+
+		assertEquals("Simulation parameters: migration=1; seed=123; "
+			+ "migrationPoint=1; migrationStrategy=2; users=10; bandwidth=11; "
+			+ "migrationPolicy=2; cloudletLatency=61.5; travelPrediction=12; "
+			+ "predictionError=34; sliceScope=1; userAllocation=10,20,30,40; "
+			+ "bandwidthAllocation=40,30,20,10; sliceMode=0; vmDestination=1; "
+			+ "outputMode=full", configuration.toSummaryLine());
+	}
+
+	@Test
 	public void removedPathParametersUseTheirDefaults() {
 		AppExample.configureSimulationParameters(new String[] {
 			"0", "123", "0", "0", "1", "11", "0", "61", "0", "0"

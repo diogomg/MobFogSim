@@ -14,7 +14,6 @@ import java.util.Set;
 
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Log;
-import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -37,6 +36,8 @@ import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileSensor;
 import org.fog.entities.Tuple;
 import org.fog.localization.Coordinate;
+import org.fog.localization.MobilitySample;
+import org.fog.localization.MobilityTimeline;
 import org.fog.placement.MobileController;
 import org.fog.placement.ModuleMapping;
 import org.fog.policy.AppModuleAllocationPolicy;
@@ -176,6 +177,7 @@ public class AppExample {
 		 */
 
 		Log.disable();
+		System.out.println(configuration.toSummaryLine());
 
 		int numUser = 1; // number of cloud users
 		Calendar calendar = Calendar.getInstance();
@@ -212,18 +214,6 @@ public class AppExample {
 		}
 		TOPOLOGY_SERVICE.createTransportNetwork(getServerCloudlets(),
 			getLatencyBetweenCloudlets(), getRand());
-		for (FogDevice sc : getServerCloudlets()) {
-			for (FogDevice sc1 : getServerCloudlets()) {
-				if (sc.equals(sc1)) {
-					break;
-				}
-				System.out.println("Delay between " + sc.getName() + " and "
-					+ sc1.getName() + ": "
-					+ NetworkTopology.getDelay(sc.getId(), sc1.getId()));
-				System.out.println(
-					sc.getName() + ": " + sc.getDownlinkBandwidth());
-			}
-		}
 
 		/* It is creating Smart Things. */
 		int[] userSliceAssignments = NetworkSlicing.getUserSliceAssignments(
@@ -239,6 +229,7 @@ public class AppExample {
 
 		TOPOLOGY_SERVICE.connectAccessPoints(getServerCloudlets(),
 			getApDevices(), getRand());
+		SimulationContext.requireCurrent().recordInitialTopologySize();
 
 		/**
 		 * STEP 3: CREATE CONTROLLER. Brokers, VMs, and applications are created
@@ -336,32 +327,37 @@ public class AppExample {
 					+ st.getDirection() + " Speed: " + st.getSpeed()
 					+ " EntryTime: " + st.getStartTravelTime() + " seconds");
 		}
-		System.out
-			.println("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_");
-		for (FogDevice sc : getServerCloudlets()) {
-			System.out.println(sc.getName() + "- X: " + sc.getCoord().getCoordX()
-				+ " Y: " + sc.getCoord().getCoordY()
-				+ " UpLinkLatency: " + sc.getUplinkLatency());
-		}
-		System.out
-			.println("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_");
-		for (ApDevice ap : getApDevices()) {
-			System.out.println(ap.getName() + "- X: " + ap.getCoord().getCoordX() + " Y: "
-				+ ap.getCoord().getCoordY() + " connected to "
-				+ ap.getServerCloudlet().getName());
-
-		}
+		SimulationContext context = SimulationContext.requireCurrent();
+		context.startProgress(expectedSimulationEndTime(getSmartThings()));
 		PrintStream console = System.out;
 		try (PrintStream simulationOutput = RunOutputManager.getInstance()
 			.newFullPrintStream("out.txt")) {
 			System.setOut(simulationOutput);
 			System.out.println("Inicio: " + Calendar.getInstance().getTime());
 			CloudSim.startSimulation();
+			context.completeProgress();
 			System.out.println("Simulation over");
 		}
 		finally {
 			System.setOut(console);
 		}
+	}
+
+	private static double expectedSimulationEndTime(
+		List<MobileDevice> mobileDevices) {
+		double latestTraceTime = 0.0;
+		for (MobileDevice mobileDevice : mobileDevices) {
+			List<MobilitySample> path = mobileDevice.getMobilityPath();
+			if (!path.isEmpty()) {
+				latestTraceTime = Math.max(latestTraceTime,
+					MobilityTimeline.toSimulationTime(
+						path.get(path.size() - 1).getTimeSeconds()));
+			}
+		}
+		if (latestTraceTime <= 0.0) {
+			return MaxAndMin.MAX_SIMULATION_TIME;
+		}
+		return Math.min(latestTraceTime, MaxAndMin.MAX_SIMULATION_TIME);
 	}
 
 	static void configureSimulationParameters(String[] args) {
@@ -423,7 +419,6 @@ public class AppExample {
 		for (int coordX = 0; coordX < MaxAndMin.MAX_X; coordX += (2
 			* MaxAndMin.AP_COVERAGE
 			- (2 * MaxAndMin.AP_COVERAGE / 3))) { /* evenly distributed */
-			System.out.println("Creating Ap devices");
 			for (coordY = 0; coordY < MaxAndMin.MAX_Y; coordY += (2
 				* MaxAndMin.AP_COVERAGE
 				- (2 * MaxAndMin.AP_COVERAGE / 3)), i++) {
@@ -685,7 +680,6 @@ public class AppExample {
 		for (coordX = 0; coordX < MaxAndMin.MAX_X; coordX += (2
 			* MaxAndMin.CLOUDLET_COVERAGE
 			- (2 * MaxAndMin.CLOUDLET_COVERAGE / 3))) { /* evenly distributed */
-			System.out.println("Creating Server cloudlets");
 			for (coordY = 0; coordY < MaxAndMin.MAX_X; coordY += (2
 				* MaxAndMin.CLOUDLET_COVERAGE
 				- (2 * MaxAndMin.CLOUDLET_COVERAGE

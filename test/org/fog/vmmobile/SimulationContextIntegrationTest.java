@@ -85,7 +85,11 @@ public class SimulationContextIntegrationTest {
 		assertEquals(first.getGeneratedActualTupleCount(),
 			second.getGeneratedActualTupleCount());
 		assertEquals(first.getEventCounters(), second.getEventCounters());
+		assertEquals(first.getTopologySize(), second.getTopologySize());
+		assertReferenceTopology(first.getTopologySize());
 		assertEquals(first.toSemanticSnapshot(), second.toSemanticSnapshot());
+		assertEquals(first.toCharacterisationText(),
+			second.toCharacterisationText());
 		assertMetricSnapshotsEqual(first.getMetrics(), second.getMetrics());
 		assertContextWasReleased();
 	}
@@ -129,6 +133,15 @@ public class SimulationContextIntegrationTest {
 		assertTrue(AppExample.getServerCloudlets().isEmpty());
 		assertTrue(AppExample.getApDevices().isEmpty());
 		assertFalse(NetworkTopology.isNetworkEnabled());
+	}
+
+	private static void assertReferenceTopology(SimulationTopologySize topology) {
+		assertEquals(1, topology.getMobileDeviceCount());
+		assertEquals(144, topology.getServerCloudletCount());
+		assertEquals(144, topology.getAccessPointCount());
+		assertEquals(288, topology.getNetworkNodeCount());
+		assertEquals(10440, topology.getNetworkLinkCount());
+		assertEquals(20592L, topology.getServerAdjacencyEntryCount());
 	}
 
 	private static void assertMetricSnapshotsEqual(

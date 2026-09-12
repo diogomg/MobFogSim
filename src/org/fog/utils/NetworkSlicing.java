@@ -123,6 +123,14 @@ public final class NetworkSlicing {
 		public Mode getMode() {
 			return mode;
 		}
+
+		public double[] getBandwidthPercentages() {
+			return bandwidthPercentages.clone();
+		}
+
+		public double[] getUserPercentages() {
+			return userPercentages.clone();
+		}
 	}
 
 	/** Mutable schedulers and transfer registries owned by one simulation run. */

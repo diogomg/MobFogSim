@@ -34,8 +34,10 @@ public final class SimulationContext implements AutoCloseable {
 		new NetworkUsageMonitor.Metrics();
 	private final NetworkSlicing.RuntimeState slicingState;
 	private final SimulationClock clock;
+	private final SimulationProgressBar progressBar;
 	private RunOutputManager outputManager;
 	private SimulationMetricsSnapshot metricsSnapshot;
+	private SimulationTopologySize topologySize;
 	private int cloudSimEntityCount;
 	private boolean closed;
 
@@ -47,6 +49,7 @@ public final class SimulationContext implements AutoCloseable {
 		}
 		this.configuration = configuration;
 		this.clock = clock;
+		this.progressBar = new SimulationProgressBar(System.out);
 		this.randomStreams = new RandomStreams(configuration.getSeed());
 		this.slicingState = NetworkSlicing.createRuntimeState(
 			configuration.getSlicingConfiguration());
@@ -144,6 +147,18 @@ public final class SimulationContext implements AutoCloseable {
 		return requireCurrent().random(streamName);
 	}
 
+	public void startProgress(double finalSimulationTime) {
+		progressBar.start(finalSimulationTime);
+	}
+
+	public void updateProgress(double simulationTime) {
+		progressBar.update(simulationTime);
+	}
+
+	public void completeProgress() {
+		progressBar.complete();
+	}
+
 	public void recordMetrics(SimulationMetricsSnapshot metrics) {
 		if (metrics == null) {
 			throw new IllegalArgumentException("Simulation metrics cannot be null");
@@ -155,18 +170,30 @@ public final class SimulationContext implements AutoCloseable {
 		cloudSimEntityCount = CloudSim.getNumEntities();
 	}
 
+	/** Freezes the initially constructed physical and logical topology sizes. */
+	void recordInitialTopologySize() {
+		if (topologySize != null) {
+			throw new IllegalStateException("Simulation topology size was already recorded");
+		}
+		topologySize = SimulationTopologySize.capture(topology);
+	}
+
 	public SimulationRunResult result() {
 		if (metricsSnapshot == null) {
 			throw new IllegalStateException(
 				"The simulation ended without recording a metric snapshot");
 		}
+		if (topologySize == null) {
+			throw new IllegalStateException(
+				"The simulation started without recording its topology size");
+		}
 		return new SimulationRunResult(metricsSnapshot, CloudSim.getEventCounters(),
-			cloudSimEntityCount, identifiers);
+			cloudSimEntityCount, identifiers, topologySize);
 	}
 
 	@Override
 	public void close() {
-		synchronized (SimulationContext.class) {
+			synchronized (SimulationContext.class) {
 			if (closed) {
 				return;
 			}
@@ -174,6 +201,7 @@ public final class SimulationContext implements AutoCloseable {
 				throw new IllegalStateException(
 					"Only the active SimulationContext can be closed");
 			}
+			progressBar.close();
 			BufferedFileManager.closeAll();
 			AppExample.releaseSimulationContext(this);
 			MobileController.resetRunState();

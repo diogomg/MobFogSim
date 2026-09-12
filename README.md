@@ -48,8 +48,22 @@ precompiled files from `bin`. Override the simulation arguments when needed:
 make run RUN_ARGS='1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary'
 ```
 
-Run the tests with `make test`. Use `make clean` to remove the generated
-`build` directory only.
+Run the tests with `make test`. Test classes are discovered automatically from
+files whose names end in `Test.java`; `make list-tests` prints the exact suite
+that will run. Generate HTML, XML, and CSV coverage reports with
+`make coverage`. This target downloads a pinned, checksum-verified JaCoCo
+release into the ignored `build/tools` directory and writes the reports under
+`build/reports/coverage`. Use `make clean` to remove the generated `build`
+directory only.
+
+Run the reproducible small, reference, and large performance fixtures with
+`make benchmark`. This records wall time, peak RSS, event counts, topology
+sizes, output bytes, environment details, input checksums, and semantic digests
+under `build/benchmarks`. See
+[`benchmarks/README.md`](benchmarks/README.md) for the fixture definitions and
+override options. Use `make benchmark-matrix` for the expanded 30-scenario
+one-factor-at-a-time comparison, or list its fixture names with
+`make list-benchmark-fixtures BENCHMARK_FIXTURES=matrix`.
 
 ### Running in the Eclipse IDE
 
@@ -64,7 +78,10 @@ Run the tests with `make test`. Use `make clean` to remove the generated
 
 ### Requirements
 
-- Java Development Kit (JDK)
+- Java Development Kit (JDK); the continuous-integration build uses JDK 21
+- GNU Make
+- `curl` and `sha256sum` when running `make coverage`
+- GNU `time` at `/usr/bin/time` when running `make benchmark`
 
 Optional dependency:
 

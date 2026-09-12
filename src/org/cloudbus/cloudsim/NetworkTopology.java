@@ -285,4 +285,14 @@ public class NetworkTopology {
 		return networkEnabled;
 	}
 
+	/** Returns the number of nodes in the currently registered physical graph. */
+	public static int getNumberOfNodes() {
+		return graph == null ? 0 : graph.getNumberOfNodes();
+	}
+
+	/** Returns the number of links in the currently registered physical graph. */
+	public static int getNumberOfLinks() {
+		return graph == null ? 0 : graph.getNumberOfLinks();
+	}
+
 }

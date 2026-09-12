@@ -1,9 +1,11 @@
 package org.fog.vmmobile;
 
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.cloudbus.cloudsim.util.RunOutputMode;
@@ -278,6 +280,44 @@ public final class SimulationConfig {
 
 	public RunOutputMode getOutputMode() {
 		return outputMode;
+	}
+
+	/** Returns one concise line containing every effective CLI parameter. */
+	public String toSummaryLine() {
+		return "Simulation parameters: migration=" + (migrationEnabled ? 1 : 0)
+			+ "; seed=" + seed
+			+ "; migrationPoint=" + migrationPointPolicy.legacyValue()
+			+ "; migrationStrategy=" + migrationStrategyPolicy.legacyValue()
+			+ "; users=" + maximumUsers
+			+ "; bandwidth=" + maximumBandwidth
+			+ "; migrationPolicy=" + vmMigrationPolicy.legacyValue()
+			+ "; cloudletLatency=" + plainNumber(cloudletLatency)
+			+ "; travelPrediction=" + travelPredictionTime
+			+ "; predictionError=" + mobilityPredictionError
+			+ "; sliceScope=" + slicingConfiguration.getScope().legacyValue()
+			+ "; userAllocation=" + percentageList(
+				slicingConfiguration.getUserPercentages())
+			+ "; bandwidthAllocation=" + percentageList(
+				slicingConfiguration.getBandwidthPercentages())
+			+ "; sliceMode="
+			+ (slicingConfiguration.getMode().allowsDynamicBorrowing() ? 1 : 0)
+			+ "; vmDestination=" + vmDestinationPolicy.legacyValue()
+			+ "; outputMode=" + outputMode.name().toLowerCase(Locale.ENGLISH);
+	}
+
+	private static String percentageList(double[] percentages) {
+		StringBuilder result = new StringBuilder();
+		for (double percentage : percentages) {
+			if (result.length() > 0) {
+				result.append(',');
+			}
+			result.append(plainNumber(percentage));
+		}
+		return result.toString();
+	}
+
+	private static String plainNumber(double value) {
+		return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
 	}
 
 	/** Returns an equivalent configuration writing beneath the supplied root. */

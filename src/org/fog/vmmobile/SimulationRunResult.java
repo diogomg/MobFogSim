@@ -1,5 +1,8 @@
 package org.fog.vmmobile;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.cloudbus.cloudsim.core.SimulationEventCounters;
 import org.fog.placement.SimulationMetricsSnapshot;
 
@@ -11,12 +14,15 @@ public final class SimulationRunResult {
 	private final int generatedFogEntityCount;
 	private final int generatedTupleCount;
 	private final int generatedActualTupleCount;
+	private final SimulationTopologySize topologySize;
 
 	SimulationRunResult(SimulationMetricsSnapshot metrics,
 		SimulationEventCounters eventCounters, int cloudSimEntityCount,
-		SimulationIdentifiers identifiers) {
-		if (metrics == null || eventCounters == null || identifiers == null) {
-			throw new IllegalArgumentException("A completed run requires metrics and identifiers");
+		SimulationIdentifiers identifiers, SimulationTopologySize topologySize) {
+		if (metrics == null || eventCounters == null || identifiers == null
+			|| topologySize == null) {
+			throw new IllegalArgumentException("A completed run requires metrics,"
+				+ " event counters, identifiers, and topology size");
 		}
 		this.metrics = metrics;
 		this.eventCounters = eventCounters;
@@ -24,6 +30,7 @@ public final class SimulationRunResult {
 		this.generatedFogEntityCount = identifiers.getGeneratedEntityCount();
 		this.generatedTupleCount = identifiers.getGeneratedTupleCount();
 		this.generatedActualTupleCount = identifiers.getGeneratedActualTupleCount();
+		this.topologySize = topologySize;
 	}
 
 	public SimulationMetricsSnapshot getMetrics() {
@@ -37,6 +44,43 @@ public final class SimulationRunResult {
 	/** Returns the stable, wall-clock-independent characterisation of this run. */
 	public SimulationSemanticSnapshot toSemanticSnapshot() {
 		return SimulationSemanticSnapshot.capture(this);
+	}
+
+	/**
+	 * Returns the canonical semantic snapshot plus deterministic dispatch
+	 * counters used by golden tests and performance baselines.
+	 */
+	public String toCharacterisationText() {
+		TreeMap<String, String> values = new TreeMap<String, String>(
+			toSemanticSnapshot().getValues());
+		values.put("events.dispatched.total",
+			Long.toString(eventCounters.getTotalDispatched()));
+		values.put("events.dispatched.queued",
+			Long.toString(eventCounters.getQueuedDispatched()));
+		values.put("events.dispatched.periodic",
+			Long.toString(eventCounters.getPeriodicDispatched()));
+		addCounterMap(values, "events.by_internal_type",
+			eventCounters.getDispatchedByInternalType());
+		addCounterMap(values, "events.by_tag",
+			eventCounters.getDispatchedByTag());
+		StringBuilder text = new StringBuilder();
+		for (Map.Entry<String, String> entry : values.entrySet()) {
+			text.append(entry.getKey()).append('=').append(entry.getValue())
+				.append('\n');
+		}
+		return text.toString();
+	}
+
+	private static void addCounterMap(Map<String, String> values, String prefix,
+		Map<Integer, Long> counters) {
+		values.put(prefix + ".count", Integer.toString(counters.size()));
+		int index = 0;
+		for (Map.Entry<Integer, Long> entry : counters.entrySet()) {
+			String item = prefix + "." + String.format(java.util.Locale.ROOT,
+				"%04d", index++);
+			values.put(item + ".key", Integer.toString(entry.getKey().intValue()));
+			values.put(item + ".value", Long.toString(entry.getValue().longValue()));
+		}
 	}
 
 	public int getCloudSimEntityCount() {
@@ -53,5 +97,9 @@ public final class SimulationRunResult {
 
 	public int getGeneratedActualTupleCount() {
 		return generatedActualTupleCount;
+	}
+
+	public SimulationTopologySize getTopologySize() {
+		return topologySize;
 	}
 }

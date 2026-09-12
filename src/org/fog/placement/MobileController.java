@@ -406,6 +406,7 @@ public class MobileController extends SimEntity {
 			|| !getSmartThings().contains(st)) {
 			return;
 		}
+		updateProgress();
 		MobilityService.EntryOutcome entry = mobilityService.enter(st,
 			getCoordDevices());
 		if (entry == MobilityService.EntryOutcome.NO_TRACE) {
@@ -431,6 +432,7 @@ public class MobileController extends SimEntity {
 			|| !smartThing.getLifecycleState().acceptsMobilityUpdates()) {
 			return;
 		}
+		updateProgress();
 
 		mobilityService.advance(smartThing, getCoordDevices(), CloudSim.clock());
 		if (!processCurrentMobilityPosition(smartThing)) {
@@ -457,6 +459,13 @@ public class MobileController extends SimEntity {
 			return;
 		}
 		scheduleNextMobilityUpdate(smartThing);
+	}
+
+	private void updateProgress() {
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context != null) {
+			context.updateProgress(CloudSim.clock());
+		}
 	}
 
 	private void scheduleNextMobilityUpdate(MobileDevice smartThing) {
