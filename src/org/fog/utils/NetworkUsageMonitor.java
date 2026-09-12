@@ -22,9 +22,9 @@ public class NetworkUsageMonitor {
 	}
 
 	/**
-	 * Records one completed migration byte-transfer phase. Fixed and preparation
-	 * delays are deliberately excluded because no bytes traverse the link during
-	 * those phases.
+	 * Records one completed migration byte-transfer phase. Fixed, preparation,
+	 * and slice-reallocation delays are deliberately excluded because no bytes
+	 * traverse the link during those phases.
 	 */
 	public static void recordCompletedMigration(double transferredBytes,
 		double transferDurationMillis) {

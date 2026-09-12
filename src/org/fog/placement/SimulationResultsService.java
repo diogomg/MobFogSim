@@ -32,6 +32,7 @@ public final class SimulationResultsService {
 		writeTiming(metrics, applications);
 		writePower(metrics);
 		writeNetworkUsage(metrics);
+		writeSliceReconfiguration(metrics);
 		writeMigration(metrics);
 	}
 
@@ -165,6 +166,37 @@ public final class SimulationResultsService {
 	private static String rateLine(SimulationMetricsSnapshot metrics, double value) {
 		return metrics.perSimulationMillisecond(value) + "\t" + value + "\t"
 			+ metrics.getSimulationTimeMillis();
+	}
+
+	private void writeSliceReconfiguration(SimulationMetricsSnapshot metrics) {
+		System.out.println("=========================================");
+		System.out.println("==========SLICE RECONFIGURATION==========");
+		System.out.println("=========================================");
+		System.out.println("Number of slice reconfigurations: "
+			+ metrics.getSliceReconfigurationCount());
+		System.out.println("Slice outage (seconds): "
+			+ metrics.getSliceOutageSeconds());
+		appendSummary(String.valueOf(metrics.getSliceReconfigurationCount()),
+			"sliceReconfigurations.txt");
+		appendSummary(String.valueOf(metrics.getSliceOutageSeconds()),
+			"sliceOutage.txt");
+		appendSummary(String.valueOf(metrics.getSliceReconfigurationCount()),
+			"results.txt");
+		appendSummary(String.valueOf(metrics.getSliceOutageSeconds()), "results.txt");
+
+		StringBuilder receivedBandwidth = new StringBuilder();
+		for (Entry<Integer, Double> slice
+			: metrics.getReceivedBandwidthBySlice().entrySet()) {
+			System.out.println("Slice " + slice.getKey()
+				+ " received bandwidth sum (bit/s): " + slice.getValue());
+			if (receivedBandwidth.length() > 0) {
+				receivedBandwidth.append('\t');
+			}
+			receivedBandwidth.append(slice.getKey()).append('=')
+				.append(slice.getValue());
+		}
+		appendSummary(receivedBandwidth.toString(), "sliceReceivedBandwidth.txt");
+		appendSummary(receivedBandwidth.toString(), "results.txt");
 	}
 
 	private void writeMigration(SimulationMetricsSnapshot metrics) {

@@ -70,8 +70,8 @@ reference configuration and is not duplicated inside the matrix.
 The shared reference values are migration enabled, fixed migration point,
 lowest-latency strategy, live-container migration, no prediction or prediction
 error, end-to-end dynamic slicing, hybrid VM destinations, seed `290538`,
-11 Mbps cloudlet bandwidth, 61 units of cloudlet latency, and output mode
-`none`.
+11 Mbps cloudlet bandwidth, 61 units of cloudlet latency, a zero-second slice
+reallocation delay, and output mode `none`.
 
 The 13 one-user fixtures use the default single slice (`100` user allocation
 and `100` bandwidth share):

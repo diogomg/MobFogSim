@@ -141,6 +141,49 @@ public class MigrationTransferSchedulerTest {
 		assertEquals(80.0, remaining.getTotalDuration(), DELTA);
 	}
 
+	@Test
+	public void reallocationDelayPausesEveryTransferOnTheAffectedDynamicLink() {
+		MigrationTransferScheduler scheduler = new MigrationTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, true, 100.0);
+
+		MigrationTransferScheduler.Schedule borrowed = only(
+			scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0));
+		assertEquals(170.0, borrowed.getDelay(), DELTA);
+
+		List<MigrationTransferScheduler.Schedule> reallocated =
+			scheduler.start(2, LINK, 1, 3.0, 800.0, 50.0);
+
+		assertEquals(560.0, find(reallocated, 1).getBandwidth(), DELTA);
+		assertEquals(240.0, find(reallocated, 2).getBandwidth(), DELTA);
+		assertEquals(200.0, find(reallocated, 1).getDelay(), DELTA);
+		assertEquals(200.0, find(reallocated, 2).getDelay(), DELTA);
+
+		MigrationTransferScheduler.Completion firstCompletion = scheduler.complete(
+			1, find(reallocated, 1).getGeneration(), 250.0);
+		assertTrue(firstCompletion.isAccepted());
+		assertEquals(150.0,
+			firstCompletion.getReallocationDelayDuration(), DELTA);
+		MigrationTransferScheduler.Schedule alreadyFinished =
+			only(firstCompletion.getSchedules());
+		assertEquals(0.0, alreadyFinished.getDelay(), DELTA);
+		MigrationTransferScheduler.Completion secondCompletion = scheduler.complete(
+			2, alreadyFinished.getGeneration(), 250.0);
+		assertTrue(secondCompletion.isAccepted());
+		assertEquals(100.0,
+			secondCompletion.getReallocationDelayDuration(), DELTA);
+	}
+
+	@Test
+	public void fixedTransportIgnoresConfiguredReallocationDelay() {
+		MigrationTransferScheduler scheduler = new MigrationTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, false, 100.0);
+
+		MigrationTransferScheduler.Schedule schedule = only(
+			scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0));
+
+		assertEquals(100.0, schedule.getDelay(), DELTA);
+	}
+
 	private static MigrationTransferScheduler dynamicScheduler() {
 		return new MigrationTransferScheduler(new double[] { 70.0, 30.0 }, true, true);
 	}

@@ -210,12 +210,12 @@ public final class SimulationBenchmark {
 
 			register(fixtures, "small", new String[] {
 				"0", "290538", "0", "0", "1", "11", "0", "61", "0", "0",
-				"2", "100", "100", "1", "2", "none"
+				"2", "100", "100", "1", "0", "2", "none"
 			});
 			register(fixtures, "reference", referenceArguments(1, "100", "100"));
 			register(fixtures, "large", new String[] {
 				"0", "290538", "0", "0", "10", "11", "0", "61", "0", "0",
-				"2", "100", "100", "1", "2", "none"
+				"2", "100", "100", "1", "0", "2", "none"
 			});
 			register(fixtures, "large-migration",
 				referenceArguments(10, "100", "100"));
@@ -295,9 +295,9 @@ public final class SimulationBenchmark {
 			registerVariant(fixtures, matrixNames, "u1-slicing-static",
 				baseline, 13, "0");
 			registerVariant(fixtures, matrixNames, "u1-destination-edge",
-				baseline, 14, "0");
+				baseline, 15, "0");
 			registerVariant(fixtures, matrixNames, "u1-destination-device",
-				baseline, 14, "1");
+				baseline, 15, "1");
 		}
 
 		private static void registerTenUserMatrix(
@@ -334,17 +334,17 @@ public final class SimulationBenchmark {
 			registerVariant(fixtures, matrixNames, "u10-slicing-static",
 				baseline, 13, "0");
 			registerVariant(fixtures, matrixNames, "u10-destination-edge",
-				baseline, 14, "0");
+				baseline, 15, "0");
 			registerVariant(fixtures, matrixNames, "u10-destination-device",
-				baseline, 14, "1");
+				baseline, 15, "1");
 		}
 
 		private static String[] referenceArguments(int users,
 			String userAllocation, String sliceShares) {
 			return new String[] {
 				"1", "290538", "0", "0", Integer.toString(users), "11", "2",
-				"61", "0", "0", "2", userAllocation, sliceShares, "1", "2",
-				"none"
+				"61", "0", "0", "2", userAllocation, sliceShares, "1", "0",
+				"2", "none"
 			};
 		}
 

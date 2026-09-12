@@ -52,7 +52,7 @@ public class SimulationBenchmarkScenarioTest {
 		assertEquals(values("0", "500"), parameterValues(names, 9, null));
 		assertEquals(values("0", "1", "2"), parameterValues(names, 10, null));
 		assertEquals(values("0", "1"), parameterValues(names, 13, null));
-		assertEquals(values("0", "1", "2"), parameterValues(names, 14, null));
+		assertEquals(values("0", "1", "2"), parameterValues(names, 15, null));
 
 		assertEquals(values("70,30", "50,50", "50,30,20",
 			"33.333334,33.333333,33.333333"),

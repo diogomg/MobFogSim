@@ -45,7 +45,7 @@ make run
 precompiled files from `bin`. Override the simulation arguments when needed:
 
 ```text
-make run RUN_ARGS='1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary'
+make run RUN_ARGS='1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 2 summary'
 ```
 
 Run the tests with `make test`. Test classes are discovered automatically from
@@ -89,7 +89,7 @@ Optional dependency:
 
 ## Parameters
 
-The first ten parameters are required. Parameters 11 through 16 are optional
+The first ten parameters are required. Parameters 11 through 17 are optional
 and use the defaults shown below. Because the interface is positional, all
 preceding parameters must be supplied when setting a later one.
 
@@ -109,13 +109,14 @@ preceding parameters must be supplied when setting a later one.
 | 12 | User allocation per slice | Optional comma-separated finite percentages, for example `60,40`; each value must be in `(0, 100]`, values must sum to `100`, and the count must match parameter 13 | Assigns the configured percentage of users to each slice. If omitted, users are divided equally among the slices. Fractional user counts are resolved using the largest-remainder method. |
 | 13 | Bandwidth share per slice | Optional comma-separated finite percentages, for example `70,30`; each value must be in `(0, 100]` and values must sum to `100`; default `100` | Defines the number of slices and the percentage of capacity reserved for each slice within the selected scope. The default creates one slice with all capacity. |
 | 14 | Slice mode | Optional integer flag: `0` static, `1` dynamic; default `1` | Static mode keeps each slice at its configured share. Dynamic mode lets active slices borrow capacity reserved for slices that are idle on the same link or AP. |
-| 15 | VM destination type | Optional integer: `0` edge servers only, `1` end devices only, `2` hybrid; default `2` | Restricts the eligible nodes that may host a migrated VM. Hybrid mode considers both server cloudlets and connected mobile devices with sufficient resources. |
-| 16 | Output mode | Optional, case-insensitive text: `summary`, `full`, or `none`; default `summary` | Controls whether a run writes bounded aggregate results, aggregate results plus detailed event records, or no result files. |
+| 15 | Reallocation delay | Optional finite non-negative number (`>= 0`), in seconds; default `2` | Sets how long traffic pauses while a dynamic slice allocation is applied. The delay affects all active transfers sharing the reallocated transport link and/or wireless AP direction, according to parameter 11. It is ignored in static mode and on network portions outside the slice scope. |
+| 16 | VM destination type | Optional integer: `0` edge servers only, `1` end devices only, `2` hybrid; default `2` | Restricts the eligible nodes that may host a migrated VM. Hybrid mode considers both server cloudlets and connected mobile devices with sufficient resources. |
+| 17 | Output mode | Optional, case-insensitive text: `summary`, `full`, or `none`; default `summary` | Controls whether a run writes bounded aggregate results, aggregate results plus detailed event records, or no result files. |
 
 ### Example
 
 ```text
-1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary
+1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2.5 2 summary
 ```
 
 This example configures the simulation as follows:
@@ -136,6 +137,7 @@ This example configures the simulation as follows:
 | User allocation | `60,40` | Assigns 60% of users to slice 0 and 40% to slice 1: six and four users, respectively, in this ten-user example. |
 | Slice shares | `70,30` | Gives slice 0 70% and slice 1 30% of the bandwidth in the selected scope. |
 | Slice mode | `1` | Enables dynamic borrowing of idle slice capacity. |
+| Reallocation delay | `2.5` | Pauses affected traffic for 2.5 seconds whenever the set of active slices changes and dynamic bandwidth shares must be reapplied. |
 | VM destinations | `2` | Allows both edge servers and eligible end devices to host migrated VMs. |
 | Output mode | `summary` | Writes bounded end-of-run metrics and omits detailed event records. |
 
@@ -155,7 +157,7 @@ transfer or a faster-moving user to be considered earlier.
 
 The **migration strategy** controls *where* the VM should move after the
 trigger. Value `0` evaluates candidate server cloudlets and selects the one
-with the lowest estimated latency cost. This is distinct from parameter 15:
+with the lowest estimated latency cost. This is distinct from parameter 16:
 the strategy chooses the destination server region, while the hybrid VM
 destination policy may use a suitable connected end device as the final host.
 
@@ -200,6 +202,13 @@ capacity from slices that are idle on the same directed transport link. Value `0
 every slice limited to its configured share. Concurrent transfers within a
 slice share that capacity.
 
+The **reallocation delay** models the control-plane time needed to install a
+new dynamic allocation. When a slice becomes active or idle on a sliced
+resource, every active transfer on that directed transport link or AP direction
+pauses for the configured number of seconds before using the new rates. A new
+active-slice change during an unfinished reallocation restarts the delay. The
+setting does not affect static slices or unsliced portions of the network.
+
 The **VM destinations** setting limits the types of hosts considered after the
 migration strategy selects a destination server region. Value `2` enables
 hybrid placement: MobFogSim may retain the selected edge server or choose a
@@ -219,6 +228,21 @@ directory. The selected mode determines which files are written:
 | `summary` | Default. Writes bounded end-of-run averages, totals, network usage, migration statistics, and tuple-loss statistics. It omits per-event records and `out.txt`. |
 | `full` | Writes the summaries and all detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace records. |
 | `none` | Disables every output file. The configured run root may still be created, but it remains empty. |
+
+### Slice reconfiguration metrics
+
+Dynamic slicing with multiple configured slices reports three additional
+metrics. **Number of slice reconfigurations** counts active-slice set changes
+on sliced transport links and wireless AP directions, including transitions to
+or from an entirely idle resource. **Slice outage** is that count multiplied by the configured
+reallocation delay and is reported in seconds. **Received bandwidth** is
+reported for each slice as the sum of its actual allocations at every
+reconfiguration, in bits per second; transport and wireless allocations are
+combined when end-to-end scope is selected.
+
+Summary and full output modes write these values to
+`sliceReconfigurations.txt`, `sliceOutage.txt`, and
+`sliceReceivedBandwidth.txt`, as well as the aggregate `results.txt` file.
 
 ## Input
 

@@ -6,12 +6,12 @@ seventh arguments varied as shown.
 
 | Case | Arguments |
 | --- | --- |
-| Migration disabled | `0 290538 0 0 1 11 0 61 0 0 2 100 100 1 2 none` |
-| Complete-VM migration | `1 290538 0 0 1 11 0 61 0 0 2 100 100 1 2 none` |
-| Container migration | `1 290538 0 0 1 11 1 61 0 0 2 100 100 1 2 none` |
-| Live migration | `1 290538 0 0 1 11 2 61 0 0 2 100 100 1 2 none` |
+| Migration disabled | `0 290538 0 0 1 11 0 61 0 0 2 100 100 1 0 2 none` |
+| Complete-VM migration | `1 290538 0 0 1 11 0 61 0 0 2 100 100 1 0 2 none` |
+| Container migration | `1 290538 0 0 1 11 1 61 0 0 2 100 100 1 0 2 none` |
+| Live migration | `1 290538 0 0 1 11 2 61 0 0 2 100 100 1 0 2 none` |
 
-Schema version 1 sorts all fields, formats numbers independently of the
+Schema version 2 sorts all fields, formats numbers independently of the
 machine locale, and rounds floating-point results to nine decimal places. It
 excludes wall-clock execution time, output paths, and CloudSim entity IDs.
 Each characterisation file combines that semantic snapshot with separate event

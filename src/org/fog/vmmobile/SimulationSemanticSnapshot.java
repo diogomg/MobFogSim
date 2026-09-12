@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 1;
+	public static final int SCHEMA_VERSION = 2;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;
@@ -101,6 +101,13 @@ public final class SimulationSemanticSnapshot {
 			metrics.getTotalUsageByteMilliseconds());
 		put(values, "network.migration_transferred_bytes",
 			metrics.getMigrationTransferredBytes());
+		put(values, "network_slicing.reconfigurations",
+			metrics.getSliceReconfigurationCount());
+		put(values, "network_slicing.outage_seconds",
+			metrics.getSliceOutageSeconds());
+		addDoubleMap(values,
+			"network_slicing.received_bandwidth_bits_per_second_sum",
+			metrics.getReceivedBandwidthBySlice());
 		addStatistics(values, metrics.getStatistics());
 	}
 

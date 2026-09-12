@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
@@ -238,6 +239,9 @@ public final class SimulationMetricsSnapshot {
 	private final double migrationUsageByteMilliseconds;
 	private final double totalUsageByteMilliseconds;
 	private final double migrationTransferredBytes;
+	private final long sliceReconfigurationCount;
+	private final double sliceOutageSeconds;
+	private final Map<Integer, Double> receivedBandwidthBySlice;
 	private final Statistics statistics;
 
 	private SimulationMetricsSnapshot(List<FogDevice> serverCloudlets,
@@ -269,6 +273,11 @@ public final class SimulationMetricsSnapshot {
 			NetworkUsageMonitor.getTotalUsageByteMilliseconds());
 		this.migrationTransferredBytes = finiteOrZero(
 			NetworkUsageMonitor.getMigrationTransferredBytes());
+		this.sliceReconfigurationCount = NetworkSlicing.getReconfigurationCount();
+		this.sliceOutageSeconds = finiteOrZero(
+			NetworkSlicing.getSliceOutageSeconds());
+		this.receivedBandwidthBySlice = indexedDoubleMap(
+			NetworkSlicing.getReceivedBandwidthBySlice());
 		this.statistics = new Statistics(statistics);
 	}
 
@@ -372,6 +381,19 @@ public final class SimulationMetricsSnapshot {
 			: migrationUsageByteMilliseconds / statistics.totalMigrations;
 	}
 
+	public long getSliceReconfigurationCount() {
+		return sliceReconfigurationCount;
+	}
+
+	public double getSliceOutageSeconds() {
+		return sliceOutageSeconds;
+	}
+
+	/** Per-slice cumulative allocation sampled at reconfigurations, in bit/s. */
+	public Map<Integer, Double> getReceivedBandwidthBySlice() {
+		return receivedBandwidthBySlice;
+	}
+
 	public double perSimulationMillisecond(double value) {
 		return simulationTimeMillis == 0.0 ? 0.0 : value / simulationTimeMillis;
 	}
@@ -427,6 +449,14 @@ public final class SimulationMetricsSnapshot {
 	private static Map<Integer, Double> immutableDoubleMap(
 		Map<Integer, Double> source) {
 		return Collections.unmodifiableMap(sanitisedDoubleMap(source));
+	}
+
+	private static Map<Integer, Double> indexedDoubleMap(double[] source) {
+		Map<Integer, Double> indexed = new TreeMap<Integer, Double>();
+		for (int index = 0; index < source.length; index++) {
+			indexed.put(index, source[index]);
+		}
+		return Collections.unmodifiableMap(indexed);
 	}
 
 	private static Map<String, Double> immutableStringDoubleMap(

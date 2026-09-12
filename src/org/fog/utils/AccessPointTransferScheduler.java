@@ -14,7 +14,9 @@ import java.util.Set;
  * Work is expressed in bytes and bandwidth in bits per second. A channel is one
  * access point in one direction. Slice capacity is assigned from active flows,
  * not from associated users, and flows within a slice receive max-min fair
- * rates subject to their mobile device's directional capability.
+ * rates subject to their mobile device's directional capability. In dynamic
+ * slicing, a configured reallocation delay pauses the affected AP direction
+ * whenever its set of active slices changes.
  */
 final class AccessPointTransferScheduler {
 
@@ -109,18 +111,23 @@ final class AccessPointTransferScheduler {
 	private static final class ChannelState {
 		private final Map<Long, Transfer> transfers =
 			new LinkedHashMap<Long, Transfer>();
+		private final Set<Integer> activeSlices = new LinkedHashSet<Integer>();
 		private double physicalBandwidth;
 		private double lastUpdated;
+		private double allocationStartsAt;
 
 		private ChannelState(double physicalBandwidth, double now) {
 			this.physicalBandwidth = physicalBandwidth;
 			this.lastUpdated = now;
+			this.allocationStartsAt = now;
 		}
 	}
 
 	private final double[] percentages;
 	private final boolean slicingEnabled;
 	private final boolean dynamicBorrowing;
+	private final double reallocationDelayMillis;
+	private final SliceReconfigurationMetrics reconfigurationMetrics;
 	private final Map<String, ChannelState> channels =
 		new LinkedHashMap<String, ChannelState>();
 	private final Map<Long, Transfer> transfers =
@@ -129,9 +136,33 @@ final class AccessPointTransferScheduler {
 
 	AccessPointTransferScheduler(double[] percentages, boolean slicingEnabled,
 		boolean dynamicBorrowing) {
+		this(percentages, slicingEnabled, dynamicBorrowing, 0.0);
+	}
+
+	AccessPointTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis) {
+		this(percentages, slicingEnabled, dynamicBorrowing,
+			reallocationDelayMillis,
+			new SliceReconfigurationMetrics(percentages.length));
+	}
+
+	AccessPointTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis,
+		SliceReconfigurationMetrics reconfigurationMetrics) {
+		if (!Double.isFinite(reallocationDelayMillis)
+			|| reallocationDelayMillis < 0.0) {
+			throw new IllegalArgumentException(
+				"Reallocation delay must be finite and non-negative");
+		}
+		if (reconfigurationMetrics == null) {
+			throw new IllegalArgumentException(
+				"Slice reconfiguration metrics cannot be null");
+		}
 		this.percentages = percentages.clone();
 		this.slicingEnabled = slicingEnabled;
 		this.dynamicBorrowing = dynamicBorrowing;
+		this.reallocationDelayMillis = reallocationDelayMillis;
+		this.reconfigurationMetrics = reconfigurationMetrics;
 	}
 
 	List<Schedule> start(long transferId, String channel, int sliceId,
@@ -204,12 +235,25 @@ final class AccessPointTransferScheduler {
 		if (channelState == null) {
 			return schedules;
 		}
+		Set<Integer> newActiveSlices = activeSlices(channelState);
+		boolean reconfiguration = isSliceReconfiguration(
+			channelState.activeSlices, newActiveSlices);
+		if (reconfiguration && !channelState.transfers.isEmpty()) {
+			channelState.allocationStartsAt = now + reallocationDelayMillis;
+		}
+		channelState.activeSlices.clear();
+		channelState.activeSlices.addAll(newActiveSlices);
 		if (channelState.transfers.isEmpty()) {
+			if (reconfiguration) {
+				reconfigurationMetrics.record(new double[percentages.length]);
+			}
 			channels.remove(channel);
 			return schedules;
 		}
-
+		double pendingDelay = Math.max(0.0,
+			channelState.allocationStartsAt - now);
 		Map<Long, Double> allocations = allocate(channelState);
+		double[] receivedBandwidth = new double[percentages.length];
 		for (Transfer transfer : channelState.transfers.values()) {
 			Double allocation = allocations.get(transfer.id);
 			if (allocation == null || allocation <= 0.0) {
@@ -217,14 +261,36 @@ final class AccessPointTransferScheduler {
 					"An active wireless transfer received no bandwidth");
 			}
 			transfer.bandwidth = allocation;
-			double delay = transferTimeMillis(transfer.remainingBytes,
-				transfer.bandwidth);
+			receivedBandwidth[transfer.sliceId] += transfer.bandwidth;
+			double transferDelay = transferTimeMillis(
+				transfer.remainingBytes, transfer.bandwidth);
+			// Do not delay a flow whose bytes completed at this same timestamp.
+			double delay = transfer.generation > 0L
+				&& now + TIME_EPSILON >= transfer.completionTime
+				? 0.0 : pendingDelay + transferDelay;
 			transfer.generation = nextGeneration++;
 			transfer.completionTime = now + delay;
 			schedules.add(new Schedule(transfer.id, transfer.generation,
 				delay, transfer.bandwidth));
 		}
+		if (reconfiguration) {
+			reconfigurationMetrics.record(receivedBandwidth);
+		}
 		return schedules;
+	}
+
+	private static Set<Integer> activeSlices(ChannelState channelState) {
+		Set<Integer> activeSlices = new LinkedHashSet<Integer>();
+		for (Transfer transfer : channelState.transfers.values()) {
+			activeSlices.add(transfer.sliceId);
+		}
+		return activeSlices;
+	}
+
+	private boolean isSliceReconfiguration(Set<Integer> previousActiveSlices,
+		Set<Integer> newActiveSlices) {
+		return slicingEnabled && dynamicBorrowing && percentages.length > 1
+			&& !previousActiveSlices.equals(newActiveSlices);
 	}
 
 	private Map<Long, Double> allocate(ChannelState channelState) {
@@ -302,7 +368,9 @@ final class AccessPointTransferScheduler {
 			throw new IllegalArgumentException(
 				"Simulation time cannot move backwards");
 		}
-		double elapsed = Math.max(0.0, now - channelState.lastUpdated);
+		double serviceStartedAt = Math.max(channelState.lastUpdated,
+			channelState.allocationStartsAt);
+		double elapsed = Math.max(0.0, now - serviceStartedAt);
 		for (Transfer transfer : channelState.transfers.values()) {
 			transfer.remainingBytes = Math.max(0.0,
 				transfer.remainingBytes - bytesTransferred(transfer.bandwidth,

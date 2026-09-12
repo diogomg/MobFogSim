@@ -13,7 +13,9 @@ import java.util.Set;
  * Transfer work is expressed in bytes and allocated bandwidth in bits per
  * second. Whenever the active transfer set changes, the scheduler first
  * accounts for bytes completed at the previous rates and then returns
- * replacement completion schedules using the new rates.
+ * replacement completion schedules using the new rates. In dynamic slicing,
+ * a configured reallocation delay pauses the affected link whenever its set of
+ * active slices changes.
  */
 final class MigrationTransferScheduler {
 
@@ -62,14 +64,17 @@ final class MigrationTransferScheduler {
 		private final boolean accepted;
 		private final int transferId;
 		private final double duration;
+		private final double reallocationDelayDuration;
 		private final double transferredBytes;
 		private final List<Schedule> schedules;
 
 		private Completion(boolean accepted, int transferId, double duration,
-			double transferredBytes, List<Schedule> schedules) {
+			double reallocationDelayDuration, double transferredBytes,
+			List<Schedule> schedules) {
 			this.accepted = accepted;
 			this.transferId = transferId;
 			this.duration = duration;
+			this.reallocationDelayDuration = reallocationDelayDuration;
 			this.transferredBytes = transferredBytes;
 			this.schedules = schedules;
 		}
@@ -84,6 +89,10 @@ final class MigrationTransferScheduler {
 
 		double getDuration() {
 			return duration;
+		}
+
+		double getReallocationDelayDuration() {
+			return reallocationDelayDuration;
 		}
 
 		double getTransferredBytes() {
@@ -103,6 +112,7 @@ final class MigrationTransferScheduler {
 		private final double transferBytes;
 		private double remainingBytes;
 		private double bandwidth;
+		private double reallocationDelayDuration;
 		private long generation;
 		private double completionTime;
 
@@ -120,18 +130,23 @@ final class MigrationTransferScheduler {
 	private static final class LinkState {
 		private final Map<Integer, Transfer> transfers =
 			new HashMap<Integer, Transfer>();
+		private final Set<Integer> activeSlices = new LinkedHashSet<Integer>();
 		private double physicalBandwidth;
 		private double lastUpdated;
+		private double allocationStartsAt;
 
 		private LinkState(double physicalBandwidth, double now) {
 			this.physicalBandwidth = physicalBandwidth;
 			this.lastUpdated = now;
+			this.allocationStartsAt = now;
 		}
 	}
 
 	private final double[] percentages;
 	private final boolean slicingEnabled;
 	private final boolean dynamicBorrowing;
+	private final double reallocationDelayMillis;
+	private final SliceReconfigurationMetrics reconfigurationMetrics;
 	private final Map<TransportLinkId, LinkState> links =
 		new HashMap<TransportLinkId, LinkState>();
 	private final Map<Integer, Transfer> transfers = new HashMap<Integer, Transfer>();
@@ -139,9 +154,32 @@ final class MigrationTransferScheduler {
 
 	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
 		boolean dynamicBorrowing) {
+		this(percentages, slicingEnabled, dynamicBorrowing, 0.0);
+	}
+
+	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis) {
+		this(percentages, slicingEnabled, dynamicBorrowing,
+			reallocationDelayMillis,
+			new SliceReconfigurationMetrics(percentages.length));
+	}
+
+	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis,
+		SliceReconfigurationMetrics reconfigurationMetrics) {
+		if (!isFinite(reallocationDelayMillis) || reallocationDelayMillis < 0.0) {
+			throw new IllegalArgumentException(
+				"Reallocation delay must be finite and non-negative");
+		}
+		if (reconfigurationMetrics == null) {
+			throw new IllegalArgumentException(
+				"Slice reconfiguration metrics cannot be null");
+		}
 		this.percentages = percentages.clone();
 		this.slicingEnabled = slicingEnabled;
 		this.dynamicBorrowing = dynamicBorrowing;
+		this.reallocationDelayMillis = reallocationDelayMillis;
+		this.reconfigurationMetrics = reconfigurationMetrics;
 	}
 
 	List<Schedule> start(int transferId, TransportLinkId link, int sliceId,
@@ -186,7 +224,7 @@ final class MigrationTransferScheduler {
 		Transfer transfer = transfers.get(transferId);
 		if (transfer == null || transfer.generation != generation
 			|| now + TIME_EPSILON < transfer.completionTime) {
-			return new Completion(false, transferId, 0.0, 0.0,
+			return new Completion(false, transferId, 0.0, 0.0, 0.0,
 				new ArrayList<Schedule>());
 		}
 
@@ -200,7 +238,7 @@ final class MigrationTransferScheduler {
 			new LinkedHashSet<TransportLinkId>();
 		affectedLinks.add(transfer.link);
 		return new Completion(true, transferId, duration,
-			transfer.transferBytes,
+			transfer.reallocationDelayDuration, transfer.transferBytes,
 			rebalance(affectedLinks, now));
 	}
 
@@ -232,12 +270,25 @@ final class MigrationTransferScheduler {
 			if (linkState == null) {
 				continue;
 			}
+			int[] activeBySlice = activeBySlice(linkState);
+			Set<Integer> newActiveSlices = activeSlices(activeBySlice);
+			boolean reconfiguration = isSliceReconfiguration(
+				linkState.activeSlices, newActiveSlices);
+			if (reconfiguration && !linkState.transfers.isEmpty()) {
+				linkState.allocationStartsAt = now + reallocationDelayMillis;
+			}
+			linkState.activeSlices.clear();
+			linkState.activeSlices.addAll(newActiveSlices);
 			if (linkState.transfers.isEmpty()) {
+				if (reconfiguration) {
+					reconfigurationMetrics.record(new double[percentages.length]);
+				}
 				links.remove(link);
 				continue;
 			}
-
-			int[] activeBySlice = activeBySlice(linkState);
+			double pendingDelay = Math.max(0.0,
+				linkState.allocationStartsAt - now);
+			double[] receivedBandwidth = new double[percentages.length];
 			for (Transfer transfer : linkState.transfers.values()) {
 				transfer.bandwidth = allocatedBandwidth(linkState.physicalBandwidth,
 					activeBySlice, transfer.sliceId);
@@ -245,12 +296,22 @@ final class MigrationTransferScheduler {
 					throw new IllegalStateException(
 						"An active migration received no transport bandwidth");
 				}
-				double delay = transferTimeMillis(transfer.remainingBytes,
-					transfer.bandwidth);
+				receivedBandwidth[transfer.sliceId] += transfer.bandwidth;
+				double transferDelay = transferTimeMillis(
+					transfer.remainingBytes, transfer.bandwidth);
+				// A different event at this same timestamp may have advanced this
+				// transfer to completion already. It must not wait for a reallocation
+				// that only became necessary after its bytes finished.
+				double delay = transfer.generation > 0L
+					&& now + TIME_EPSILON >= transfer.completionTime
+					? 0.0 : pendingDelay + transferDelay;
 				transfer.generation = nextGeneration++;
 				transfer.completionTime = now + delay;
 				schedules.add(new Schedule(transfer.id, transfer.generation, delay,
 					transfer.bandwidth, now - transfer.startedAt));
+			}
+			if (reconfiguration) {
+				reconfigurationMetrics.record(receivedBandwidth);
 			}
 		}
 		return schedules;
@@ -295,6 +356,22 @@ final class MigrationTransferScheduler {
 		return activeBySlice;
 	}
 
+	private static Set<Integer> activeSlices(int[] activeBySlice) {
+		Set<Integer> activeSlices = new LinkedHashSet<Integer>();
+		for (int sliceId = 0; sliceId < activeBySlice.length; sliceId++) {
+			if (activeBySlice[sliceId] > 0) {
+				activeSlices.add(sliceId);
+			}
+		}
+		return activeSlices;
+	}
+
+	private boolean isSliceReconfiguration(Set<Integer> previousActiveSlices,
+		Set<Integer> newActiveSlices) {
+		return slicingEnabled && dynamicBorrowing && percentages.length > 1
+			&& !previousActiveSlices.equals(newActiveSlices);
+	}
+
 	private static void advance(LinkState linkState, double now) {
 		if (linkState == null) {
 			return;
@@ -303,8 +380,13 @@ final class MigrationTransferScheduler {
 			throw new IllegalArgumentException("Simulation time cannot move backwards");
 		}
 
-		double elapsed = Math.max(0.0, now - linkState.lastUpdated);
+		double serviceStartedAt = Math.max(linkState.lastUpdated,
+			linkState.allocationStartsAt);
+		double elapsed = Math.max(0.0, now - serviceStartedAt);
+		double pausedElapsed = Math.max(0.0,
+			Math.min(now, linkState.allocationStartsAt) - linkState.lastUpdated);
 		for (Transfer transfer : linkState.transfers.values()) {
+			transfer.reallocationDelayDuration += pausedElapsed;
 			transfer.remainingBytes = Math.max(0.0,
 				transfer.remainingBytes - bytesTransferred(transfer.bandwidth,
 					elapsed));

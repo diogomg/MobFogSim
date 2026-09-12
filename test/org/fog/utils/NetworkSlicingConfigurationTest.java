@@ -24,6 +24,7 @@ public class NetworkSlicingConfigurationTest {
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 	}
 
 	@After
@@ -31,6 +32,7 @@ public class NetworkSlicingConfigurationTest {
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 	}
 
 	@Test
@@ -103,6 +105,32 @@ public class NetworkSlicingConfigurationTest {
 		assertTrue(NetworkSlicing.isDynamicBorrowing());
 		NetworkSlicing.setDynamicBorrowing(false);
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
+	}
+
+	@Test
+	public void reallocationDelayRoundTripsInSeconds() {
+		NetworkSlicing.Configuration configuration =
+			NetworkSlicing.parseConfiguration("70,30", "50,50",
+				NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC, 2.5);
+
+		assertEquals(2.5, configuration.getReallocationDelaySeconds(), DELTA);
+		NetworkSlicing.applyConfiguration(configuration);
+		assertEquals(2.5, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
+	}
+
+	@Test
+	public void omittedReallocationDelayDefaultsToTwoSeconds() {
+		NetworkSlicing.Configuration configuration =
+			NetworkSlicing.parseConfiguration("70,30", "50,50",
+				NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC);
+
+		assertEquals(2.0, configuration.getReallocationDelaySeconds(), DELTA);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void rejectsNegativeReallocationDelay() {
+		NetworkSlicing.parseConfiguration("70,30", "50,50",
+			NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC, -1.0);
 	}
 
 	@Test

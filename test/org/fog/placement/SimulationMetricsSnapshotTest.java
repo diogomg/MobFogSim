@@ -18,6 +18,7 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
@@ -35,6 +36,7 @@ public class SimulationMetricsSnapshotTest {
 		Log.disable();
 		CloudSim.init(1, Calendar.getInstance(), false);
 		NetworkUsageMonitor.reset();
+		NetworkSlicing.useDefaultRuntimeState();
 		statistics = new MyStatistics();
 		timeKeeper = TimeKeeper.getInstance();
 		timeKeeper.setLoopIdToTupleIds(
@@ -63,6 +65,9 @@ public class SimulationMetricsSnapshotTest {
 		assertEquals(0.0, snapshot.perSimulationMillisecond(123.0), DELTA);
 		assertEquals(0.0,
 			snapshot.getStatistics().getLostTuplePercentage(), DELTA);
+		assertEquals(0L, snapshot.getSliceReconfigurationCount());
+		assertEquals(0.0, snapshot.getSliceOutageSeconds(), DELTA);
+		assertEquals(0.0, snapshot.getReceivedBandwidthBySlice().get(0), DELTA);
 		assertTrue(snapshot.getLoopTimings().isEmpty());
 	}
 

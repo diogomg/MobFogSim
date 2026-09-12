@@ -176,9 +176,9 @@ public class ReferenceSimulationGoldenTest {
 
 		private SimulationConfig configuration(Path outputDirectory) {
 			return SimulationConfig.parse(new String[] {
-				migrationEnabled ? "1" : "0", "290538", "0", "0", "1",
-				"11", Integer.toString(migrationPolicy), "61", "0", "0",
-				"2", "100", "100", "1", "2", "none"
+					migrationEnabled ? "1" : "0", "290538", "0", "0", "1",
+					"11", Integer.toString(migrationPolicy), "61", "0", "0",
+					"2", "100", "100", "1", "0", "2", "none"
 			}).withOutputDirectory(outputDirectory);
 		}
 

@@ -18,7 +18,7 @@ import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 /** Immutable, fully validated command-line configuration for one simulation. */
 public final class SimulationConfig {
 	private static final int REQUIRED_PARAMETER_COUNT = 10;
-	private static final int MAXIMUM_PARAMETER_COUNT = 16;
+	private static final int MAXIMUM_PARAMETER_COUNT = 17;
 	private static final DateTimeFormatter RUN_DIRECTORY_TIMESTAMP =
 		DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
@@ -74,7 +74,7 @@ public final class SimulationConfig {
 		}
 		if (args.length > MAXIMUM_PARAMETER_COUNT) {
 			throw new IllegalArgumentException(
-				"AppExample accepts at most sixteen simulation parameters");
+				"AppExample accepts at most seventeen simulation parameters");
 		}
 
 		boolean migrationEnabled = parseFlag(args, 0, "Migration enabled");
@@ -109,20 +109,25 @@ public final class SimulationConfig {
 		NetworkSlicing.Mode slicingMode = args.length <= 13
 			|| parseFlag(args, 13, "Dynamic slicing")
 			? NetworkSlicing.Mode.DYNAMIC : NetworkSlicing.Mode.FIXED;
+		double reallocationDelaySeconds = args.length > 14
+			? requireNonNegativeFinite(
+				parseDouble(args, 14, "Network slice reallocation delay"),
+				"Network slice reallocation delay")
+			: NetworkSlicing.DEFAULT_REALLOCATION_DELAY_SECONDS;
 		NetworkSlicing.Configuration slicingConfiguration =
 			NetworkSlicing.parseConfiguration(bandwidthAllocation, userAllocation,
-				scope, slicingMode);
+				scope, slicingMode, reallocationDelaySeconds);
 
-		VmDestinationPolicy.Destination vmDestinationPolicy = args.length > 14
+		VmDestinationPolicy.Destination vmDestinationPolicy = args.length > 15
 			? VmDestinationPolicy.Destination.fromLegacy(
-				parseInteger(args, 14, "VM destination policy"))
+				parseInteger(args, 15, "VM destination policy"))
 			: VmDestinationPolicy.Destination.HYBRID;
 
 		Path mobilityDirectory = Paths.get("input");
 		Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
 		Path outputDirectory = defaultOutputDirectory(seed);
-		RunOutputMode outputMode = args.length > 15
-			? RunOutputMode.parse(args[15]) : RunOutputMode.SUMMARY;
+		RunOutputMode outputMode = args.length > 16
+			? RunOutputMode.parse(args[16]) : RunOutputMode.SUMMARY;
 
 		return new SimulationConfig(migrationEnabled, seed, migrationPointPolicy,
 			migrationStrategyPolicy, maximumUsers, maximumBandwidth,
@@ -198,6 +203,15 @@ public final class SimulationConfig {
 		if (!Double.isFinite(value) || value <= 0.0) {
 			throw new IllegalArgumentException(
 				description + " must be finite and positive");
+		}
+		return value;
+	}
+
+	private static double requireNonNegativeFinite(double value,
+		String description) {
+		if (!Double.isFinite(value) || value < 0.0) {
+			throw new IllegalArgumentException(
+				description + " must be finite and non-negative");
 		}
 		return value;
 	}
@@ -301,6 +315,8 @@ public final class SimulationConfig {
 				slicingConfiguration.getBandwidthPercentages())
 			+ "; sliceMode="
 			+ (slicingConfiguration.getMode().allowsDynamicBorrowing() ? 1 : 0)
+			+ "; reallocationDelay=" + plainNumber(
+				slicingConfiguration.getReallocationDelaySeconds())
 			+ "; vmDestination=" + vmDestinationPolicy.legacyValue()
 			+ "; outputMode=" + outputMode.name().toLowerCase(Locale.ENGLISH);
 	}

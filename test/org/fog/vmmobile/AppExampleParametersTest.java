@@ -22,6 +22,7 @@ public class AppExampleParametersTest {
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
 		NetworkSlicing.setDynamicBorrowing(true);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 		VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
 		AppExample.setMobilityDirectory(Paths.get("input"));
 		AppExample.setMobilityOrderManifest(Paths.get("input", "inputOrder.csv"));
@@ -33,7 +34,7 @@ public class AppExampleParametersTest {
 	public void readsParametersInReadmeOrder() {
 		AppExample.configureSimulationParameters(new String[] {
 			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
-			"1", "10,20,30,40", "40,30,20,10", "0", "1"
+			"1", "10,20,30,40", "40,30,20,10", "0", "2.5", "1", "summary"
 		});
 
 		assertTrue(AppExample.isMigrationAble());
@@ -54,6 +55,7 @@ public class AppExampleParametersTest {
 		assertEquals(40.0, NetworkSlicing.getUserAllocationPercentage(3), DELTA);
 		assertEquals(4, NetworkSlicing.getUserAllocations(10)[3]);
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
+		assertEquals(2.5, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
 		assertFalse(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 	}
@@ -70,6 +72,7 @@ public class AppExampleParametersTest {
 		assertEquals(100.0, NetworkSlicing.getPercentage(0), DELTA);
 		assertEquals(100.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
 		assertTrue(NetworkSlicing.isDynamicBorrowing());
+		assertEquals(2.0, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
 		assertTrue(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 	}
@@ -93,7 +96,7 @@ public class AppExampleParametersTest {
 	public void readsExplicitOutputMode() {
 		AppExample.configureSimulationParameters(new String[] {
 			"1", "123", "0", "0", "1", "11", "0", "61", "0", "0",
-			"2", "100", "100", "1", "2", "FuLl"
+			"2", "100", "100", "1", "0", "2", "FuLl"
 		});
 
 		assertEquals(RunOutputMode.FULL, AppExample.getOutputMode());
@@ -103,14 +106,15 @@ public class AppExampleParametersTest {
 	public void summarizesEveryEffectiveParameterOnOneLine() {
 		SimulationConfig configuration = SimulationConfig.parse(new String[] {
 			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
-			"1", "10,20,30,40", "40,30,20,10", "0", "1", "full"
+			"1", "10,20,30,40", "40,30,20,10", "0", "2.5", "1", "full"
 		});
 
 		assertEquals("Simulation parameters: migration=1; seed=123; "
 			+ "migrationPoint=1; migrationStrategy=2; users=10; bandwidth=11; "
 			+ "migrationPolicy=2; cloudletLatency=61.5; travelPrediction=12; "
 			+ "predictionError=34; sliceScope=1; userAllocation=10,20,30,40; "
-			+ "bandwidthAllocation=40,30,20,10; sliceMode=0; vmDestination=1; "
+			+ "bandwidthAllocation=40,30,20,10; sliceMode=0; "
+			+ "reallocationDelay=2.5; vmDestination=1; "
 			+ "outputMode=full", configuration.toSummaryLine());
 	}
 
@@ -132,8 +136,8 @@ public class AppExampleParametersTest {
 	@Test
 	public void rejectsParametersAfterOutputOptionsWithoutApplyingThem() {
 		AppExample.configureSimulationParameters(baselineArguments());
-		String[] invalid = Arrays.copyOf(changedArguments(), 17);
-		invalid[16] = "unexpected";
+		String[] invalid = Arrays.copyOf(changedArguments(), 18);
+		invalid[17] = "unexpected";
 
 		assertConfigurationRejected(invalid);
 
@@ -146,7 +150,7 @@ public class AppExampleParametersTest {
 
 		for (String unsupportedMode : new String[] { "input", "sampled", "verbose" }) {
 			String[] invalid = changedArguments();
-			invalid[15] = unsupportedMode;
+			invalid[16] = unsupportedMode;
 			assertConfigurationRejected(invalid);
 			assertBaselineConfiguration();
 		}
@@ -167,6 +171,20 @@ public class AppExampleParametersTest {
 	}
 
 	@Test
+	public void rejectsInvalidReallocationDelaysWithoutApplyingArguments() {
+		AppExample.configureSimulationParameters(baselineArguments());
+
+		for (String invalidDelay : new String[] {
+			"-1", "NaN", "Infinity", "-Infinity"
+		}) {
+			String[] invalid = changedArguments();
+			invalid[14] = invalidDelay;
+			assertConfigurationRejected(invalid);
+			assertBaselineConfiguration();
+		}
+	}
+
+	@Test
 	public void invalidSlicingPercentagesDoNotApplyEarlierParameters() {
 		AppExample.configureSimulationParameters(baselineArguments());
 		String[] invalid = changedArguments();
@@ -181,7 +199,7 @@ public class AppExampleParametersTest {
 	public void invalidLateParameterLeavesCompleteConfigurationUnchanged() {
 		AppExample.configureSimulationParameters(baselineArguments());
 		String[] invalid = changedArguments();
-		invalid[14] = "9";
+		invalid[15] = "9";
 
 		assertConfigurationRejected(invalid);
 
@@ -202,7 +220,7 @@ public class AppExampleParametersTest {
 			{ "9", "-1" },
 			{ "10", "3" },
 			{ "13", "2" },
-			{ "14", "3" }
+			{ "15", "3" }
 		};
 
 		for (String[] invalidValue : invalidValues) {
@@ -215,14 +233,14 @@ public class AppExampleParametersTest {
 	private static String[] baselineArguments() {
 		return new String[] {
 			"1", "123", "1", "2", "10", "11", "2", "61.5", "12", "34",
-			"1", "60,40", "70,30", "0", "1", "full"
+			"1", "60,40", "70,30", "0", "1.25", "1", "full"
 		};
 	}
 
 	private static String[] changedArguments() {
 		return new String[] {
 			"0", "999", "0", "0", "3", "99", "0", "77", "1", "2",
-			"0", "50,50", "50,50", "1", "2", "none"
+			"0", "50,50", "50,50", "1", "3.5", "2", "none"
 		};
 	}
 
@@ -252,6 +270,7 @@ public class AppExampleParametersTest {
 		assertEquals(70.0, NetworkSlicing.getPercentage(0), DELTA);
 		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
+		assertEquals(1.25, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
 		assertFalse(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 		assertEquals(Paths.get("input"), AppExample.getMobilityDirectory());

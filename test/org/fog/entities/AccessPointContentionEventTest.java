@@ -48,6 +48,7 @@ public class AccessPointContentionEventTest {
 		NetworkSlicing.configure("70,30");
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 		MobileController.setRand(new Random(1L));
 		server = new RecordingServer("server");
 		accessPoint = new ApDevice("ap", 0, 0, 0);
@@ -61,6 +62,7 @@ public class AccessPointContentionEventTest {
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 		NetworkUsageMonitor.reset();
 	}
 
@@ -102,6 +104,33 @@ public class AccessPointContentionEventTest {
 		assertEquals(2010.0, server.arrivalTime(2), DELTA);
 		assertEquals(2.0 * TUPLE_BYTES * PROPAGATION_DELAY_MILLIS,
 			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
+		assertEquals(4L, NetworkSlicing.getReconfigurationCount());
+		assertEquals(0.0, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		double[] receivedBandwidth =
+			NetworkSlicing.getReceivedBandwidthBySlice();
+		assertEquals(13600.0, receivedBandwidth[0], DELTA);
+		assertEquals(10400.0, receivedBandwidth[1], DELTA);
+	}
+
+	@Test
+	public void wirelessDynamicAllocationIncludesReallocationDelay() {
+		NetworkSlicing.setReallocationDelaySeconds(1.0);
+		RecordingMobile mobile = connect("delayed", 0);
+		Tuple tuple = tuple(1, Tuple.UP);
+		new ActionHarness("harness", new Runnable() {
+			@Override
+			public void run() {
+				mobile.emitUp(tuple);
+			}
+		});
+
+		runUntil(2500.0);
+
+		assertEquals(2010.0, server.arrivalTime(1), DELTA);
+		assertEquals(2L, NetworkSlicing.getReconfigurationCount());
+		assertEquals(2.0, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		assertEquals(BANDWIDTH_BITS_PER_SECOND,
+			NetworkSlicing.getReceivedBandwidthBySlice()[0], DELTA);
 	}
 
 	@Test
@@ -123,6 +152,7 @@ public class AccessPointContentionEventTest {
 
 		assertEquals(1000.0 * 8.0 * 1000.0 / 2400.0
 			+ PROPAGATION_DELAY_MILLIS, server.arrivalTime(2), DELTA);
+		assertEquals(0L, NetworkSlicing.getReconfigurationCount());
 	}
 
 	@Test

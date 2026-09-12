@@ -154,7 +154,7 @@ public class AppExample {
 		 *  
 		 *  Example parameters
 		 *  
-		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2 summary
+		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2.5 2 summary
 		 *  
 		 *  First parameter: 0/1 -> migrations are denied or allowed
 		 *  Second parameter: Positive Integer -> seed to be used in the random numbers generation
@@ -171,8 +171,10 @@ public class AppExample {
 		 *  Twelfth parameter: Comma-separated percentages of users assigned to each slice.
 		 *  Thirteenth parameter: Comma-separated network-slice bandwidth percentages.
 		 *  Fourteenth parameter: 0 for fixed slices or 1 to borrow idle slice capacity.
-		 *  Fifteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
-		 *  Sixteenth parameter: summary, full, or none output mode
+		 *  Fifteenth parameter: Dynamic slice reallocation delay in seconds
+		 *  (default: 2).
+		 *  Sixteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
+		 *  Seventeenth parameter: summary, full, or none output mode
 		 *  (default: summary).
 		 */
 

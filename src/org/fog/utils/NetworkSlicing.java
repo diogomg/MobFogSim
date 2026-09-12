@@ -24,12 +24,16 @@ import org.fog.entities.Tuple;
  * independently for each AP direction from active tuple transfers. Idle
  * associated users consume no capacity; in dynamic mode, active slices borrow
  * reservations belonging to slices with no active flow on that AP direction.
+ * A configured reallocation delay pauses all transfers on an affected sliced
+ * resource while a changed active-slice allocation is installed.
  */
 public final class NetworkSlicing {
 
 	public static final int TRANSPORT_NETWORK = 0;
 	public static final int WIRELESS_NETWORK = 1;
 	public static final int END_TO_END_NETWORK = 2;
+	public static final double DEFAULT_REALLOCATION_DELAY_SECONDS = 2.0;
+	private static final double MILLISECONDS_PER_SECOND = 1000.0;
 
 	private static RuntimeState activeState = RuntimeState.defaults();
 
@@ -104,16 +108,20 @@ public final class NetworkSlicing {
 		private final double[] userPercentages;
 		private final Mode mode;
 		private final Scope scope;
+		private final double reallocationDelaySeconds;
 
 		private Configuration(double[] bandwidthPercentages,
-			double[] userPercentages, Scope scope, Mode mode) {
+			double[] userPercentages, Scope scope, Mode mode,
+			double reallocationDelaySeconds) {
 			this.bandwidthPercentages = bandwidthPercentages.clone();
 			this.userPercentages = userPercentages.clone();
 			if (scope == null || mode == null) {
 				throw new IllegalArgumentException("Slicing scope and mode cannot be null");
 			}
+			validateReallocationDelay(reallocationDelaySeconds);
 			this.scope = scope;
 			this.mode = mode;
+			this.reallocationDelaySeconds = reallocationDelaySeconds;
 		}
 
 		public Scope getScope() {
@@ -131,6 +139,11 @@ public final class NetworkSlicing {
 		public double[] getUserPercentages() {
 			return userPercentages.clone();
 		}
+
+		/** Time required to apply a dynamic slice allocation, in seconds. */
+		public double getReallocationDelaySeconds() {
+			return reallocationDelaySeconds;
+		}
 	}
 
 	/** Mutable schedulers and transfer registries owned by one simulation run. */
@@ -139,6 +152,8 @@ public final class NetworkSlicing {
 		private double[] userAllocationPercentages;
 		private Mode mode;
 		private Scope scope;
+		private double reallocationDelayMillis;
+		private final SliceReconfigurationMetrics reconfigurationMetrics;
 		private final Map<Integer, MigrationTransferMetadata> migrationTransfers =
 			new HashMap<Integer, MigrationTransferMetadata>();
 		private MigrationTransferScheduler migrationScheduler;
@@ -156,15 +171,22 @@ public final class NetworkSlicing {
 			userAllocationPercentages = configuration.userPercentages.clone();
 			mode = configuration.mode;
 			scope = configuration.scope;
+			reallocationDelayMillis = toMilliseconds(
+				configuration.reallocationDelaySeconds);
+			reconfigurationMetrics =
+				new SliceReconfigurationMetrics(percentages.length);
 			migrationScheduler = new MigrationTransferScheduler(percentages,
-				scope.coversTransportNetwork(), mode.allowsDynamicBorrowing());
+				scope.coversTransportNetwork(), mode.allowsDynamicBorrowing(),
+				reallocationDelayMillis, reconfigurationMetrics);
 			wirelessScheduler = new AccessPointTransferScheduler(percentages,
-				scope.coversWirelessNetwork(), mode.allowsDynamicBorrowing());
+				scope.coversWirelessNetwork(), mode.allowsDynamicBorrowing(),
+				reallocationDelayMillis, reconfigurationMetrics);
 		}
 
 		private static RuntimeState defaults() {
 			return new RuntimeState(new Configuration(new double[] { 100.0 },
-				new double[] { 100.0 }, Scope.END_TO_END, Mode.DYNAMIC));
+				new double[] { 100.0 }, Scope.END_TO_END, Mode.DYNAMIC,
+				DEFAULT_REALLOCATION_DELAY_SECONDS));
 		}
 	}
 
@@ -230,6 +252,7 @@ public final class NetworkSlicing {
 		private final MobileDevice mobileDevice;
 		private final double transferredBytes;
 		private final double transferDurationMillis;
+		private final double reallocationDelayMillis;
 		private final double fixedDelayMillis;
 
 		private MigrationTransferResult(MigrationTransferMetadata metadata,
@@ -237,6 +260,8 @@ public final class NetworkSlicing {
 			this.mobileDevice = metadata.spec.getMobileDevice();
 			this.transferredBytes = completion.getTransferredBytes();
 			this.transferDurationMillis = completion.getDuration();
+			this.reallocationDelayMillis =
+				completion.getReallocationDelayDuration();
 			this.fixedDelayMillis = metadata.spec.getFixedDelayMillis();
 		}
 
@@ -248,8 +273,20 @@ public final class NetworkSlicing {
 			return transferredBytes;
 		}
 
+		/** Wall-clock byte-transfer phase, including reallocation pauses. */
 		public double getTransferDurationMillis() {
 			return transferDurationMillis;
+		}
+
+		/** Portion of the transfer phase spent paused for slice reallocation. */
+		public double getReallocationDelayMillis() {
+			return reallocationDelayMillis;
+		}
+
+		/** Time during which bytes actually traversed the transport link. */
+		public double getDataTransferDurationMillis() {
+			return Math.max(0.0,
+				transferDurationMillis - reallocationDelayMillis);
 		}
 
 		public double getFixedDelayMillis() {
@@ -369,7 +406,7 @@ public final class NetworkSlicing {
 	 */
 	public static void configure(String percentageList) {
 		applyConfiguration(parseConfiguration(percentageList, null, state().scope,
-			state().mode));
+			state().mode, getReallocationDelaySeconds()));
 	}
 
 	/**
@@ -379,15 +416,35 @@ public final class NetworkSlicing {
 		String userPercentageList, int selectedScope, boolean useDynamicBorrowing) {
 		return parseConfiguration(bandwidthPercentageList, userPercentageList,
 			Scope.fromLegacy(selectedScope),
-			Mode.fromDynamicBorrowing(useDynamicBorrowing));
+			Mode.fromDynamicBorrowing(useDynamicBorrowing),
+			DEFAULT_REALLOCATION_DELAY_SECONDS);
+	}
+
+	/** Parses every slicing option, including reallocation delay in seconds. */
+	public static Configuration parseConfiguration(String bandwidthPercentageList,
+		String userPercentageList, int selectedScope, boolean useDynamicBorrowing,
+		double reallocationDelaySeconds) {
+		return parseConfiguration(bandwidthPercentageList, userPercentageList,
+			Scope.fromLegacy(selectedScope),
+			Mode.fromDynamicBorrowing(useDynamicBorrowing),
+			reallocationDelaySeconds);
 	}
 
 	/** Parses typed slicing options without changing global slicing state. */
 	public static Configuration parseConfiguration(String bandwidthPercentageList,
 		String userPercentageList, Scope selectedScope, Mode selectedMode) {
+		return parseConfiguration(bandwidthPercentageList, userPercentageList,
+			selectedScope, selectedMode, DEFAULT_REALLOCATION_DELAY_SECONDS);
+	}
+
+	/** Parses typed slicing options, including reallocation delay in seconds. */
+	public static Configuration parseConfiguration(String bandwidthPercentageList,
+		String userPercentageList, Scope selectedScope, Mode selectedMode,
+		double reallocationDelaySeconds) {
 		if (selectedScope == null || selectedMode == null) {
 			throw new IllegalArgumentException("Slicing scope and mode cannot be null");
 		}
+		validateReallocationDelay(reallocationDelaySeconds);
 		double[] parsedBandwidthPercentages = parsePercentagesOrDefault(
 			bandwidthPercentageList, "Network slice");
 		double[] parsedUserPercentages;
@@ -403,7 +460,7 @@ public final class NetworkSlicing {
 			}
 		}
 		return new Configuration(parsedBandwidthPercentages, parsedUserPercentages,
-			selectedScope, selectedMode);
+			selectedScope, selectedMode, reallocationDelaySeconds);
 	}
 
 	/** Applies one already validated slicing configuration in a single update. */
@@ -415,6 +472,8 @@ public final class NetworkSlicing {
 		state().userAllocationPercentages = configuration.userPercentages.clone();
 		state().mode = configuration.mode;
 		state().scope = configuration.scope;
+		state().reallocationDelayMillis = toMilliseconds(
+			configuration.reallocationDelaySeconds);
 		resetUsage();
 	}
 
@@ -484,6 +543,36 @@ public final class NetworkSlicing {
 
 	public static Scope getTypedScope() {
 		return state().scope;
+	}
+
+	/** Sets the dynamic slice reallocation penalty, in seconds. */
+	public static void setReallocationDelaySeconds(double seconds) {
+		validateReallocationDelay(seconds);
+		state().reallocationDelayMillis = toMilliseconds(seconds);
+		resetUsage();
+	}
+
+	/** Returns the dynamic slice reallocation penalty, in seconds. */
+	public static double getReallocationDelaySeconds() {
+		return state().reallocationDelayMillis / MILLISECONDS_PER_SECOND;
+	}
+
+	/** Number of dynamic active-slice allocation changes in this run. */
+	public static synchronized long getReconfigurationCount() {
+		return state().reconfigurationMetrics.getReconfigurationCount();
+	}
+
+	/** Aggregate configured outage across all reconfigurations, in seconds. */
+	public static synchronized double getSliceOutageSeconds() {
+		return getReconfigurationCount() * getReallocationDelaySeconds();
+	}
+
+	/**
+	 * Per-slice sum of bandwidth allocated at each reconfiguration, in bits per
+	 * second. Transport links and wireless AP directions are combined.
+	 */
+	public static synchronized double[] getReceivedBandwidthBySlice() {
+		return state().reconfigurationMetrics.getReceivedBandwidthBySlice();
 	}
 
 	public static boolean coversTransportNetwork() {
@@ -799,7 +888,7 @@ public final class NetworkSlicing {
 			transferResult.getTotalDurationMillis());
 		NetworkUsageMonitor.recordCompletedMigration(
 			transferResult.getTransferredBytes(),
-			transferResult.getTransferDurationMillis());
+			transferResult.getDataTransferDurationMillis());
 		applySchedules(result.getSchedules());
 		return transferResult;
 	}
@@ -1018,6 +1107,18 @@ public final class NetworkSlicing {
 		return value;
 	}
 
+	private static void validateReallocationDelay(double seconds) {
+		validateNonNegativeFinite(seconds, "Network slice reallocation delay");
+		if (!Double.isFinite(seconds * MILLISECONDS_PER_SECOND)) {
+			throw new IllegalArgumentException(
+				"Network slice reallocation delay is too large");
+		}
+	}
+
+	private static double toMilliseconds(double seconds) {
+		return seconds * MILLISECONDS_PER_SECOND;
+	}
+
 	private static void resetUsage() {
 		if (CloudSim.running()) {
 			for (Map.Entry<Integer, MigrationTransferMetadata> entry
@@ -1030,15 +1131,18 @@ public final class NetworkSlicing {
 			}
 		}
 		state().migrationTransfers.clear();
+		state().reconfigurationMetrics.reset(state().percentages.length);
 		state().migrationScheduler = new MigrationTransferScheduler(
 			state().percentages, coversTransportNetwork(),
-			state().mode.allowsDynamicBorrowing());
+			state().mode.allowsDynamicBorrowing(),
+			state().reallocationDelayMillis, state().reconfigurationMetrics);
 		state().wirelessTransfers.clear();
 		state().activeWirelessTransfers.clear();
 		state().queuedWirelessTransfers.clear();
 		state().wirelessScheduler = new AccessPointTransferScheduler(
 			state().percentages, coversWirelessNetwork(),
-			state().mode.allowsDynamicBorrowing());
+			state().mode.allowsDynamicBorrowing(),
+			state().reallocationDelayMillis, state().reconfigurationMetrics);
 		state().nextWirelessTransferId = 1L;
 	}
 

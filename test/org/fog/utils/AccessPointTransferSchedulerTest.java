@@ -95,6 +95,37 @@ public class AccessPointTransferSchedulerTest {
 			schedule(downlink, 2L).getBandwidthBitsPerSecond(), DELTA);
 	}
 
+	@Test
+	public void reallocationDelayPausesEveryTransferOnTheAffectedDynamicChannel() {
+		AccessPointTransferScheduler scheduler = new AccessPointTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, true, 100.0);
+
+		List<AccessPointTransferScheduler.Schedule> borrowed = scheduler.start(
+			1L, UPLINK, 1, 1000.0, 8000.0, 8000.0, 0.0);
+		assertEquals(1100.0,
+			schedule(borrowed, 1L).getDelayMillis(), DELTA);
+
+		List<AccessPointTransferScheduler.Schedule> reallocated = scheduler.start(
+			2L, UPLINK, 0, 1000.0, 8000.0, 8000.0, 50.0);
+
+		assertEquals(100.0 + 1000.0 * 8.0 * 1000.0 / 2400.0,
+			schedule(reallocated, 1L).getDelayMillis(), DELTA);
+		assertEquals(100.0 + 1000.0 * 8.0 * 1000.0 / 5600.0,
+			schedule(reallocated, 2L).getDelayMillis(), DELTA);
+	}
+
+	@Test
+	public void unslicedWirelessIgnoresConfiguredReallocationDelay() {
+		AccessPointTransferScheduler scheduler = new AccessPointTransferScheduler(
+			new double[] { 70.0, 30.0 }, false, true, 100.0);
+
+		List<AccessPointTransferScheduler.Schedule> schedules = scheduler.start(
+			1L, UPLINK, 0, 1000.0, 8000.0, 8000.0, 0.0);
+
+		assertEquals(1000.0,
+			schedule(schedules, 1L).getDelayMillis(), DELTA);
+	}
+
 	private static AccessPointTransferScheduler scheduler(boolean slicing,
 		boolean dynamic) {
 		return new AccessPointTransferScheduler(new double[] { 70.0, 30.0 },

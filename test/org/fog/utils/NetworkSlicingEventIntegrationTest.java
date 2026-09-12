@@ -39,6 +39,7 @@ public class NetworkSlicingEventIntegrationTest {
 		NetworkSlicing.configure("70,30");
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 		NetworkUsageMonitor.reset();
 
 		source = cloudlet("source", 1000.0, 1000.0);
@@ -52,6 +53,7 @@ public class NetworkSlicingEventIntegrationTest {
 		NetworkSlicing.configure(null);
 		NetworkSlicing.setDynamicBorrowing(true);
 		NetworkSlicing.setScope(NetworkSlicing.END_TO_END_NETWORK);
+		NetworkSlicing.setReallocationDelaySeconds(0.0);
 	}
 
 	@Test
@@ -89,6 +91,28 @@ public class NetworkSlicingEventIntegrationTest {
 			NetworkUsageMonitor.getMigrationTransferredBytes(), DELTA);
 		assertEquals(0.0,
 			NetworkUsageMonitor.getMigrationUsageByteMilliseconds(), DELTA);
+	}
+
+	@Test
+	public void transportDynamicAllocationIncludesReallocationDelay() {
+		NetworkSlicing.setReallocationDelaySeconds(0.1);
+		SingleTransferHarness harness = new SingleTransferHarness(
+			"singleTransferHarness", source, destination, first);
+		CloudSim.terminateSimulation(220.0);
+
+		CloudSim.startSimulation();
+
+		assertEquals(170.0, harness.transferCompletionTime, DELTA);
+		assertEquals(100.0, harness.reallocationDelayMillis, DELTA);
+		assertEquals(195.0, first.getMigTime(), DELTA);
+		assertEquals(TRANSFER_BYTES * 70.0,
+			NetworkUsageMonitor.getMigrationUsageByteMilliseconds(), DELTA);
+		assertEquals(2L, NetworkSlicing.getReconfigurationCount());
+		assertEquals(0.2, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		assertEquals(800.0,
+			NetworkSlicing.getReceivedBandwidthBySlice()[0], DELTA);
+		assertEquals(0.0,
+			NetworkSlicing.getReceivedBandwidthBySlice()[1], DELTA);
 	}
 
 	private static final class TransferHarness extends SimEntity {
@@ -190,6 +214,47 @@ public class NetworkSlicingEventIntegrationTest {
 		public void processEvent(SimEvent event) {
 			if (event.getTag() == START_FIRST) {
 				NetworkSlicing.releaseBandwidth(mobileDevice);
+			}
+		}
+
+		@Override
+		public void shutdownEntity() {
+		}
+	}
+
+	private static final class SingleTransferHarness extends SimEntity {
+		private final FogDevice source;
+		private final FogDevice destination;
+		private final MobileDevice mobileDevice;
+		private double transferCompletionTime = -1.0;
+		private double reallocationDelayMillis = -1.0;
+
+		private SingleTransferHarness(String name, FogDevice source,
+			FogDevice destination, MobileDevice mobileDevice) {
+			super(name);
+			this.source = source;
+			this.destination = destination;
+			this.mobileDevice = mobileDevice;
+		}
+
+		@Override
+		public void startEntity() {
+			NetworkSlicing.startMigrationTransfer(new MigrationTransferSpec(source,
+				destination, mobileDevice, TRANSFER_BYTES, FIXED_DELAY_MILLIS,
+				0.0, getId(), TRANSFER_COMPLETE));
+		}
+
+		@Override
+		public void processEvent(SimEvent event) {
+			if (event.getTag() != TRANSFER_COMPLETE) {
+				return;
+			}
+			NetworkSlicing.MigrationTransferResult result =
+				NetworkSlicing.completeMigrationTransfer(
+					(NetworkSlicing.MigrationTransferCompletion) event.getData());
+			if (result != null) {
+				transferCompletionTime = CloudSim.clock();
+				reallocationDelayMillis = result.getReallocationDelayMillis();
 			}
 		}
 

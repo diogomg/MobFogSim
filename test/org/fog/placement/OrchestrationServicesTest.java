@@ -5,6 +5,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -20,13 +24,18 @@ import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.localization.Coordinate;
 import org.fog.localization.MobilitySample;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.utils.NetworkSlicing;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class OrchestrationServicesTest {
+	@Rule
+	public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
 	@Before
 	public void initializeCloudSim() {
@@ -36,6 +45,7 @@ public class OrchestrationServicesTest {
 			Paths.get("build", "test-output", "orchestration-services"),
 			RunOutputMode.NONE);
 		NetworkUsageMonitor.reset();
+		NetworkSlicing.useDefaultRuntimeState();
 	}
 
 	@Test
@@ -91,5 +101,26 @@ public class OrchestrationServicesTest {
 			metrics, Collections.emptyMap());
 
 		assertEquals(0.0, metrics.getTotalUsageByteMilliseconds(), 0.0);
+	}
+
+	@Test
+	public void resultServiceWritesSliceMetricsInSummaryMode() throws IOException {
+		Path outputRoot = temporaryFolder.newFolder("slice-metrics").toPath();
+		RunOutputManager output = RunOutputManager.initialize(outputRoot,
+			RunOutputMode.SUMMARY);
+		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+			Collections.emptyList(), Collections.emptyList(),
+			Collections.emptyList(), new MyStatistics(), new TimeKeeper(), 0.0, 0L);
+
+		new SimulationResultsService(output).write(metrics, Collections.emptyMap());
+
+		assertEquals("0", read(outputRoot.resolve("sliceReconfigurations.txt")));
+		assertEquals("0.0", read(outputRoot.resolve("sliceOutage.txt")));
+		assertEquals("0=0.0",
+			read(outputRoot.resolve("sliceReceivedBandwidth.txt")));
+	}
+
+	private static String read(Path path) throws IOException {
+		return new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
 	}
 }

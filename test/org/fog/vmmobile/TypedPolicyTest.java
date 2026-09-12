@@ -32,7 +32,7 @@ public class TypedPolicyTest {
 	public void commandLinePoliciesAreTypedAfterParsing() {
 		SimulationConfig configuration = SimulationConfig.parse(new String[] {
 			"1", "7", "1", "2", "3", "11", "1", "61", "60", "5",
-			"1", "50,50", "70,30", "0", "1", "none"
+			"1", "50,50", "70,30", "0", "0", "1", "none"
 		});
 
 		assertEquals(MigrationPointPolicy.SPEED,
