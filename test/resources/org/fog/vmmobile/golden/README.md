@@ -11,11 +11,12 @@ seventh arguments varied as shown.
 | Container migration | `1 290538 0 0 1 11 1 61 0 0 2 100 100 1 0 2 none` |
 | Live migration | `1 290538 0 0 1 11 2 61 0 0 2 100 100 1 0 2 none` |
 
-Schema version 3 sorts all fields, formats numbers independently of the
+Schema version 4 sorts all fields, formats numbers independently of the
 machine locale, and rounds floating-point results to nine decimal places. It
 excludes wall-clock execution time, output paths, and CloudSim entity IDs.
 It includes the configured wireless FIFO limit plus final, maximum, and dropped
-tuple queue metrics.
+tuple queue metrics. Version 4 removes the unused distinct-cloudlets-reached
+counter.
 Each characterisation file combines that semantic snapshot with separate event
 measurements. Event totals count occurrences that the CloudSim core actually
 dispatched; events left queued at termination are excluded. Device energy rows

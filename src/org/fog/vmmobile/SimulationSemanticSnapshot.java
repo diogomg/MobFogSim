@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 3;
+	public static final int SCHEMA_VERSION = 4;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;
@@ -168,8 +168,6 @@ public final class SimulationSemanticSnapshot {
 		put(values, "statistics.output_label", statistics.getOutputLabel());
 		put(values, "statistics.migrations", statistics.getTotalMigrations());
 		put(values, "statistics.handoffs", statistics.getTotalHandoffs());
-		put(values, "statistics.distinct_cloudlets_reached",
-			statistics.getDistinctCloudletsReached());
 		put(values, "statistics.tuples.lost", statistics.getLostTuples());
 		put(values, "statistics.tuples.total", statistics.getTotalTuples());
 		put(values, "statistics.tuples.lost_percentage",

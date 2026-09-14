@@ -32,7 +32,6 @@ public class MyStatistics {
 	private int seed;
 	private Map<Integer, Double> tupleLatency;
 	private int myCountTuple;
-	private int myCountLowestLatency;
 	private int totalHandoff;
 
 	private Map<Integer, Double> withoutConnectionTime;
@@ -74,7 +73,6 @@ public class MyStatistics {
 		myCountWithoutVmTime = 0;
 		myCountDelayAfterNewConnection = 0;
 		myCountMigrationTime = 0;
-		myCountLowestLatency = 0;
 		myCountDowntime = 0;
 		myCount = new HashMap<Integer, Integer>();
 		myCountTotalTuple = 0L;
@@ -211,10 +209,6 @@ public class MyStatistics {
 	public void recordPowerAndEnergy(int id, double power, double energy) {
 		powerHistory.put(id, power);
 		energyHistory.put(id, energy);
-	}
-
-	public void incrementLowestLatencyCloudletCount() {
-		myCountLowestLatency++;
 	}
 
 	public void incrementHandoffCount() {
@@ -574,14 +568,6 @@ public class MyStatistics {
 
 	public void setToPrint(String toPrint) {
 		this.toPrint = toPrint;
-	}
-
-	public int getMyCountLowestLatency() {
-		return myCountLowestLatency;
-	}
-
-	public void setMyCountLowestLatency(int myCountLowestLatency) {
-		this.myCountLowestLatency = myCountLowestLatency;
 	}
 
 	public int getTotalHandoff() {

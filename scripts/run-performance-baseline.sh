@@ -69,7 +69,7 @@ physical_memory_kib=$(awk '/MemTotal/ { print $2; exit }' /proc/meminfo \
 java_runtime=$(java -version 2>&1 | awk 'NR == 1 { print; exit }')
 
 {
-	printf 'benchmark_schema_version=2\n'
+	printf 'benchmark_schema_version=4\n'
 	printf 'created_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 	printf 'git_commit=%s\n' "${git_commit}"
 	printf 'git_worktree_dirty=%s\n' "${git_worktree_dirty}"

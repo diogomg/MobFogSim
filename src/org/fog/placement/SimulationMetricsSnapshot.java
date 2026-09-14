@@ -131,7 +131,6 @@ public final class SimulationMetricsSnapshot {
 		private final String outputLabel;
 		private final int totalMigrations;
 		private final int totalHandoffs;
-		private final int distinctCloudletsReached;
 		private final long lostTuples;
 		private final long totalTuples;
 		private final double lostTuplePercentage;
@@ -146,7 +145,6 @@ public final class SimulationMetricsSnapshot {
 			this.outputLabel = statistics.getToPrint();
 			this.totalMigrations = statistics.getTotalMigrations();
 			this.totalHandoffs = statistics.getTotalHandoff();
-			this.distinctCloudletsReached = statistics.getMyCountLowestLatency();
 			this.lostTuples = statistics.getMyCountLostTuple();
 			this.totalTuples = statistics.getMyCountTotalTuple();
 			this.lostTuplePercentage = totalTuples == 0L ? 0.0
@@ -183,10 +181,6 @@ public final class SimulationMetricsSnapshot {
 
 		public int getTotalHandoffs() {
 			return totalHandoffs;
-		}
-
-		public int getDistinctCloudletsReached() {
-			return distinctCloudletsReached;
 		}
 
 		public long getLostTuples() {

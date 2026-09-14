@@ -221,14 +221,10 @@ public final class SimulationResultsService {
 		System.out.println("=========================================");
 		System.out.println("Total of migrations: " + statistics.getTotalMigrations());
 		System.out.println("Total of handoff: " + statistics.getTotalHandoffs());
-		System.out.println("Different Cloudlets reached along the user's path: "
-			+ statistics.getDistinctCloudletsReached());
 		appendSummary(String.valueOf(statistics.getTotalMigrations()), "results.txt");
 		appendSummary(String.valueOf(statistics.getTotalHandoffs()), "results.txt");
 		appendSummary(String.valueOf(statistics.getTotalMigrations()),
 			"totalMigrations.txt");
-		appendSummary(String.valueOf(statistics.getDistinctCloudletsReached()),
-			"totalMyCountLowestLatency.txt");
 		appendSummary(String.valueOf(statistics.getTotalHandoffs()), "totalHandoff.txt");
 		writeStatisticsAverages(statistics);
 		writeObservation("without connection", statistics.getWithoutConnection());

@@ -188,8 +188,6 @@ public class SimulationContextIntegrationTest {
 		assertEquals(first.getOutputLabel(), second.getOutputLabel());
 		assertEquals(first.getTotalMigrations(), second.getTotalMigrations());
 		assertEquals(first.getTotalHandoffs(), second.getTotalHandoffs());
-		assertEquals(first.getDistinctCloudletsReached(),
-			second.getDistinctCloudletsReached());
 		assertEquals(first.getLostTuples(), second.getLostTuples());
 		assertEquals(first.getTotalTuples(), second.getTotalTuples());
 		assertMetricSeriesEqual(first.getWithoutConnection(),
