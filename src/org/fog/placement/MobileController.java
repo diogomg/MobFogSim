@@ -521,6 +521,15 @@ public class MobileController extends SimEntity {
 
 	private void finishMobileUser(MobileDevice mobileDevice) {
 		associationService.finish(mobileDevice);
+		retireApplication(mobileDevice);
+	}
+
+	private void retireApplication(MobileDevice mobileDevice) {
+		String applicationId = "MyApp_vr_game" + mobileDevice.getMyId();
+		for (FogDevice serverCloudlet : getServerCloudlets()) {
+			serverCloudlet.removeApplication(applicationId);
+		}
+		mobileDevice.removeApplication(applicationId);
 	}
 
 	private void registerMobileUser(MobileDevice mobileDevice) {

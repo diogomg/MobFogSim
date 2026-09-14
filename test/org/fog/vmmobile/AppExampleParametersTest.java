@@ -56,6 +56,8 @@ public class AppExampleParametersTest {
 		assertEquals(4, NetworkSlicing.getUserAllocations(10)[3]);
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
 		assertEquals(2.5, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
+		assertEquals(NetworkSlicing.DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE,
+			NetworkSlicing.getMaximumWirelessQueueSize());
 		assertFalse(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 	}
@@ -73,6 +75,8 @@ public class AppExampleParametersTest {
 		assertEquals(100.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
 		assertTrue(NetworkSlicing.isDynamicBorrowing());
 		assertEquals(2.0, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
+		assertEquals(NetworkSlicing.DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE,
+			NetworkSlicing.getMaximumWirelessQueueSize());
 		assertTrue(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 	}
@@ -115,7 +119,8 @@ public class AppExampleParametersTest {
 			+ "predictionError=34; sliceScope=1; userAllocation=10,20,30,40; "
 			+ "bandwidthAllocation=40,30,20,10; sliceMode=0; "
 			+ "reallocationDelay=2.5; vmDestination=1; "
-			+ "outputMode=full", configuration.toSummaryLine());
+			+ "outputMode=full",
+			configuration.toSummaryLine());
 	}
 
 	@Test
@@ -271,6 +276,8 @@ public class AppExampleParametersTest {
 		assertEquals(60.0, NetworkSlicing.getUserAllocationPercentage(0), DELTA);
 		assertFalse(NetworkSlicing.isDynamicBorrowing());
 		assertEquals(1.25, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
+		assertEquals(NetworkSlicing.DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE,
+			NetworkSlicing.getMaximumWirelessQueueSize());
 		assertFalse(VmDestinationPolicy.allowsEdgeServers());
 		assertTrue(VmDestinationPolicy.allowsEndDevices());
 		assertEquals(Paths.get("input"), AppExample.getMobilityDirectory());

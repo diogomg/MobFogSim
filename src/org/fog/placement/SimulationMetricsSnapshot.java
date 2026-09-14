@@ -242,6 +242,11 @@ public final class SimulationMetricsSnapshot {
 	private final long sliceReconfigurationCount;
 	private final double sliceOutageSeconds;
 	private final Map<Integer, Double> receivedBandwidthBySlice;
+	private final int maximumWirelessQueueSize;
+	private final long queuedWirelessTransferCount;
+	private final long maximumQueuedWirelessTransferCount;
+	private final int maximumWirelessQueueDepth;
+	private final long droppedWirelessTupleCount;
 	private final Statistics statistics;
 
 	private SimulationMetricsSnapshot(List<FogDevice> serverCloudlets,
@@ -278,6 +283,16 @@ public final class SimulationMetricsSnapshot {
 			NetworkSlicing.getSliceOutageSeconds());
 		this.receivedBandwidthBySlice = indexedDoubleMap(
 			NetworkSlicing.getReceivedBandwidthBySlice());
+		this.maximumWirelessQueueSize =
+			NetworkSlicing.getMaximumWirelessQueueSize();
+		this.queuedWirelessTransferCount =
+			NetworkSlicing.getQueuedWirelessTransferCount();
+		this.maximumQueuedWirelessTransferCount =
+			NetworkSlicing.getMaximumQueuedWirelessTransferCount();
+		this.maximumWirelessQueueDepth =
+			NetworkSlicing.getMaximumWirelessQueueDepth();
+		this.droppedWirelessTupleCount =
+			NetworkSlicing.getDroppedWirelessTupleCount();
 		this.statistics = new Statistics(statistics);
 	}
 
@@ -387,6 +402,26 @@ public final class SimulationMetricsSnapshot {
 
 	public double getSliceOutageSeconds() {
 		return sliceOutageSeconds;
+	}
+
+	public int getMaximumWirelessQueueSize() {
+		return maximumWirelessQueueSize;
+	}
+
+	public long getQueuedWirelessTransferCount() {
+		return queuedWirelessTransferCount;
+	}
+
+	public long getMaximumQueuedWirelessTransferCount() {
+		return maximumQueuedWirelessTransferCount;
+	}
+
+	public int getMaximumWirelessQueueDepth() {
+		return maximumWirelessQueueDepth;
+	}
+
+	public long getDroppedWirelessTupleCount() {
+		return droppedWirelessTupleCount;
 	}
 
 	/** Per-slice cumulative allocation sampled at reconfigurations, in bit/s. */

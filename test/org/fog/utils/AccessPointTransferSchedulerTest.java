@@ -126,6 +126,26 @@ public class AccessPointTransferSchedulerTest {
 			schedule(schedules, 1L).getDelayMillis(), DELTA);
 	}
 
+	@Test
+	public void sameSliceFifoSuccessorDoesNotReallocateThroughTransientIdle() {
+		SliceReconfigurationMetrics metrics =
+			new SliceReconfigurationMetrics(2);
+		AccessPointTransferScheduler scheduler = new AccessPointTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, true, 100.0, metrics);
+
+		List<AccessPointTransferScheduler.Schedule> first = scheduler.start(
+			1L, UPLINK, 0, 1000.0, 8000.0, 8000.0, 0.0);
+		AccessPointTransferScheduler.Schedule firstSchedule = schedule(first, 1L);
+		AccessPointTransferScheduler.Completion completion =
+			scheduler.completeAndStart(1L, firstSchedule.getGeneration(),
+				2L, 0, 1000.0, 8000.0, 8000.0,
+				firstSchedule.getDelayMillis());
+
+		assertEquals(1L, metrics.getReconfigurationCount());
+		assertEquals(1000.0,
+			schedule(completion.getSchedules(), 2L).getDelayMillis(), DELTA);
+	}
+
 	private static AccessPointTransferScheduler scheduler(boolean slicing,
 		boolean dynamic) {
 		return new AccessPointTransferScheduler(new double[] { 70.0, 30.0 },

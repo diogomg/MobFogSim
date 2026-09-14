@@ -234,6 +234,9 @@ public class MobileControllerDelayedEntryTest {
 		assertFalse(MyStatistics.getInstance().getInitialTimeWithoutConnection()
 			.containsKey(user.getMyId()));
 		assertEquals(1, brokers.size());
+		assertFalse(server.getApplicationMap().containsKey("MyApp_vr_game0"));
+		assertFalse(user.getApplicationMap().containsKey("MyApp_vr_game0"));
+		assertTrue(controller.getApplications().containsKey("MyApp_vr_game0"));
 		assertFalse(controller.activateMobileUser(user));
 		assertEquals(MobileDeviceLifecycle.FINISHED, user.getLifecycleState());
 		assertEquals(1, brokers.size());

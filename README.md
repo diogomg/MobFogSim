@@ -243,6 +243,11 @@ combined when end-to-end scope is selected.
 Summary and full output modes write these values to
 `sliceReconfigurations.txt`, `sliceOutage.txt`, and
 `sliceReceivedBandwidth.txt`, as well as the aggregate `results.txt` file.
+Wireless queues are hard-limited to 10,000 waiting tuples per user and AP
+direction. These modes also write `wirelessQueue.txt`, whose tab-separated
+values are the fixed limit, final aggregate queue size, maximum aggregate queue
+size, maximum single-direction depth, and number of tuples dropped at the
+limit.
 
 ## Input
 

@@ -197,6 +197,21 @@ public final class SimulationResultsService {
 		}
 		appendSummary(receivedBandwidth.toString(), "sliceReceivedBandwidth.txt");
 		appendSummary(receivedBandwidth.toString(), "results.txt");
+		System.out.println("Wireless queue limit per direction: "
+			+ metrics.getMaximumWirelessQueueSize());
+		System.out.println("Wireless tuples queued at simulation end: "
+			+ metrics.getQueuedWirelessTransferCount());
+		System.out.println("Maximum wireless tuples queued across all directions: "
+			+ metrics.getMaximumQueuedWirelessTransferCount());
+		System.out.println("Maximum wireless queue depth for one direction: "
+			+ metrics.getMaximumWirelessQueueDepth());
+		System.out.println("Wireless tuples dropped at queue limit: "
+			+ metrics.getDroppedWirelessTupleCount());
+		appendSummary(metrics.getMaximumWirelessQueueSize() + "\t"
+			+ metrics.getQueuedWirelessTransferCount() + "\t"
+			+ metrics.getMaximumQueuedWirelessTransferCount() + "\t"
+			+ metrics.getMaximumWirelessQueueDepth() + "\t"
+			+ metrics.getDroppedWirelessTupleCount(), "wirelessQueue.txt");
 	}
 
 	private void writeMigration(SimulationMetricsSnapshot metrics) {

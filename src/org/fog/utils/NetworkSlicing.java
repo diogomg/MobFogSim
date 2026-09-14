@@ -33,6 +33,7 @@ public final class NetworkSlicing {
 	public static final int WIRELESS_NETWORK = 1;
 	public static final int END_TO_END_NETWORK = 2;
 	public static final double DEFAULT_REALLOCATION_DELAY_SECONDS = 2.0;
+	public static final int DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE = 10000;
 	private static final double MILLISECONDS_PER_SECOND = 1000.0;
 
 	private static RuntimeState activeState = RuntimeState.defaults();
@@ -165,6 +166,10 @@ public final class NetworkSlicing {
 			new HashMap<String, ArrayDeque<Long>>();
 		private AccessPointTransferScheduler wirelessScheduler;
 		private long nextWirelessTransferId = 1L;
+		private long queuedWirelessTransferCount;
+		private long maximumQueuedWirelessTransferCount;
+		private int maximumWirelessQueueDepth;
+		private long droppedWirelessTupleCount;
 
 		private RuntimeState(Configuration configuration) {
 			percentages = configuration.bandwidthPercentages.clone();
@@ -557,6 +562,31 @@ public final class NetworkSlicing {
 		return state().reallocationDelayMillis / MILLISECONDS_PER_SECOND;
 	}
 
+	/** Fixed maximum FIFO depth retained for one mobile and AP direction. */
+	public static int getMaximumWirelessQueueSize() {
+		return DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE;
+	}
+
+	/** Number of wireless tuples still waiting behind an active transfer. */
+	public static synchronized long getQueuedWirelessTransferCount() {
+		return state().queuedWirelessTransferCount;
+	}
+
+	/** Largest aggregate wireless FIFO population observed during this run. */
+	public static synchronized long getMaximumQueuedWirelessTransferCount() {
+		return state().maximumQueuedWirelessTransferCount;
+	}
+
+	/** Largest FIFO depth observed for one mobile and AP direction. */
+	public static synchronized int getMaximumWirelessQueueDepth() {
+		return state().maximumWirelessQueueDepth;
+	}
+
+	/** Tuples discarded because their per-direction FIFO reached its limit. */
+	public static synchronized long getDroppedWirelessTupleCount() {
+		return state().droppedWirelessTupleCount;
+	}
+
 	/** Number of dynamic active-slice allocation changes in this run. */
 	public static synchronized long getReconfigurationCount() {
 		return state().reconfigurationMetrics.getReconfigurationCount();
@@ -728,7 +758,7 @@ public final class NetworkSlicing {
 				queue = new ArrayDeque<Long>();
 				state().queuedWirelessTransfers.put(metadata.mobileDirectionKey, queue);
 			}
-			queue.addLast(transferId);
+			enqueueWirelessTransfer(queue, transferId);
 		}
 		return transferId;
 	}
@@ -740,14 +770,36 @@ public final class NetworkSlicing {
 			throw new IllegalArgumentException(
 				"Wireless completion cannot be null");
 		}
-		AccessPointTransferScheduler.Completion schedulerCompletion =
-			state().wirelessScheduler.complete(completion.transferId,
-				completion.generation, CloudSim.clock());
+		WirelessTransferMetadata metadata = state().wirelessTransfers.get(
+			completion.transferId);
+		if (metadata == null || !metadata.active) {
+			return null;
+		}
+		WirelessTransferMetadata next = peekQueuedWirelessTransfer(
+			metadata.mobileDirectionKey);
+		AccessPointTransferScheduler.Completion schedulerCompletion;
+		if (next == null) {
+			schedulerCompletion = state().wirelessScheduler.complete(
+				completion.transferId, completion.generation, CloudSim.clock());
+		}
+		else {
+			double accessPointBandwidth = next.direction == WirelessDirection.UPLINK
+				? next.accessPoint.getUplinkBandwidth()
+				: next.accessPoint.getDownlinkBandwidth();
+			double mobileBandwidth = next.direction == WirelessDirection.UPLINK
+				? next.mobileDevice.getUplinkBandwidth()
+				: next.mobileDevice.getDownlinkBandwidth();
+			schedulerCompletion = state().wirelessScheduler.completeAndStart(
+				completion.transferId, completion.generation, next.transferId,
+				next.mobileDevice.getNetworkSliceId(),
+				next.tuple.getCloudletFileSize(), accessPointBandwidth,
+				mobileBandwidth, CloudSim.clock());
+		}
 		if (!schedulerCompletion.isAccepted()) {
 			return null;
 		}
 
-		WirelessTransferMetadata metadata = state().wirelessTransfers.remove(
+		metadata = state().wirelessTransfers.remove(
 			schedulerCompletion.getTransferId());
 		if (metadata == null || !metadata.active) {
 			return null;
@@ -758,15 +810,13 @@ public final class NetworkSlicing {
 		WirelessTransferResult result = new WirelessTransferResult(metadata,
 			schedulerCompletion);
 
-		WirelessTransferMetadata next = nextQueuedWirelessTransfer(
-			metadata.mobileDirectionKey);
-		if (next == null) {
-			applyWirelessSchedules(schedulerCompletion.getSchedules());
-		}
-		else {
+		if (next != null) {
+			removeQueuedWirelessTransfer(metadata.mobileDirectionKey,
+				next.transferId);
+			next.active = true;
 			state().activeWirelessTransfers.put(next.mobileDirectionKey, next.transferId);
-			startWirelessTransfer(next);
 		}
+		applyWirelessSchedules(schedulerCompletion.getSchedules());
 		return result;
 	}
 
@@ -776,34 +826,29 @@ public final class NetworkSlicing {
 		if (mobileDevice == null) {
 			return;
 		}
-		List<Long> matchingTransfers = new ArrayList<Long>();
-		for (Map.Entry<Long, WirelessTransferMetadata> entry
-			: state().wirelessTransfers.entrySet()) {
-			if (entry.getValue().mobileDevice == mobileDevice) {
-				matchingTransfers.add(entry.getKey());
+		for (WirelessDirection direction : WirelessDirection.values()) {
+			String directionKey = mobileDirectionKey(mobileDevice, direction);
+			ArrayDeque<Long> queue =
+				state().queuedWirelessTransfers.remove(directionKey);
+			if (queue != null) {
+				state().queuedWirelessTransferCount -= queue.size();
+				for (Long queuedTransferId : queue) {
+					state().wirelessTransfers.remove(queuedTransferId);
+				}
 			}
-		}
 
-		for (Long transferId : matchingTransfers) {
+			Long activeTransferId =
+				state().activeWirelessTransfers.remove(directionKey);
+			if (activeTransferId == null) {
+				continue;
+			}
 			WirelessTransferMetadata metadata =
-				state().wirelessTransfers.remove(transferId);
+				state().wirelessTransfers.remove(activeTransferId);
 			if (metadata == null) {
 				continue;
 			}
-			ArrayDeque<Long> queue = state().queuedWirelessTransfers.get(
-				metadata.mobileDirectionKey);
-			if (queue != null) {
-				queue.remove(transferId);
-				if (queue.isEmpty()) {
-					state().queuedWirelessTransfers.remove(metadata.mobileDirectionKey);
-				}
-			}
-			if (!metadata.active) {
-				continue;
-			}
-			state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
 			cancelWirelessCompletionEvent(metadata);
-			applyWirelessSchedules(state().wirelessScheduler.cancel(transferId,
+			applyWirelessSchedules(state().wirelessScheduler.cancel(activeTransferId,
 				CloudSim.clock()));
 		}
 	}
@@ -1043,23 +1088,48 @@ public final class NetworkSlicing {
 			mobileBandwidth, CloudSim.clock()));
 	}
 
-	private static WirelessTransferMetadata nextQueuedWirelessTransfer(
+	private static void enqueueWirelessTransfer(ArrayDeque<Long> queue,
+		long transferId) {
+		if (queue.size() >= DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE) {
+			Long droppedTransferId = queue.removeFirst();
+			state().wirelessTransfers.remove(droppedTransferId);
+			state().queuedWirelessTransferCount--;
+			state().droppedWirelessTupleCount++;
+		}
+		queue.addLast(transferId);
+		state().queuedWirelessTransferCount++;
+		state().maximumQueuedWirelessTransferCount = Math.max(
+			state().maximumQueuedWirelessTransferCount,
+			state().queuedWirelessTransferCount);
+		state().maximumWirelessQueueDepth = Math.max(
+			state().maximumWirelessQueueDepth, queue.size());
+	}
+
+	private static WirelessTransferMetadata peekQueuedWirelessTransfer(
 		String mobileDirection) {
 		ArrayDeque<Long> queue =
 			state().queuedWirelessTransfers.get(mobileDirection);
-		while (queue != null && !queue.isEmpty()) {
-			Long transferId = queue.removeFirst();
-			WirelessTransferMetadata metadata =
-				state().wirelessTransfers.get(transferId);
-			if (metadata != null) {
-				if (queue.isEmpty()) {
-					state().queuedWirelessTransfers.remove(mobileDirection);
-				}
-				return metadata;
-			}
+		return queue == null || queue.isEmpty() ? null
+			: state().wirelessTransfers.get(queue.peekFirst());
+	}
+
+	private static void removeQueuedWirelessTransfer(String mobileDirection,
+		long expectedTransferId) {
+		ArrayDeque<Long> queue =
+			state().queuedWirelessTransfers.get(mobileDirection);
+		if (queue == null || queue.isEmpty()) {
+			throw new IllegalStateException(
+				"Atomic wireless successor disappeared from its FIFO");
 		}
-		state().queuedWirelessTransfers.remove(mobileDirection);
-		return null;
+		Long transferId = queue.removeFirst();
+		state().queuedWirelessTransferCount--;
+		if (transferId.longValue() != expectedTransferId) {
+			throw new IllegalStateException(
+				"Wireless FIFO order changed during atomic completion");
+		}
+		if (queue.isEmpty()) {
+			state().queuedWirelessTransfers.remove(mobileDirection);
+		}
 	}
 
 	private static void applyWirelessSchedules(
@@ -1144,6 +1214,10 @@ public final class NetworkSlicing {
 			state().mode.allowsDynamicBorrowing(),
 			state().reallocationDelayMillis, state().reconfigurationMetrics);
 		state().nextWirelessTransferId = 1L;
+		state().queuedWirelessTransferCount = 0L;
+		state().maximumQueuedWirelessTransferCount = 0L;
+		state().maximumWirelessQueueDepth = 0;
+		state().droppedWirelessTupleCount = 0L;
 	}
 
 	private static void cancelMigrationTransfer(MobileDevice mobileDevice) {

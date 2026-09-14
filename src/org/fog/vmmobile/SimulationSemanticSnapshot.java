@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 2;
+	public static final int SCHEMA_VERSION = 3;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;
@@ -108,6 +108,16 @@ public final class SimulationSemanticSnapshot {
 		addDoubleMap(values,
 			"network_slicing.received_bandwidth_bits_per_second_sum",
 			metrics.getReceivedBandwidthBySlice());
+		put(values, "network_slicing.wireless_queue.limit_per_direction",
+			metrics.getMaximumWirelessQueueSize());
+		put(values, "network_slicing.wireless_queue.final_total",
+			metrics.getQueuedWirelessTransferCount());
+		put(values, "network_slicing.wireless_queue.maximum_total",
+			metrics.getMaximumQueuedWirelessTransferCount());
+		put(values, "network_slicing.wireless_queue.maximum_per_direction",
+			metrics.getMaximumWirelessQueueDepth());
+		put(values, "network_slicing.wireless_queue.dropped_tuples",
+			metrics.getDroppedWirelessTupleCount());
 		addStatistics(values, metrics.getStatistics());
 	}
 

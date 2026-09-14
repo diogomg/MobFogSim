@@ -194,19 +194,65 @@ final class AccessPointTransferScheduler {
 	}
 
 	Completion complete(long transferId, long generation, double now) {
+		return completeAndStart(transferId, generation, null, now);
+	}
+
+	/**
+	 * Completes one transfer and atomically installs its same-channel FIFO
+	 * successor. Keeping the channel populated across the hand-off prevents a
+	 * transient empty active-slice set from being mistaken for a reallocation.
+	 */
+	Completion completeAndStart(long transferId, long generation,
+		long nextTransferId, int nextSliceId, double nextTransferBytes,
+		double physicalBandwidth, double deviceBandwidth, double now) {
+		Transfer current = transfers.get(transferId);
+		if (current == null || current.generation != generation
+			|| now + TIME_EPSILON < current.completionTime) {
+			return rejectedCompletion(transferId);
+		}
+		validateStart(nextTransferId, current.channel, nextSliceId,
+			nextTransferBytes, physicalBandwidth, deviceBandwidth, now);
+		if (transfers.containsKey(nextTransferId)) {
+			throw new IllegalArgumentException(
+				"Wireless transfer ID is already active: " + nextTransferId);
+		}
+		Transfer replacement = new Transfer(nextTransferId, current.channel,
+			nextSliceId, nextTransferBytes, deviceBandwidth, now);
+		return completeAndStart(transferId, generation, replacement,
+			physicalBandwidth, now);
+	}
+
+	private Completion completeAndStart(long transferId, long generation,
+		Transfer replacement, double now) {
+		return completeAndStart(transferId, generation, replacement,
+			Double.NaN, now);
+	}
+
+	private Completion completeAndStart(long transferId, long generation,
+		Transfer replacement, double physicalBandwidth, double now) {
 		Transfer transfer = transfers.get(transferId);
 		if (transfer == null || transfer.generation != generation
 			|| now + TIME_EPSILON < transfer.completionTime) {
-			return new Completion(false, transferId, 0.0,
-				new ArrayList<Schedule>());
+			return rejectedCompletion(transferId);
 		}
 
 		ChannelState channelState = channels.get(transfer.channel);
 		advance(channelState, now);
 		channelState.transfers.remove(transferId);
 		transfers.remove(transferId);
+		if (replacement != null) {
+			channelState.physicalBandwidth = Math.min(
+				channelState.physicalBandwidth, physicalBandwidth);
+			channelState.transfers.put(replacement.id, replacement);
+			transfers.put(replacement.id, replacement);
+		}
 		return new Completion(true, transferId, now - transfer.startedAt,
 			rebalance(transfer.channel, now));
+	}
+
+	private static Completion rejectedCompletion(long transferId) {
+		return new Completion(false, transferId, 0.0,
+			new ArrayList<Schedule>());
 	}
 
 	List<Schedule> cancel(long transferId, double now) {

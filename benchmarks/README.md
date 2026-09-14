@@ -138,7 +138,9 @@ GNU `time` records end-to-end wall time and peak resident set size (RSS) for
 each JVM. The Java harness records dispatched queued and periodic events,
 initial topology sizes, entity and tuple counts, run-directory output bytes,
 and a SHA-256 digest of the same semantic characterisation used by the golden
-tests. The shell runner adds captured standard-output and standard-error bytes;
+tests. The compact `results.tsv` also contains the wireless queue limit, final
+size, maximum aggregate size, maximum per-direction depth, and dropped-tuple
+count. The shell runner adds captured standard-output and standard-error bytes;
 `total_output_bytes` is their sum plus run-directory files.
 
 `environment.properties`, `input-files.sha256`, and `source-files.sha256`

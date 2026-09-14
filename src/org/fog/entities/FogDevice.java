@@ -1946,7 +1946,11 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public Application removeApplication(String applicationId) {
-		return applicationMap.remove(applicationId);
+		Application removed = applicationMap.remove(applicationId);
+		activeApplications.remove(applicationId);
+		appToModulesMap.remove(applicationId);
+		moduleInstanceCount.remove(applicationId);
+		return removed;
 	}
 
 	public Queue<Tuple> getNorthTupleQueue() {

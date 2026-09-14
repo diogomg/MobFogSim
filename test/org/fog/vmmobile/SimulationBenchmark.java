@@ -28,6 +28,8 @@ import org.cloudbus.cloudsim.core.SimulationEventCounters;
 
 /** Process-isolated entry point used by the reproducible performance baseline. */
 public final class SimulationBenchmark {
+	static final int BENCHMARK_SCHEMA_VERSION = 2;
+
 	private SimulationBenchmark() {
 	}
 
@@ -71,7 +73,8 @@ public final class SimulationBenchmark {
 		TreeMap<String, String> values = new TreeMap<String, String>();
 		SimulationEventCounters events = result.getEventCounters();
 		SimulationTopologySize topology = result.getTopologySize();
-		values.put("benchmark_schema_version", "1");
+		values.put("benchmark_schema_version",
+			Integer.toString(BENCHMARK_SCHEMA_VERSION));
 		values.put("fixture", fixture.name);
 		values.put("configuration", fixture.argumentsText());
 		values.put("seed", Integer.toString(configuration.getSeed()));
@@ -121,6 +124,17 @@ public final class SimulationBenchmark {
 			Long.toString(topology.getServerAdjacencyEntryCount()));
 		values.put("run_output_files", Long.toString(output.fileCount));
 		values.put("run_output_bytes", Long.toString(output.byteCount));
+		values.put("wireless_queue_limit",
+			Integer.toString(result.getMetrics().getMaximumWirelessQueueSize()));
+		values.put("wireless_queue_final",
+			Long.toString(result.getMetrics().getQueuedWirelessTransferCount()));
+		values.put("wireless_queue_max_total",
+			Long.toString(result.getMetrics()
+				.getMaximumQueuedWirelessTransferCount()));
+		values.put("wireless_queue_max_per_direction",
+			Integer.toString(result.getMetrics().getMaximumWirelessQueueDepth()));
+		values.put("wireless_queue_dropped_tuples",
+			Long.toString(result.getMetrics().getDroppedWirelessTupleCount()));
 		values.put("characterisation_sha256",
 			sha256(result.toCharacterisationText()));
 

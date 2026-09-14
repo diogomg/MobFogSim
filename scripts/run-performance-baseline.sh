@@ -69,7 +69,7 @@ physical_memory_kib=$(awk '/MemTotal/ { print $2; exit }' /proc/meminfo \
 java_runtime=$(java -version 2>&1 | awk 'NR == 1 { print; exit }')
 
 {
-	printf 'benchmark_schema_version=1\n'
+	printf 'benchmark_schema_version=2\n'
 	printf 'created_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 	printf 'git_commit=%s\n' "${git_commit}"
 	printf 'git_worktree_dirty=%s\n' "${git_worktree_dirty}"
@@ -90,7 +90,7 @@ java_runtime=$(java -version 2>&1 | awk 'NR == 1 { print; exit }')
 } > "${benchmark_root}/environment.properties"
 
 results_file=${benchmark_root}/results.tsv
-printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_adjacency_entries\tcloudsim_entities\tgenerated_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
+printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_adjacency_entries\tcloudsim_entities\tgenerated_tuples\twireless_queue_limit\twireless_queue_final\twireless_queue_max_total\twireless_queue_max_per_direction\twireless_queue_dropped_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
 	> "${results_file}"
 
 property_value() {
@@ -139,6 +139,14 @@ for fixture in "${fixtures[@]}"; do
 		"${metrics_file}")
 	cloudsim_entities=$(property_value cloudsim_entities "${metrics_file}")
 	generated_tuples=$(property_value generated_tuples "${metrics_file}")
+	wireless_queue_limit=$(property_value wireless_queue_limit "${metrics_file}")
+	wireless_queue_final=$(property_value wireless_queue_final "${metrics_file}")
+	wireless_queue_max_total=$(property_value wireless_queue_max_total \
+		"${metrics_file}")
+	wireless_queue_max_per_direction=$(property_value \
+		wireless_queue_max_per_direction "${metrics_file}")
+	wireless_queue_dropped_tuples=$(property_value \
+		wireless_queue_dropped_tuples "${metrics_file}")
 	run_output_bytes=$(property_value run_output_bytes "${metrics_file}")
 	characterisation_sha256=$(property_value characterisation_sha256 \
 		"${metrics_file}")
@@ -146,12 +154,15 @@ for fixture in "${fixtures[@]}"; do
 	stderr_bytes=$(wc -c < "${stderr_file}")
 	total_output_bytes=$((stdout_bytes + stderr_bytes + run_output_bytes))
 
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 		"${fixture}" "${wall_seconds}" "${peak_rss_kib}" \
 		"${events_total}" "${events_queued}" "${events_periodic}" \
 		"${servers}" "${access_points}" "${users}" "${network_nodes}" \
 		"${network_links}" "${adjacency_entries}" "${cloudsim_entities}" \
-		"${generated_tuples}" "${stdout_bytes}" "${stderr_bytes}" \
+		"${generated_tuples}" "${wireless_queue_limit}" \
+		"${wireless_queue_final}" "${wireless_queue_max_total}" \
+		"${wireless_queue_max_per_direction}" \
+		"${wireless_queue_dropped_tuples}" "${stdout_bytes}" "${stderr_bytes}" \
 		"${run_output_bytes}" "${total_output_bytes}" \
 		"${characterisation_sha256}" "${input_files_sha256}" \
 		>> "${results_file}"

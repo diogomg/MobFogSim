@@ -68,6 +68,12 @@ public class SimulationMetricsSnapshotTest {
 		assertEquals(0L, snapshot.getSliceReconfigurationCount());
 		assertEquals(0.0, snapshot.getSliceOutageSeconds(), DELTA);
 		assertEquals(0.0, snapshot.getReceivedBandwidthBySlice().get(0), DELTA);
+		assertEquals(NetworkSlicing.DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE,
+			snapshot.getMaximumWirelessQueueSize());
+		assertEquals(0L, snapshot.getQueuedWirelessTransferCount());
+		assertEquals(0L, snapshot.getMaximumQueuedWirelessTransferCount());
+		assertEquals(0, snapshot.getMaximumWirelessQueueDepth());
+		assertEquals(0L, snapshot.getDroppedWirelessTupleCount());
 		assertTrue(snapshot.getLoopTimings().isEmpty());
 	}
 
