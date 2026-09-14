@@ -13,6 +13,8 @@ import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
 import org.cloudbus.cloudsim.CloudletScheduler;
+import org.cloudbus.cloudsim.Host;
+import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -526,8 +528,23 @@ public class MobileController extends SimEntity {
 
 	private void retireApplication(MobileDevice mobileDevice) {
 		String applicationId = "MyApp_vr_game" + mobileDevice.getMyId();
+		FogDevice vmLocation = mobileDevice.getVmLocalServerCloudlet();
+		if (vmLocation != null) {
+			vmLocation.unregisterHostedMobileVm(mobileDevice);
+		}
+		Vm vm = mobileDevice.getVmMobileDevice();
+		Host host = vm == null ? null : vm.getHost();
+		if (host != null) {
+			while (host.getVmList().contains(vm)) {
+				host.vmDestroy(vm);
+			}
+		}
 		for (FogDevice serverCloudlet : getServerCloudlets()) {
+			serverCloudlet.unregisterHostedMobileVm(mobileDevice);
 			serverCloudlet.removeApplication(applicationId);
+		}
+		if (vmLocation != null && !getServerCloudlets().contains(vmLocation)) {
+			vmLocation.removeApplication(applicationId);
 		}
 		mobileDevice.removeApplication(applicationId);
 	}

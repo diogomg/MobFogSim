@@ -183,6 +183,7 @@ public class MobileControllerDelayedEntryTest {
 		configureAppExample(servers, accessPoints, users);
 		AppExample.addServerCloudlet(servers, new Coordinate(), 0);
 		FogDevice server = servers.get(0);
+		long initialServerStorage = server.getHost().getStorage();
 		server.setCoord(0, 0);
 		ApDevice accessPoint = new ApDevice("lifecycleAp", 0, 0, 0,
 			100 * 1024 * 1024, 200, 500, 100 * 1024 * 1024, 4);
@@ -237,6 +238,13 @@ public class MobileControllerDelayedEntryTest {
 		assertFalse(server.getApplicationMap().containsKey("MyApp_vr_game0"));
 		assertFalse(user.getApplicationMap().containsKey("MyApp_vr_game0"));
 		assertTrue(controller.getApplications().containsKey("MyApp_vr_game0"));
+		assertNotNull(probe.getRegisteredVm());
+		assertNull(probe.getRegisteredVm().getHost());
+		assertFalse(server.getHost().getVmList().contains(probe.getRegisteredVm()));
+		assertFalse(server.getSmartThingsWithVm().contains(user));
+		assertEquals(server.getHost().getRamProvisioner().getRam(),
+			server.getHost().getRamProvisioner().getAvailableRam());
+		assertEquals(initialServerStorage, server.getHost().getStorage());
 		assertFalse(controller.activateMobileUser(user));
 		assertEquals(MobileDeviceLifecycle.FINISHED, user.getLifecycleState());
 		assertEquals(1, brokers.size());
@@ -515,6 +523,10 @@ public class MobileControllerDelayedEntryTest {
 
 		private boolean wasReconnected() {
 			return reconnected;
+		}
+
+		private Vm getRegisteredVm() {
+			return registeredVm;
 		}
 	}
 
