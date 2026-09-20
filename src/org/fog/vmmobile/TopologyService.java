@@ -84,12 +84,19 @@ public final class TopologyService {
 		if (random == null) {
 			throw new IllegalArgumentException("Random generator cannot be null");
 		}
-
 		for (ApDevice accessPoint : accessPoints) {
 			if (accessPoint == null) {
 				throw new IllegalArgumentException(
 					"Access point list cannot contain null entries");
 			}
+			if (accessPoint.getMaxSmartThing() <= 0) {
+				throw new IllegalArgumentException(
+					"Access-point capacity must be positive: "
+						+ accessPoint.getName());
+			}
+		}
+
+		for (ApDevice accessPoint : accessPoints) {
 			FogDevice closestServerCloudlet = Distances
 				.findClosestServerCloudletToAp(serverCloudlets, accessPoint)
 				.orElseThrow(() -> new IllegalStateException(

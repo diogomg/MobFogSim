@@ -40,6 +40,7 @@ public class MobileDevice extends FogDevice {
 	private ApDevice sourceAp;
 	private ApDevice destinationAp;
 	private WirelessAssociation wirelessAssociation;
+	private HandoffReservation pendingHandoffReservation;
 	private Vm vmMobileDevice;
 	private double migTime;
 	private boolean migPoint;
@@ -513,6 +514,37 @@ public class MobileDevice extends FogDevice {
 
 	public void setDestinationAp(ApDevice destinationAp) {
 		this.destinationAp = destinationAp;
+	}
+
+	public HandoffReservation getPendingHandoffReservation() {
+		return pendingHandoffReservation;
+	}
+
+	void installHandoffReservation(HandoffReservation reservation) {
+		if (reservation == null || reservation.getMobileDevice() != this) {
+			throw new IllegalArgumentException(
+				"A handoff reservation must belong to this mobile device");
+		}
+		if (pendingHandoffReservation != null
+			&& pendingHandoffReservation != reservation) {
+			throw new IllegalStateException(
+				"Mobile device already owns a handoff reservation");
+		}
+		pendingHandoffReservation = reservation;
+	}
+
+	void clearHandoffReservation(HandoffReservation reservation) {
+		if (pendingHandoffReservation == reservation) {
+			pendingHandoffReservation = null;
+		}
+	}
+
+	/** Cancels the current reservation and invalidates all events using it. */
+	public boolean cancelPendingHandoffReservation() {
+		HandoffReservation reservation = pendingHandoffReservation;
+		return reservation != null
+			&& reservation.getDestinationAccessPoint()
+				.cancelHandoffReservation(reservation);
 	}
 
 	public Vm getVmMobileDevice() {

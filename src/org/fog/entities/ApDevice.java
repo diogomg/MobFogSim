@@ -7,7 +7,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.cloudbus.cloudsim.NetworkTopology;
@@ -28,6 +31,9 @@ public class ApDevice extends FogDevice {
 	private int maxSmartThing;
 	private boolean status;
 	private int edge;// verify if ap is edge -> NONE, UPON, BOTTOM, RIGHT or LEFT
+	private final Map<Long, HandoffReservation> handoffReservations =
+		new LinkedHashMap<Long, HandoffReservation>();
+	private long nextHandoffReservationId = 1L;
 
 	public ApDevice() {
 	}
@@ -57,18 +63,27 @@ public class ApDevice extends FogDevice {
 
 	private void handoff(SimEvent ev,
 		SimulationDuration associationEstablishmentDuration) {
-		MobileDevice smartThing = (MobileDevice) ev.getData();
+		Object payload = ev.getData();
+		HandoffReservation reservation = payload instanceof HandoffReservation
+			? (HandoffReservation) payload : null;
+		MobileDevice smartThing = reservation == null
+			? payload instanceof MobileDevice ? (MobileDevice) payload : null
+			: reservation.getMobileDevice();
 		if (smartThing == null
 			|| smartThing.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
 			|| smartThing.getSourceAp() == null
 			|| smartThing.getDestinationAp() == null) {
+			if (reservation != null) {
+				reservation.getDestinationAccessPoint()
+					.cancelHandoffReservation(reservation);
+			}
 			return;
 		}
 
 		if (getSmartThings().contains(smartThing)) {
-			ApDevice destination = smartThing.getDestinationAp();
-			if (!transferMobileDevice(smartThing, destination,
+			if (!transferMobileDevice(smartThing, reservation,
 				associationEstablishmentDuration)) {
+				recoverRejectedHandoff(smartThing, reservation);
 				return;
 			}
 
@@ -90,6 +105,7 @@ public class ApDevice extends FogDevice {
 
 		}
 		else {
+			recoverRejectedHandoff(smartThing, reservation);
 			System.out.println("*_*_*_*_*_*_*_*_*_*_*_*_*_ABORT MIGRATION*_*_*_*_*_*_*_*_*_*_*_*: "
 				+ smartThing.getId());
 			smartThing.setMigStatus(false);
@@ -100,10 +116,25 @@ public class ApDevice extends FogDevice {
 
 	}
 
+	private void recoverRejectedHandoff(MobileDevice mobileDevice,
+		HandoffReservation reservation) {
+		if (reservation != null) {
+			reservation.getDestinationAccessPoint()
+				.cancelHandoffReservation(reservation);
+		}
+		if (mobileDevice.getSourceAp() == this
+			&& getSmartThings().contains(mobileDevice)) {
+			mobileDevice.setDestinationAp(null);
+			mobileDevice.setHandoffStatus(false);
+			mobileDevice.setLockedToHandoff(false);
+		}
+	}
+
 	public boolean desconnectApSmartThing(MobileDevice st) {
 		if (st == null || st.getSourceAp() != this) {
 			return false;
 		}
+		st.cancelPendingHandoffReservation();
 		NetworkSlicing.cancelWirelessTransfers(st);
 		boolean removed = dissociateMobileDevice(st);
 		st.setSourceAp(null);
@@ -113,11 +144,140 @@ public class ApDevice extends FogDevice {
 		return removed;
 	}
 
+	/** Atomically reserves one capacity slot for a delayed handoff. */
+	public synchronized Optional<HandoffReservation> reserveHandoffSlot(
+		MobileDevice mobileDevice, ApDevice expectedSource,
+		double expiresAtMillis, SimulationDuration handoffSetupDuration) {
+		if (mobileDevice == null || expectedSource == null
+			|| handoffSetupDuration == null
+			|| !Double.isFinite(expiresAtMillis)) {
+			throw new IllegalArgumentException(
+				"Handoff reservation fields cannot be null or non-finite");
+		}
+		purgeExpiredHandoffReservations(CloudSim.clock());
+		if (mobileDevice.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
+			|| mobileDevice.getSourceAp() != expectedSource
+			|| expectedSource == this
+			|| mobileDevice.getPendingHandoffReservation() != null
+			|| getMaxSmartThing() <= 0
+			|| getSmartThings().size() + handoffReservations.size()
+				>= getMaxSmartThing()) {
+			return Optional.empty();
+		}
+		double now = CloudSim.clock();
+		if (expiresAtMillis < now
+			|| expiresAtMillis < now
+				+ handoffSetupDuration.toMilliseconds()) {
+			throw new IllegalArgumentException(
+				"Handoff reservation expires before completion");
+		}
+		if (nextHandoffReservationId == Long.MAX_VALUE) {
+			throw new IllegalStateException(
+				"Handoff reservation identifiers are exhausted for " + getName());
+		}
+		long generation = mobileDevice.advanceNetworkAssociationGeneration();
+		HandoffReservation reservation = new HandoffReservation(
+			nextHandoffReservationId++, mobileDevice, expectedSource, this,
+			generation, now, expiresAtMillis, handoffSetupDuration);
+		handoffReservations.put(reservation.getReservationId(), reservation);
+		mobileDevice.installHandoffReservation(reservation);
+		return Optional.of(reservation);
+	}
+
+	/** Converts exactly one current reservation into permission to associate. */
+	public synchronized boolean completeHandoffReservation(
+		HandoffReservation reservation) {
+		purgeExpiredHandoffReservations(CloudSim.clock());
+		if (reservation == null
+			|| reservation.getDestinationAccessPoint() != this
+			|| handoffReservations.get(reservation.getReservationId())
+				!= reservation) {
+			return false;
+		}
+		MobileDevice mobileDevice = reservation.getMobileDevice();
+		if (mobileDevice.getPendingHandoffReservation() != reservation
+			|| mobileDevice.getNetworkAssociationGeneration()
+				!= reservation.getAssociationGeneration()
+			|| mobileDevice.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
+			|| mobileDevice.getSourceAp()
+				!= reservation.getSourceAccessPoint()
+			|| mobileDevice.getDestinationAp() != this
+			|| !reservation.getSourceAccessPoint().getSmartThings()
+				.contains(mobileDevice)
+			|| getSmartThings().size() >= getMaxSmartThing()) {
+			cancelHandoffReservation(reservation);
+			return false;
+		}
+		handoffReservations.remove(reservation.getReservationId());
+		mobileDevice.clearHandoffReservation(reservation);
+		return true;
+	}
+
+	/** Releases only the matching token; another user's slot is untouched. */
+	public synchronized boolean cancelHandoffReservation(
+		HandoffReservation reservation) {
+		if (reservation == null
+			|| reservation.getDestinationAccessPoint() != this
+			|| handoffReservations.get(reservation.getReservationId())
+				!= reservation) {
+			return false;
+		}
+		handoffReservations.remove(reservation.getReservationId());
+		recoverReservationOwner(reservation);
+		return true;
+	}
+
+	public synchronized int getHandoffReservationCount() {
+		purgeExpiredHandoffReservations(CloudSim.clock());
+		return handoffReservations.size();
+	}
+
+	public synchronized boolean hasAvailableCapacity() {
+		purgeExpiredHandoffReservations(CloudSim.clock());
+		return getMaxSmartThing() > 0
+			&& getSmartThings().size() + handoffReservations.size()
+			< getMaxSmartThing();
+	}
+
+	private void purgeExpiredHandoffReservations(double now) {
+		Iterator<Map.Entry<Long, HandoffReservation>> iterator =
+			handoffReservations.entrySet().iterator();
+		while (iterator.hasNext()) {
+			HandoffReservation reservation = iterator.next().getValue();
+			if (reservation.isExpiredAt(now)) {
+				iterator.remove();
+				recoverReservationOwner(reservation);
+			}
+		}
+	}
+
+	private void recoverReservationOwner(HandoffReservation reservation) {
+		MobileDevice mobileDevice = reservation.getMobileDevice();
+		boolean ownedByMobileDevice =
+			mobileDevice.getPendingHandoffReservation() == reservation;
+		mobileDevice.clearHandoffReservation(reservation);
+		if (mobileDevice.getNetworkAssociationGeneration()
+			== reservation.getAssociationGeneration()) {
+			mobileDevice.advanceNetworkAssociationGeneration();
+		}
+		if (ownedByMobileDevice && mobileDevice.getDestinationAp() == this) {
+			mobileDevice.setDestinationAp(null);
+			mobileDevice.setHandoffStatus(false);
+			mobileDevice.setLockedToHandoff(false);
+		}
+	}
+
 	/** Moves both sides of a wireless association as one validated transition. */
 	private boolean transferMobileDevice(MobileDevice mobileDevice,
-		ApDevice destination,
+		HandoffReservation reservation,
 		SimulationDuration associationEstablishmentDuration) {
-		if (mobileDevice == null || destination == null
+		if (mobileDevice == null) {
+			return false;
+		}
+		ApDevice destination = reservation == null
+			? mobileDevice.getDestinationAp()
+			: reservation.getDestinationAccessPoint();
+		if (destination == null
 			|| mobileDevice.getSourceAp() != this
 			|| !getSmartThings().contains(mobileDevice)) {
 			return false;
@@ -125,6 +285,21 @@ public class ApDevice extends FogDevice {
 		if (associationEstablishmentDuration == null) {
 			throw new IllegalArgumentException(
 				"Association establishment duration cannot be null");
+		}
+		if (reservation == null) {
+			Optional<HandoffReservation> immediateReservation =
+				destination.reserveHandoffSlot(mobileDevice, this,
+					CloudSim.clock(), SimulationDuration.ZERO);
+			if (!immediateReservation.isPresent()) {
+				return false;
+			}
+			reservation = immediateReservation.get();
+		}
+		if (reservation.getSourceAccessPoint() != this
+			|| reservation.getMobileDevice() != mobileDevice
+			|| mobileDevice.getDestinationAp() != destination
+			|| !destination.completeHandoffReservation(reservation)) {
+			return false;
 		}
 		PropagationDelay propagationDelay = mobileDevice.getWirelessAssociation()
 			== null
@@ -166,7 +341,7 @@ public class ApDevice extends FogDevice {
 		}
 
 		ApDevice apDevice = closestAp.get();
-		if (apDevice.getMaxSmartThing() <= apDevice.getSmartThings().size()) {
+		if (!apDevice.hasAvailableCapacity()) {
 			return false;
 		}
 

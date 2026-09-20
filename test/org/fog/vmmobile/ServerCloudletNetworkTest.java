@@ -126,6 +126,7 @@ public class ServerCloudletNetworkTest {
 		FogDevice closest = new FogDevice("closest", 10, 0, 1200);
 		ApDevice accessPoint = new ApDevice("accessPoint", 0, 0, 1800);
 		accessPoint.setDownlinkBandwidth(1000.0);
+		accessPoint.setMaxSmartThing(1);
 
 		topologyService.connectAccessPoints(
 			Arrays.asList(farther, closest), Arrays.asList(accessPoint),

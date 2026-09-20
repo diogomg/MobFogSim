@@ -234,7 +234,6 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c3SimultaneousHandoffsMustNotOverbookOneSlot() {
-		requireKnownDefectRun("C3");
 		ApDevice firstSource = accessPoint("firstSource", 1, 4.0);
 		ApDevice secondSource = accessPoint("secondSource", 1, 4.0);
 		ApDevice destination = accessPoint("oneSlotDestination", 1, 4.0);
@@ -257,11 +256,12 @@ public class P0CorrectnessRegressionTest {
 		assertTrue("C3: equal-time contention must have a deterministic winner",
 			destination.getSmartThings().contains(first));
 		assertFalse(destination.getSmartThings().contains(second));
+		assertSame(secondSource, second.getSourceAp());
+		assertNull(second.getDestinationAp());
 	}
 
 	@Test
 	public void c3NonPositiveCapacityMustFailTopologyValidation() {
-		requireKnownDefectRun("C3");
 		FogDevice server = new FogDevice("capacityServer", 0, 0, 0);
 		for (int capacity : new int[] { 0, -1 }) {
 			ApDevice invalid = accessPoint("invalidCapacityAp" + capacity,

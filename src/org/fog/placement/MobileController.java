@@ -27,6 +27,7 @@ import org.fog.entities.Actuator;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
+import org.fog.entities.HandoffReservation;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.Sensor;
@@ -85,6 +86,7 @@ public class MobileController extends SimEntity {
 	private final SimulationResultsService resultsService;
 	private final MobilityService mobilityService;
 	private final MobileAssociationService associationService;
+	private final AccessPointAssociationService accessPointAssociationService;
 	private final MigrationCoordinator migrationCoordinator;
 
 	static final int numOfDepts = 1;
@@ -113,6 +115,7 @@ public class MobileController extends SimEntity {
 			RunOutputManager.getInstance());
 		this.mobilityService = new MobilityService();
 		this.associationService = new MobileAssociationService();
+		this.accessPointAssociationService = new AccessPointAssociationService();
 		this.migrationCoordinator = new MigrationCoordinator();
 	}
 
@@ -137,6 +140,7 @@ public class MobileController extends SimEntity {
 			RunOutputManager.getInstance());
 		this.mobilityService = new MobilityService();
 		this.associationService = new MobileAssociationService();
+		this.accessPointAssociationService = new AccessPointAssociationService();
 		this.migrationCoordinator = new MigrationCoordinator();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
@@ -183,6 +187,7 @@ public class MobileController extends SimEntity {
 			RunOutputManager.getInstance());
 		this.mobilityService = new MobilityService();
 		this.associationService = new MobileAssociationService();
+		this.accessPointAssociationService = new AccessPointAssociationService();
 		this.migrationCoordinator = new MigrationCoordinator();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
@@ -630,10 +635,6 @@ public class MobileController extends SimEntity {
 						&& distance < MaxAndMin.AP_COVERAGE) {
 						Optional<ApDevice> nextAp = Migration.nextAp(getApDevices(), st);
 						if (nextAp.isPresent()) {
-							st.setDestinationAp(nextAp.get());
-							st.setHandoffStatus(true);
-							st.setLockedToHandoff(true);
-
 							SimulationDuration handoffSetupDuration =
 								SimulationDuration.ofMilliseconds(
 									MaxAndMin.MIN_HANDOFF_TIME
@@ -643,39 +644,45 @@ public class MobileController extends SimEntity {
 							double handoffTime =
 								handoffSetupDuration.toMilliseconds();
 							float handoffLocked = (float) (handoffTime * 4);
-							int delayConnection = 100; // connection between SmartT and ServerCloudlet
+							SimulationDuration reservationLifetime =
+								SimulationDuration.ofMilliseconds(handoffTime * 4);
+							Optional<HandoffReservation> reservedHandoff =
+								accessPointAssociationService.reserveClosestHandoff(
+									getApDevices(), st, handoffSetupDuration,
+									reservationLifetime);
+							if (reservedHandoff.isPresent()) {
+								HandoffReservation reservation = reservedHandoff.get();
+								int delayConnection = 100;
 
-							if (!st.getDestinationAp().getServerCloudlet()
-								.equals(st.getSourceServerCloudlet())) {
-
-								if (isMigrationAble()) {
-									FogDevice sourceServer = st.getSourceServerCloudlet();
-									ApDevice destinationAccessPoint = st.getDestinationAp();
-									long associationGeneration =
-										st.advanceNetworkAssociationGeneration();
-									HandoffConnectionRequest connectionRequest =
-										new HandoffConnectionRequest(st, sourceServer,
-											destinationAccessPoint, associationGeneration);
-									LogMobile.debug("MobileController.java", st.getName()
-										+ " will be desconnected from " +
-										sourceServer.getName() + " by handoff");
-									sendNow(sourceServer.getId(),
-										MobileEvents.MAKE_DECISION_MIGRATION, st);
-									sendNow(sourceServer.getId(),
-										MobileEvents.DESCONNECT_ST_TO_SC, st);
-									send(connectionRequest.getDestinationServer().getId(),
-										handoffTime + delayConnection,
-										MobileEvents.CONNECT_ST_TO_SC, connectionRequest);
-								}
-								if (st.isPostCopyStatus() && !st.isMigStatus()) {
-									if (!st.isMigStatusLive()) {
+								if (!st.getDestinationAp().getServerCloudlet()
+									.equals(st.getSourceServerCloudlet())) {
+									if (isMigrationAble()) {
+										FogDevice sourceServer = st.getSourceServerCloudlet();
+										ApDevice destinationAccessPoint = st.getDestinationAp();
+										HandoffConnectionRequest connectionRequest =
+											new HandoffConnectionRequest(st, sourceServer,
+												destinationAccessPoint,
+												reservation.getAssociationGeneration());
+										LogMobile.debug("MobileController.java", st.getName()
+											+ " will be desconnected from "
+											+ sourceServer.getName() + " by handoff");
+										sendNow(sourceServer.getId(),
+											MobileEvents.MAKE_DECISION_MIGRATION, st);
+										sendNow(sourceServer.getId(),
+											MobileEvents.DESCONNECT_ST_TO_SC, st);
+										send(connectionRequest.getDestinationServer().getId(),
+											handoffTime + delayConnection,
+											MobileEvents.CONNECT_ST_TO_SC, connectionRequest);
+									}
+									if (st.isPostCopyStatus() && !st.isMigStatus()
+										&& !st.isMigStatusLive()) {
 										st.setMigStatusLive(true);
 										double baselineBandwidth = NetworkSlicing.getSliceBandwidth(
 											st.getVmLocalServerCloudlet(),
 											st.getDestinationServerCloudlet(), st.getNetworkSliceId());
 										double remainingTransferBytes =
-										migrationCoordinator.remainingLiveMigrationBytes(
-											st, baselineBandwidth, CloudSim.clock());
+											migrationCoordinator.remainingLiveMigrationBytes(
+												st, baselineBandwidth, CloudSim.clock());
 										if (remainingTransferBytes == 0.0) {
 											remainingTransferBytes = MigrationTransferSpec
 												.mebibytesToBytes(st.getVmMobileDevice().getHost()
@@ -683,10 +690,10 @@ public class MobileController extends SimEntity {
 										}
 										double delayProcess = st.getVmLocalServerCloudlet()
 											.getCharacteristics().getCpuTime((st.getVmMobileDevice()
-												.getSize() * 1024 * 1024 * 8) * 0.7, 0.0);// the connection already opened
+												.getSize() * 1024 * 1024 * 8) * 0.7, 0.0);
 										st.setTimeFinishDeliveryVm(-1.0);
 										MyStatistics.getInstance().startWithoutVmTime(
-											st.getMyId(),CloudSim.clock());
+											st.getMyId(), CloudSim.clock());
 										MigrationTransferSpec transferSpec =
 											new MigrationTransferSpec(
 												st.getVmLocalServerCloudlet(),
@@ -701,23 +708,27 @@ public class MobileController extends SimEntity {
 											MobileEvents.START_MIGRATION_TRANSFER, transferSpec);
 									}
 								}
-							}
 
-							send(st.getSourceAp().getId(), handoffTime, MobileEvents.START_HANDOFF,st);
-							send(st.getDestinationAp().getId(), handoffLocked,
-								MobileEvents.UNLOCKED_HANDOFF, st);
-							MyStatistics.getInstance().incrementHandoffCount();
-
-							saveHandOff(st);
-
-							LogMobile.debug("MobileController.java", st.getName()
-								+ " handoff was scheduled! " + "SourceAp: "
-								+ st.getSourceAp().getName() + " NextAp: "
-								+ st.getDestinationAp().getName() + "\n");
-							LogMobile.debug("MobileController.java", "Distance between "
+								send(st.getSourceAp().getId(), handoffTime,
+									MobileEvents.START_HANDOFF, reservation);
+								send(st.getDestinationAp().getId(), handoffLocked,
+									MobileEvents.UNLOCKED_HANDOFF, st);
+								MyStatistics.getInstance().incrementHandoffCount();
+								saveHandOff(st);
+								LogMobile.debug("MobileController.java", st.getName()
+									+ " handoff was scheduled! SourceAp: "
+									+ st.getSourceAp().getName() + " NextAp: "
+									+ st.getDestinationAp().getName() + "\n");
+								LogMobile.debug("MobileController.java", "Distance between "
 									+ st.getName() + " and " + st.getSourceAp().getName()
 									+ ": " + Distances.checkDistance(st.getCoord(),
 										st.getSourceAp().getCoord()));
+							}
+							else {
+								LogMobile.debug("MobileController.java", st.getName()
+									+ " remains on its source AP because no destination "
+									+ "capacity could be reserved");
+							}
 						}
 						else {
 							LogMobile.debug("MobileController.java", st.getName()

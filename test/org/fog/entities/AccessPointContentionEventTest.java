@@ -227,6 +227,7 @@ public class AccessPointContentionEventTest {
 	public void handoffCancelsTrafficOnTheFormerAccessPoint() {
 		RecordingMobile mobile = connect("mobile", 0);
 		ApDevice destinationAccessPoint = new ApDevice("destination-ap", 0, 0, 1);
+		destinationAccessPoint.setMaxSmartThing(1);
 		destinationAccessPoint.setUplinkBandwidth(BANDWIDTH_BITS_PER_SECOND);
 		destinationAccessPoint.setDownlinkBandwidth(BANDWIDTH_BITS_PER_SECOND);
 		destinationAccessPoint.setServerCloudlet(server);

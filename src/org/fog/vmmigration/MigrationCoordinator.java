@@ -106,6 +106,7 @@ public final class MigrationCoordinator {
 		if (mobileDevice == null) {
 			throw new IllegalArgumentException("Mobile device cannot be null");
 		}
+		mobileDevice.cancelPendingHandoffReservation();
 		NetworkSlicing.releaseBandwidth(mobileDevice);
 		MyStatistics statistics = MyStatistics.getInstance();
 		statistics.discardOpenIntervals(mobileDevice.getMyId());

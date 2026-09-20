@@ -128,6 +128,7 @@ public final class MobileUserRegistration {
 	/** Clears both sides of the current network association, if present. */
 	public static void disconnectNetwork(MobileDevice user) {
 		validateUserAndPeripherals(user);
+		user.cancelPendingHandoffReservation();
 		ApDevice sourceAp = user.getSourceAp();
 		FogDevice sourceServer = user.getSourceServerCloudlet();
 		if (sourceAp != null) {
