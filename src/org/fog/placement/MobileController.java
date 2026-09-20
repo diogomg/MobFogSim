@@ -38,6 +38,7 @@ import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.MigrationTransferSpec;
+import org.fog.utils.SimulationDuration;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
@@ -633,9 +634,14 @@ public class MobileController extends SimEntity {
 							st.setHandoffStatus(true);
 							st.setLockedToHandoff(true);
 
-							double handoffTime = MaxAndMin.MIN_HANDOFF_TIME
-								+ (MaxAndMin.MAX_HANDOFF_TIME - MaxAndMin.MIN_HANDOFF_TIME)
-								* getRand().nextDouble();
+							SimulationDuration handoffSetupDuration =
+								SimulationDuration.ofMilliseconds(
+									MaxAndMin.MIN_HANDOFF_TIME
+									+ (MaxAndMin.MAX_HANDOFF_TIME
+										- MaxAndMin.MIN_HANDOFF_TIME)
+									* getRand().nextDouble());
+							double handoffTime =
+								handoffSetupDuration.toMilliseconds();
 							float handoffLocked = (float) (handoffTime * 4);
 							int delayConnection = 100; // connection between SmartT and ServerCloudlet
 

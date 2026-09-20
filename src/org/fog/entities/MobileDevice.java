@@ -18,6 +18,8 @@ import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.policy.MovementDirection;
@@ -37,6 +39,7 @@ public class MobileDevice extends FogDevice {
 	private FogDevice vmLocalServerCloudlet;
 	private ApDevice sourceAp;
 	private ApDevice destinationAp;
+	private WirelessAssociation wirelessAssociation;
 	private Vm vmMobileDevice;
 	private double migTime;
 	private boolean migPoint;
@@ -76,7 +79,7 @@ public class MobileDevice extends FogDevice {
 			&& getSourceAp().getSmartThings().contains(this)) {
 			NetworkSlicing.startWirelessTupleTransfer(getSourceAp(), this,
 				NetworkSlicing.WirelessDirection.UPLINK, tuple, getId(),
-				getParentId(), getUplinkLatency());
+				getParentId(), getWirelessPropagationDelayMillis());
 			return;
 		}
 		super.sendUp(tuple);
@@ -474,6 +477,34 @@ public class MobileDevice extends FogDevice {
 
 	public void setSourceAp(ApDevice sourceAp) {
 		this.sourceAp = sourceAp;
+		if (sourceAp == null) {
+			wirelessAssociation = null;
+		}
+		else if (wirelessAssociation == null
+			|| wirelessAssociation.getAccessPoint() != sourceAp) {
+			wirelessAssociation = WirelessAssociation.establish(sourceAp, this,
+				PropagationDelay.ofMilliseconds(getUplinkLatency()),
+				SimulationDuration.ZERO);
+		}
+	}
+
+	public WirelessAssociation getWirelessAssociation() {
+		return wirelessAssociation;
+	}
+
+	/** Installs both sides of the mobile's current wireless-link state. */
+	void establishWirelessAssociation(ApDevice accessPoint,
+		PropagationDelay propagationDelay,
+		SimulationDuration establishmentDuration) {
+		wirelessAssociation = WirelessAssociation.establish(accessPoint, this,
+			propagationDelay, establishmentDuration);
+		sourceAp = accessPoint;
+	}
+
+	public double getWirelessPropagationDelayMillis() {
+		return wirelessAssociation == null
+			? getUplinkLatency()
+			: wirelessAssociation.getPropagationDelay().toMilliseconds();
 	}
 
 	public ApDevice getDestinationAp() {

@@ -873,7 +873,7 @@ public class FogDevice extends PowerDatacenter {
 				+ st.getSourceServerCloudlet().getName());
 		}
 
-		double latency = st.getUplinkLatency();
+		double latency = st.getWirelessPropagationDelayMillis();
 		if (!Double.isFinite(latency) || latency < 0.0) {
 			throw new IllegalArgumentException(
 				"Mobile-device uplink latency must be finite and non-negative");
@@ -883,7 +883,6 @@ public class FogDevice extends PowerDatacenter {
 		associateMobileDevice(st);
 		st.setParentId(getId());
 		attachChild(st.getId(), latency);
-		setUplinkLatency(getUplinkLatency() + 0.123812950236);//
 		LogMobile.debug("FogDevice.java", st.getName() + " was connected to " + getName());
 
 		return true;
@@ -897,10 +896,6 @@ public class FogDevice extends PowerDatacenter {
 		st.setSourceServerCloudlet(null);
 		if (st.getParentId() == getId()) {
 			st.setParentId(-1);
-		}
-		// NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
-		if (removed) {
-			setUplinkLatency(getUplinkLatency() - 0.123812950236);
 		}
 		detachChild(st.getId());
 		LogMobile.debug("FogDevice.java", st.getName() + " was desconnected to " + getName());
@@ -1715,15 +1710,17 @@ public class FogDevice extends PowerDatacenter {
 					&& mobileDevice.getSourceServerCloudlet() == this
 					&& mobileDevice.getSourceAp().getSmartThings()
 						.contains(mobileDevice)) {
-					Double latency = getChildToLatencyMap().get(childId);
-					if (latency == null) {
+					WirelessAssociation association =
+						mobileDevice.getWirelessAssociation();
+					if (association == null) {
 						throw new IllegalStateException(
 							"Wireless child has no propagation latency: " + childId);
 					}
 					NetworkSlicing.startWirelessTupleTransfer(
 						mobileDevice.getSourceAp(), mobileDevice,
 						NetworkSlicing.WirelessDirection.DOWNLINK, tuple,
-						getId(), childId, latency);
+						getId(), childId, association.getPropagationDelay()
+							.toMilliseconds());
 					return;
 				}
 			}

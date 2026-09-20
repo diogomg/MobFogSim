@@ -8,6 +8,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.MobileUserRegistration;
@@ -38,7 +39,7 @@ public final class MobileAssociationService {
 		if (mobileDevice.getSourceAp() == null
 			&& (accessPoints == null || accessPoints.isEmpty()
 				|| !ApDevice.connectApSmartThing(accessPoints, mobileDevice,
-					random.nextDouble()))) {
+					SimulationDuration.ofMilliseconds(random.nextDouble())))) {
 			MobileUserRegistration.awaitAssociation(mobileDevice);
 			return previousState;
 		}

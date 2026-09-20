@@ -15,6 +15,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.Migration;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,7 +99,8 @@ public class DistancesTest {
 		MobileDevice mobileDevice = mobileDevice("mobile", 0, 0, 1300);
 
 		assertTrue(ApDevice.connectApSmartThing(
-			Arrays.asList(farther, closest), mobileDevice, 0.25));
+			Arrays.asList(farther, closest), mobileDevice,
+			SimulationDuration.ofMilliseconds(0.25)));
 		assertSame(closest, mobileDevice.getSourceAp());
 		assertTrue(closest.getSmartThings().contains(mobileDevice));
 	}

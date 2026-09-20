@@ -2,6 +2,7 @@ package org.fog.placement;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +33,7 @@ import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.MobileSensor;
 import org.fog.localization.Coordinate;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.SimulationDuration;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
@@ -77,9 +79,11 @@ public class P0CorrectnessRegressionTest {
 		MobileDevice second = mobile("second", 2);
 
 		assertTrue(ApDevice.connectApSmartThing(
-			Collections.singletonList(accessPoint), first, 0.5));
+			Collections.singletonList(accessPoint), first,
+			SimulationDuration.ofMilliseconds(0.5)));
 		assertFalse(ApDevice.connectApSmartThing(
-			Collections.singletonList(accessPoint), second, 0.5));
+			Collections.singletonList(accessPoint), second,
+			SimulationDuration.ofMilliseconds(0.5)));
 
 		assertEquals(1, accessPoint.getSmartThings().size());
 		assertTrue(accessPoint.getSmartThings().contains(first));
@@ -127,14 +131,15 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c1AssociationMustNotRewriteEndpointTopologyLatency() {
-		requireKnownDefectRun("C1");
 		ApDevice accessPoint = accessPoint("immutableLatencyAp", 1, 4.0);
 		FogDevice server = new FogDevice("immutableLatencyServer", 0, 0, 0);
 		server.setUplinkLatency(7.0);
 		MobileDevice user = mobile("associatedUser", 5);
+		user.setUplinkLatency(2.0);
 
 		assertTrue(ApDevice.connectApSmartThing(
-			Collections.singletonList(accessPoint), user, 0.25));
+			Collections.singletonList(accessPoint), user,
+			SimulationDuration.ofMilliseconds(0.25)));
 		assertTrue(server.connectServerCloudletSmartThing(user));
 
 		boolean unchanged = accessPoint.getUplinkLatency() == 4.0
@@ -142,11 +147,19 @@ public class P0CorrectnessRegressionTest {
 		assertTrue("C1: association duration changed endpoint topology latency "
 			+ "(AP=" + accessPoint.getUplinkLatency() + ", server="
 			+ server.getUplinkLatency() + ')', unchanged);
+		assertNotNull(user.getWirelessAssociation());
+		assertEquals(0.25, user.getWirelessAssociation()
+			.getEstablishmentDuration().toMilliseconds(), DELTA);
+		assertEquals(2.0, user.getWirelessAssociation()
+			.getPropagationDelay().toMilliseconds(), DELTA);
+		assertEquals(2.0,
+			NetworkTopology.getDelay(accessPoint.getId(), user.getId()), DELTA);
+		assertEquals(2.0,
+			server.getChildToLatencyMap().get(user.getId()), DELTA);
 	}
 
 	@Test
 	public void c1AssociationCyclesMustNotMutateTopologyLatency() {
-		requireKnownDefectRun("C1");
 		ApDevice accessPoint = accessPoint("stableLatencyAp", 1, 4.0);
 		FogDevice server = new FogDevice("stableLatencyServer", 0, 0, 0);
 		server.setUplinkLatency(7.0);
@@ -156,7 +169,8 @@ public class P0CorrectnessRegressionTest {
 
 		for (int cycle = 0; cycle < 1000; cycle++) {
 			assertTrue(ApDevice.connectApSmartThing(
-				Collections.singletonList(accessPoint), user, 0.25));
+				Collections.singletonList(accessPoint), user,
+				SimulationDuration.ofMilliseconds(0.25)));
 			assertTrue(server.connectServerCloudletSmartThing(user));
 			assertTrue(accessPoint.desconnectApSmartThing(user));
 			assertTrue(server.desconnectServerCloudletSmartThing(user));
@@ -170,7 +184,6 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c1HandoffSetupTimeMustNotBecomePropagationLatency() {
-		requireKnownDefectRun("C1");
 		ApDevice source = accessPoint("handoffSource", 1, 4.0);
 		ApDevice destination = accessPoint("handoffDestination", 1, 6.0);
 		MobileDevice user = activeAt(source, "handoffLatencyUser", 12);
@@ -190,6 +203,11 @@ public class P0CorrectnessRegressionTest {
 			4.0, source.getUplinkLatency(), DELTA);
 		assertEquals("C1: destination topology latency must remain immutable",
 			6.0, destination.getUplinkLatency(), DELTA);
+		assertEquals("C1: handoff setup must not replace wireless propagation",
+			2.0, user.getWirelessAssociation().getPropagationDelay()
+				.toMilliseconds(), DELTA);
+		assertEquals(2.0,
+			NetworkTopology.getDelay(destination.getId(), user.getId()), DELTA);
 	}
 
 	@Test
@@ -355,6 +373,7 @@ public class P0CorrectnessRegressionTest {
 
 	private static MobileDevice activeAt(ApDevice source, String name, int id) {
 		MobileDevice mobileDevice = mobile(name, id);
+		mobileDevice.setUplinkLatency(2.0);
 		source.associateMobileDevice(mobileDevice);
 		mobileDevice.setSourceAp(source);
 		mobileDevice.setLifecycleState(MobileDeviceLifecycle.ACTIVE);

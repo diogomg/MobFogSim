@@ -16,6 +16,8 @@ import org.cloudbus.cloudsim.core.SimEvent;
 import org.fog.localization.*;
 import org.fog.placement.MobileController;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -34,7 +36,8 @@ public class ApDevice extends FogDevice {
 	protected void processOtherEvent(SimEvent ev) {
 		switch (ev.getTag()) {
 		case MobileEvents.START_HANDOFF:
-			handoff(ev, MobileController.getRand().nextDouble());
+			handoff(ev, SimulationDuration.ofMilliseconds(
+				MobileController.getRand().nextDouble()));
 			break;
 		case MobileEvents.UNLOCKED_HANDOFF:
 			unLockedHandoff(ev);
@@ -52,7 +55,8 @@ public class ApDevice extends FogDevice {
 		LogMobile.debug("ApDevice.java", smartThing.getName() + " has the handoff unlocked");
 	}
 
-	private void handoff(SimEvent ev, double delay) {
+	private void handoff(SimEvent ev,
+		SimulationDuration associationEstablishmentDuration) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
 		if (smartThing == null
 			|| smartThing.getLifecycleState() != MobileDeviceLifecycle.ACTIVE
@@ -63,7 +67,8 @@ public class ApDevice extends FogDevice {
 
 		if (getSmartThings().contains(smartThing)) {
 			ApDevice destination = smartThing.getDestinationAp();
-			if (!transferMobileDevice(smartThing, destination, delay)) {
+			if (!transferMobileDevice(smartThing, destination,
+				associationEstablishmentDuration)) {
 				return;
 			}
 
@@ -102,9 +107,6 @@ public class ApDevice extends FogDevice {
 		NetworkSlicing.cancelWirelessTransfers(st);
 		boolean removed = dissociateMobileDevice(st);
 		st.setSourceAp(null);
-		if (removed) {
-			setUplinkLatency(getUplinkLatency() - 0.002);
-		}
 		LogMobile.debug("ApDevice.java", st.getName() + " was desconnected to " + getName());
 		// remove link
 		NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
@@ -113,34 +115,47 @@ public class ApDevice extends FogDevice {
 
 	/** Moves both sides of a wireless association as one validated transition. */
 	private boolean transferMobileDevice(MobileDevice mobileDevice,
-		ApDevice destination, double delay) {
+		ApDevice destination,
+		SimulationDuration associationEstablishmentDuration) {
 		if (mobileDevice == null || destination == null
 			|| mobileDevice.getSourceAp() != this
 			|| !getSmartThings().contains(mobileDevice)) {
 			return false;
 		}
-		if (!Double.isFinite(delay) || delay < 0.0) {
+		if (associationEstablishmentDuration == null) {
 			throw new IllegalArgumentException(
-				"Handoff delay must be finite and non-negative");
+				"Association establishment duration cannot be null");
 		}
+		PropagationDelay propagationDelay = mobileDevice.getWirelessAssociation()
+			== null
+			? PropagationDelay.ofMilliseconds(mobileDevice.getUplinkLatency())
+			: mobileDevice.getWirelessAssociation().getPropagationDelay();
 		NetworkSlicing.cancelWirelessTransfers(mobileDevice);
 		dissociateMobileDevice(mobileDevice);
 		destination.associateMobileDevice(mobileDevice);
-		mobileDevice.setSourceAp(destination);
-		setUplinkLatency(Math.max(0.0, getUplinkLatency() - delay));
-		destination.setUplinkLatency(destination.getUplinkLatency() + delay);
+		mobileDevice.establishWirelessAssociation(destination, propagationDelay,
+			associationEstablishmentDuration);
 		NetworkTopology.addLink(getId(), mobileDevice.getId(), 0.0, 0.0);
 		NetworkTopology.addLink(destination.getId(), mobileDevice.getId(),
-			NetworkSlicing.getAccessPointUplinkBandwidth(destination, mobileDevice),
-			delay);
+			mobileDevice.getWirelessAssociation().getBandwidthBitsPerSecond(
+				NetworkSlicing.WirelessDirection.UPLINK),
+			propagationDelay.toMilliseconds());
+		if (mobileDevice.getSourceServerCloudlet() != null) {
+			mobileDevice.getSourceServerCloudlet().attachChild(mobileDevice.getId(),
+				propagationDelay.toMilliseconds());
+		}
 		return true;
 	}
 
 	public static boolean connectApSmartThing(List<ApDevice> apDevices, MobileDevice st,
-		double delay) {
+		SimulationDuration associationEstablishmentDuration) {
 		if (apDevices == null || st == null) {
 			throw new IllegalArgumentException(
 				"Access-point list and mobile device cannot be null");
+		}
+		if (associationEstablishmentDuration == null) {
+			throw new IllegalArgumentException(
+				"Association establishment duration cannot be null");
 		}
 		if (st.getSourceAp() != null) {
 			return st.getSourceAp().getSmartThings().contains(st);
@@ -156,12 +171,16 @@ public class ApDevice extends FogDevice {
 		}
 
 		apDevice.associateMobileDevice(st);
-		st.setSourceAp(apDevice);
+		PropagationDelay propagationDelay =
+			PropagationDelay.ofMilliseconds(st.getUplinkLatency());
+		st.establishWirelessAssociation(apDevice, propagationDelay,
+			associationEstablishmentDuration);
 		NetworkTopology.addLink(apDevice.getId(), st.getId(),
-			NetworkSlicing.getAccessPointUplinkBandwidth(apDevice, st), delay);
+			st.getWirelessAssociation().getBandwidthBitsPerSecond(
+				NetworkSlicing.WirelessDirection.UPLINK),
+			propagationDelay.toMilliseconds());
 		LogMobile.debug("ApDevice.java", st.getName() + " was connected to "
 			+ apDevice.getName());
-		apDevice.setUplinkLatency(apDevice.getUplinkLatency() + delay);
 		return true;
 	}
 

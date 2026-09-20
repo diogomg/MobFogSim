@@ -34,3 +34,11 @@ java -classpath 'build/test-classes:jars/*:jars/commons-math3-3.5/*' \
 Replace the final case name with `complete-vm`, `container`, or
 `live-migration` as required. Review every semantic difference before updating
 a checked-in snapshot.
+
+The snapshots were refreshed on 20 September 2026 for refactoring-plan Phase
+1.1 (C1). Wireless tuple propagation now uses the mobile link's configured
+2 ms propagation delay across association and handoff; the random association
+duration and 700--1,200 ms handoff setup duration no longer rewrite AP/server
+topology latency. Consequently, tuple/loop timing, event counts, energy, and
+network-usage totals differ from the Phase 0 characterisation while the seed,
+mobility trace, handoff schedule, and migration policies remain unchanged.
