@@ -526,27 +526,30 @@ public class MobileController extends SimEntity {
 		retireApplication(mobileDevice);
 	}
 
-	private void retireApplication(MobileDevice mobileDevice) {
+	void retireApplication(MobileDevice mobileDevice) {
 		String applicationId = "MyApp_vr_game" + mobileDevice.getMyId();
-		FogDevice vmLocation = mobileDevice.getVmLocalServerCloudlet();
-		if (vmLocation != null) {
-			vmLocation.unregisterHostedMobileVm(mobileDevice);
-		}
 		Vm vm = mobileDevice.getVmMobileDevice();
-		Host host = vm == null ? null : vm.getHost();
-		if (host != null) {
-			while (host.getVmList().contains(vm)) {
-				host.vmDestroy(vm);
+		for (SimEntity entity : CloudSim.getEntityList()) {
+			if (!(entity instanceof FogDevice)) {
+				continue;
 			}
+			FogDevice fogDevice = (FogDevice) entity;
+			releaseVmFromHost(fogDevice, vm);
+			fogDevice.unregisterHostedMobileVm(mobileDevice);
+			fogDevice.removeApplication(applicationId);
 		}
-		for (FogDevice serverCloudlet : getServerCloudlets()) {
-			serverCloudlet.unregisterHostedMobileVm(mobileDevice);
-			serverCloudlet.removeApplication(applicationId);
+	}
+
+	private static void releaseVmFromHost(FogDevice serverCloudlet, Vm vm) {
+		if (serverCloudlet == null || vm == null
+			|| serverCloudlet.getCharacteristics() == null
+			|| serverCloudlet.getHostList().isEmpty()) {
+			return;
 		}
-		if (vmLocation != null && !getServerCloudlets().contains(vmLocation)) {
-			vmLocation.removeApplication(applicationId);
+		Host host = serverCloudlet.getHost();
+		while (host.getVmList().contains(vm)) {
+			host.vmDestroy(vm);
 		}
-		mobileDevice.removeApplication(applicationId);
 	}
 
 	private void registerMobileUser(MobileDevice mobileDevice) {

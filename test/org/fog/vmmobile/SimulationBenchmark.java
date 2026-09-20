@@ -124,6 +124,13 @@ public final class SimulationBenchmark {
 			Long.toString(topology.getServerAdjacencyEntryCount()));
 		values.put("run_output_files", Long.toString(output.fileCount));
 		values.put("run_output_bytes", Long.toString(output.byteCount));
+		values.put("slice_reconfigurations",
+			Long.toString(result.getMetrics().getSliceReconfigurationCount()));
+		values.put("slice_outage_seconds",
+			Double.toString(result.getMetrics().getSliceOutageSeconds()));
+		values.put("slice_received_bandwidth_bits_per_second_sum",
+			formatSliceBandwidth(
+				result.getMetrics().getReceivedBandwidthBySlice()));
 		values.put("wireless_queue_limit",
 			Integer.toString(result.getMetrics().getMaximumWirelessQueueSize()));
 		values.put("wireless_queue_final",
@@ -135,6 +142,9 @@ public final class SimulationBenchmark {
 			Integer.toString(result.getMetrics().getMaximumWirelessQueueDepth()));
 		values.put("wireless_queue_dropped_tuples",
 			Long.toString(result.getMetrics().getDroppedWirelessTupleCount()));
+		// Preserve every stable run metric, including variable-cardinality device,
+		// loop, user, tuple-type, and per-slice values, in the detailed fixture file.
+		values.putAll(result.toSemanticSnapshot().getValues());
 		values.put("characterisation_sha256",
 			sha256(result.toCharacterisationText()));
 
@@ -161,6 +171,22 @@ public final class SimulationBenchmark {
 			Files.move(temporary, metricsFile,
 				StandardCopyOption.REPLACE_EXISTING);
 		}
+	}
+
+	static String formatSliceBandwidth(Map<Integer, Double> bandwidthBySlice) {
+		if (bandwidthBySlice == null) {
+			throw new IllegalArgumentException(
+				"Received slice bandwidth cannot be null");
+		}
+		StringBuilder text = new StringBuilder();
+		for (Map.Entry<Integer, Double> entry
+			: new TreeMap<Integer, Double>(bandwidthBySlice).entrySet()) {
+			if (text.length() > 0) {
+				text.append(',');
+			}
+			text.append(entry.getKey()).append('=').append(entry.getValue());
+		}
+		return text.toString();
 	}
 
 	private static OutputInventory inventory(Path root) throws IOException {
@@ -210,34 +236,47 @@ public final class SimulationBenchmark {
 	private static final class Fixture {
 		private static final String BASELINE_GROUP = "baseline";
 		private static final String MATRIX_GROUP = "matrix";
+		private static final String FIFTY_USERS_GROUP = "fifty-users";
+		private static final String NUMERIC_USERS_GROUP_SUFFIX = "-users";
+		private static final String TEN_USER_FIXTURE_PREFIX = "u10-";
+		private static final int USER_ARGUMENT_INDEX = 4;
+		private static final String DEFAULT_CLOUDLET_BANDWIDTH = "74";
+		private static final String DEFAULT_CLOUDLET_LATENCY = "3";
 		private static final String ALL_GROUP = "all";
 		private static final List<String> BASELINE_NAMES =
 			Collections.unmodifiableList(Arrays.asList(
 				"small", "reference", "large"));
 		private static final Map<String, Fixture> ALL_FIXTURES;
 		private static final List<String> MATRIX_NAMES;
+		private static final List<String> FIFTY_USER_NAMES;
 
 		static {
 			LinkedHashMap<String, Fixture> fixtures =
 				new LinkedHashMap<String, Fixture>();
 			ArrayList<String> matrixNames = new ArrayList<String>();
+			ArrayList<String> fiftyUserNames = new ArrayList<String>();
 
 			register(fixtures, "small", new String[] {
-				"0", "290538", "0", "0", "1", "11", "0", "61", "0", "0",
-				"2", "100", "100", "1", "0", "2", "none"
+				"0", "290538", "0", "0", "1", DEFAULT_CLOUDLET_BANDWIDTH,
+				"0", DEFAULT_CLOUDLET_LATENCY, "0", "0",
+				"0", "100", "100", "1", "2", "2", "none"
 			});
 			register(fixtures, "reference", referenceArguments(1, "100", "100"));
 			register(fixtures, "large", new String[] {
-				"0", "290538", "0", "0", "10", "11", "0", "61", "0", "0",
-				"2", "100", "100", "1", "0", "2", "none"
+				"0", "290538", "0", "0", "10", DEFAULT_CLOUDLET_BANDWIDTH,
+				"0", DEFAULT_CLOUDLET_LATENCY, "0", "0",
+				"0", "100", "100", "1", "2", "2", "none"
 			});
 			register(fixtures, "large-migration",
 				referenceArguments(10, "100", "100"));
 
 			registerOneUserMatrix(fixtures, matrixNames);
 			registerTenUserMatrix(fixtures, matrixNames);
+			registerFiftyUserScenarios(fixtures, matrixNames, fiftyUserNames);
+			matrixNames.addAll(fiftyUserNames);
 			ALL_FIXTURES = Collections.unmodifiableMap(fixtures);
 			MATRIX_NAMES = Collections.unmodifiableList(matrixNames);
+			FIFTY_USER_NAMES = Collections.unmodifiableList(fiftyUserNames);
 		}
 
 		private final String name;
@@ -251,8 +290,13 @@ public final class SimulationBenchmark {
 		private static Fixture fromName(String name) {
 			Fixture fixture = ALL_FIXTURES.get(name);
 			if (fixture == null) {
+				fixture = scaledFixture(name);
+			}
+			if (fixture == null) {
 				throw new IllegalArgumentException("Unknown benchmark fixture or group '"
-					+ name + "'; use --list baseline, matrix, or all");
+					+ name
+					+ "'; use --list baseline, matrix, fifty-users, "
+					+ "<positive-integer>-users, or all");
 			}
 			return fixture;
 		}
@@ -270,17 +314,111 @@ public final class SimulationBenchmark {
 				else if (MATRIX_GROUP.equals(selection)) {
 					names.addAll(MATRIX_NAMES);
 				}
+				else if (FIFTY_USERS_GROUP.equals(selection)) {
+					names.addAll(FIFTY_USER_NAMES);
+				}
 				else if (ALL_GROUP.equals(selection)) {
 					names.addAll(BASELINE_NAMES);
 					names.add("large-migration");
 					names.addAll(MATRIX_NAMES);
 				}
 				else {
-					fromName(selection);
-					names.add(selection);
+					Integer userCount = numericUserGroupCount(selection);
+					if (userCount != null) {
+						names.addAll(namesForUserCount(userCount.intValue()));
+					}
+					else {
+						fromName(selection);
+						names.add(selection);
+					}
 				}
 			}
 			return Collections.unmodifiableList(new ArrayList<String>(names));
+		}
+
+		private static Integer numericUserGroupCount(String selection) {
+			if (!selection.endsWith(NUMERIC_USERS_GROUP_SUFFIX)) {
+				return null;
+			}
+			String count = selection.substring(0,
+				selection.length() - NUMERIC_USERS_GROUP_SUFFIX.length());
+			return parsePositiveUserCount(count, selection);
+		}
+
+		private static List<String> namesForUserCount(int userCount) {
+			ArrayList<String> names = new ArrayList<String>();
+			String sourcePrefix = userCount == 1 ? "u1-"
+				: TEN_USER_FIXTURE_PREFIX;
+			for (String matrixName : MATRIX_NAMES) {
+				if (!matrixName.startsWith(sourcePrefix)) {
+					continue;
+				}
+				if (userCount == 1 || userCount == 10) {
+					names.add(matrixName);
+				}
+				else {
+					names.add("u" + userCount + "-"
+						+ matrixName.substring(TEN_USER_FIXTURE_PREFIX.length()));
+				}
+			}
+			return names;
+		}
+
+		private static Fixture scaledFixture(String name) {
+			if (!name.startsWith("u")) {
+				return null;
+			}
+			int separator = name.indexOf('-');
+			if (separator <= 1 || separator == name.length() - 1) {
+				return null;
+			}
+			String count = name.substring(1, separator);
+			if (!isDecimal(count)) {
+				return null;
+			}
+			int userCount = parsePositiveUserCount(count, name).intValue();
+			if (userCount == 1) {
+				return null;
+			}
+			String sourceName = TEN_USER_FIXTURE_PREFIX
+				+ name.substring(separator + 1);
+			Fixture source = ALL_FIXTURES.get(sourceName);
+			if (source == null) {
+				return null;
+			}
+			String[] arguments = source.arguments.clone();
+			arguments[USER_ARGUMENT_INDEX] = Integer.toString(userCount);
+			return new Fixture(name, arguments);
+		}
+
+		private static Integer parsePositiveUserCount(String count,
+			String selection) {
+			if (!isDecimal(count)) {
+				return null;
+			}
+			if (count.charAt(0) == '0') {
+				throw new IllegalArgumentException("Benchmark user count must be a "
+					+ "positive integer without leading zeroes: " + selection);
+			}
+			try {
+				return Integer.valueOf(count);
+			}
+			catch (NumberFormatException invalid) {
+				throw new IllegalArgumentException(
+					"Benchmark user count is too large: " + selection, invalid);
+			}
+		}
+
+		private static boolean isDecimal(String value) {
+			if (value.isEmpty()) {
+				return false;
+			}
+			for (int index = 0; index < value.length(); index++) {
+				if (!Character.isDigit(value.charAt(index))) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		private static void registerOneUserMatrix(
@@ -302,8 +440,8 @@ public final class SimulationBenchmark {
 				baseline, 8, "60");
 			registerVariant(fixtures, matrixNames, "u1-error-500",
 				baseline, 9, "500");
-			registerVariant(fixtures, matrixNames, "u1-scope-transport",
-				baseline, 10, "0");
+			registerVariant(fixtures, matrixNames, "u1-scope-end-to-end",
+				baseline, 10, "2");
 			registerVariant(fixtures, matrixNames, "u1-scope-wireless",
 				baseline, 10, "1");
 			registerVariant(fixtures, matrixNames, "u1-slicing-static",
@@ -334,14 +472,19 @@ public final class SimulationBenchmark {
 				baseline, 8, "60");
 			registerVariant(fixtures, matrixNames, "u10-error-500",
 				baseline, 9, "500");
-			registerVariant(fixtures, matrixNames, "u10-scope-transport",
-				baseline, 10, "0");
+			registerVariant(fixtures, matrixNames, "u10-scope-end-to-end",
+				baseline, 10, "2");
 			registerVariant(fixtures, matrixNames, "u10-scope-wireless",
 				baseline, 10, "1");
 			registerMatrix(fixtures, matrixNames, "u10-allocation-equal-two",
 				referenceArguments(10, "50,50", "50,50"));
+			String[] weightedThreeSlices = referenceArguments(10, "50,30,20",
+				"33.34,33.33,33.33");
 			registerMatrix(fixtures, matrixNames, "u10-three-slices-weighted",
-				referenceArguments(10, "50,30,20", "33.34,33.33,33.33"));
+				weightedThreeSlices);
+			registerVariant(fixtures, matrixNames,
+				"u10-three-slices-weighted-delay-60", weightedThreeSlices, 14,
+				"60");
 			registerMatrix(fixtures, matrixNames, "u10-three-slices-equal",
 				referenceArguments(10,
 					"33.333334,33.333333,33.333333", "33.34,33.33,33.33"));
@@ -353,12 +496,29 @@ public final class SimulationBenchmark {
 				baseline, 15, "1");
 		}
 
+		private static void registerFiftyUserScenarios(
+			Map<String, Fixture> fixtures, List<String> matrixNames,
+			List<String> fiftyUserNames) {
+			for (String matrixName : matrixNames) {
+				if (!matrixName.startsWith("u10-")) {
+					continue;
+				}
+				String fiftyUserName = "u50-"
+					+ matrixName.substring(TEN_USER_FIXTURE_PREFIX.length());
+				String[] arguments = fixtures.get(matrixName).arguments.clone();
+				arguments[USER_ARGUMENT_INDEX] = "50";
+				register(fixtures, fiftyUserName, arguments);
+				fiftyUserNames.add(fiftyUserName);
+			}
+		}
+
 		private static String[] referenceArguments(int users,
 			String userAllocation, String sliceShares) {
 			return new String[] {
-				"1", "290538", "0", "0", Integer.toString(users), "11", "2",
-				"61", "0", "0", "2", userAllocation, sliceShares, "1", "0",
-				"2", "none"
+				"1", "290538", "0", "0", Integer.toString(users),
+				DEFAULT_CLOUDLET_BANDWIDTH, "2", DEFAULT_CLOUDLET_LATENCY,
+				"0", "0", "0", userAllocation, sliceShares, "1", "2", "2",
+				"none"
 			};
 		}
 

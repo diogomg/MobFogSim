@@ -59,11 +59,14 @@ directory only.
 Run the reproducible small, reference, and large performance fixtures with
 `make benchmark`. This records wall time, peak RSS, event counts, topology
 sizes, output bytes, environment details, input checksums, and semantic digests
-under `build/benchmarks`. See
+in UTC-stamped run directories under `benchmarks`. See
 [`benchmarks/README.md`](benchmarks/README.md) for the fixture definitions and
-override options. Use `make benchmark-matrix` for the expanded 30-scenario
-one-factor-at-a-time comparison, or list its fixture names with
+override options. Use `make benchmark-matrix` for the expanded 49-scenario
+comparison, or list its fixture names with
 `make list-benchmark-fixtures BENCHMARK_FIXTURES=matrix`.
+Use `make benchmark BENCHMARK_FIXTURES=37-users` to run the 18 ten-user matrix
+scenarios with any supported positive user count. The current mobility-order
+manifest supports up to 480 users.
 
 ### Running in the Eclipse IDE
 

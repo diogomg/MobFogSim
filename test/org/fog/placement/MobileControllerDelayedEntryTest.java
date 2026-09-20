@@ -250,6 +250,51 @@ public class MobileControllerDelayedEntryTest {
 		assertEquals(1, brokers.size());
 	}
 
+	@Test
+	public void retiringMigratedUserClearsVmFromEveryFogHost() {
+		List<FogDevice> servers = new ArrayList<FogDevice>();
+		List<ApDevice> accessPoints = new ArrayList<ApDevice>();
+		List<MobileDevice> users = new ArrayList<MobileDevice>();
+		List<FogBroker> brokers = new ArrayList<FogBroker>();
+		configureAppExample(servers, accessPoints, users);
+		AppExample.addServerCloudlet(servers, new Coordinate(), 0);
+		AppExample.addServerCloudlet(servers, new Coordinate(), 1);
+		FogDevice originalServer = servers.get(0);
+		FogDevice destinationServer = servers.get(1);
+		ApDevice accessPoint = new ApDevice("migrationRetirementAp", 0, 0, 0,
+			100 * 1024 * 1024, 200, 500, 100 * 1024 * 1024, 4);
+		accessPoint.setServerCloudlet(originalServer);
+		accessPoints.add(accessPoint);
+		AppExample.addSmartThing(users, new Coordinate(), 0);
+		AppExample.addSmartThing(users, new Coordinate(), 1);
+		MobileDevice user = users.get(0);
+		MobileDevice peerHost = users.get(1);
+		MyStatistics.getInstance().initialiseLatencyCounter(user.getMyId());
+		user.setCoord(0, 0);
+		user.setTravelTimeId(0);
+		MobileUserRegistration.preparePendingUser(user);
+		MobileController controller = new MobileController("retirementController",
+			servers, accessPoints, users, brokers, ModuleMapping.createModuleMapping(),
+			Policies.FIXED_MIGRATION_POINT, Policies.LOWEST_LATENCY, 1,
+			new Coordinate(), 1, false);
+
+		assertTrue(controller.activateMobileUser(user));
+		Vm vm = user.getVmMobileDevice();
+		assertTrue(peerHost.getHost().vmCreate(vm));
+		assertTrue(destinationServer.getHost().vmCreate(vm));
+		user.setVmLocalServerCloudlet(destinationServer);
+		assertTrue(originalServer.getHost().getVmList().contains(vm));
+		assertTrue(peerHost.getHost().getVmList().contains(vm));
+		assertTrue(destinationServer.getHost().getVmList().contains(vm));
+
+		controller.retireApplication(user);
+
+		assertNull(vm.getHost());
+		assertFalse(originalServer.getHost().getVmList().contains(vm));
+		assertFalse(peerHost.getHost().getVmList().contains(vm));
+		assertFalse(destinationServer.getHost().getVmList().contains(vm));
+	}
+
 	private static void configureAppExample(List<FogDevice> servers,
 		List<ApDevice> accessPoints, List<MobileDevice> users) {
 		AppExample.setServerCloudlets(servers);

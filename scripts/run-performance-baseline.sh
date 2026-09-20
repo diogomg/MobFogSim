@@ -35,7 +35,7 @@ if [[ -n ${BENCHMARK_OUTPUT:-} ]]; then
 		benchmark_root=${repository_root}/${benchmark_root}
 	fi
 else
-	benchmark_root=${repository_root}/build/benchmarks/run-$(date -u +%Y%m%dT%H%M%SZ)
+	benchmark_root=${repository_root}/benchmarks/run-$(date -u +%Y%m%dT%H%M%SZ)
 fi
 if [[ -e ${benchmark_root} ]]; then
 	echo "Benchmark output already exists: ${benchmark_root}" >&2
@@ -90,7 +90,7 @@ java_runtime=$(java -version 2>&1 | awk 'NR == 1 { print; exit }')
 } > "${benchmark_root}/environment.properties"
 
 results_file=${benchmark_root}/results.tsv
-printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_adjacency_entries\tcloudsim_entities\tgenerated_tuples\twireless_queue_limit\twireless_queue_final\twireless_queue_max_total\twireless_queue_max_per_direction\twireless_queue_dropped_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
+printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_adjacency_entries\tcloudsim_entities\tgenerated_tuples\tslice_reconfigurations\tslice_outage_seconds\tslice_received_bandwidth_bits_per_second_sum\twireless_queue_limit\twireless_queue_final\twireless_queue_max_total\twireless_queue_max_per_direction\twireless_queue_dropped_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
 	> "${results_file}"
 
 property_value() {
@@ -139,6 +139,12 @@ for fixture in "${fixtures[@]}"; do
 		"${metrics_file}")
 	cloudsim_entities=$(property_value cloudsim_entities "${metrics_file}")
 	generated_tuples=$(property_value generated_tuples "${metrics_file}")
+	slice_reconfigurations=$(property_value slice_reconfigurations \
+		"${metrics_file}")
+	slice_outage_seconds=$(property_value slice_outage_seconds \
+		"${metrics_file}")
+	slice_received_bandwidth=$(property_value \
+		slice_received_bandwidth_bits_per_second_sum "${metrics_file}")
 	wireless_queue_limit=$(property_value wireless_queue_limit "${metrics_file}")
 	wireless_queue_final=$(property_value wireless_queue_final "${metrics_file}")
 	wireless_queue_max_total=$(property_value wireless_queue_max_total \
@@ -154,15 +160,18 @@ for fixture in "${fixtures[@]}"; do
 	stderr_bytes=$(wc -c < "${stderr_file}")
 	total_output_bytes=$((stdout_bytes + stderr_bytes + run_output_bytes))
 
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 		"${fixture}" "${wall_seconds}" "${peak_rss_kib}" \
 		"${events_total}" "${events_queued}" "${events_periodic}" \
 		"${servers}" "${access_points}" "${users}" "${network_nodes}" \
 		"${network_links}" "${adjacency_entries}" "${cloudsim_entities}" \
-		"${generated_tuples}" "${wireless_queue_limit}" \
-		"${wireless_queue_final}" "${wireless_queue_max_total}" \
+		"${generated_tuples}" "${slice_reconfigurations}" \
+		"${slice_outage_seconds}" "${slice_received_bandwidth}" \
+		"${wireless_queue_limit}" "${wireless_queue_final}" \
+		"${wireless_queue_max_total}" \
 		"${wireless_queue_max_per_direction}" \
-		"${wireless_queue_dropped_tuples}" "${stdout_bytes}" "${stderr_bytes}" \
+		"${wireless_queue_dropped_tuples}" \
+		"${stdout_bytes}" "${stderr_bytes}" \
 		"${run_output_bytes}" "${total_output_bytes}" \
 		"${characterisation_sha256}" "${input_files_sha256}" \
 		>> "${results_file}"

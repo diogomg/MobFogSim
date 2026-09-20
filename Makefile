@@ -7,7 +7,7 @@ TEST_SOURCE_LIST := $(BUILD_DIR)/test-sources.list
 TEST_SUITE_LIST := $(BUILD_DIR)/test-suites.list
 TEST_CLASSPATH := $(TEST_CLASSES):$(MAIN_CLASSPATH)
 P0_REGRESSION_SUITES := org.fog.placement.P0CorrectnessRegressionTest
-RUN_ARGS ?= 1 290538 0 0 30 11 0 61 0 0 0 60,40 70,30 1 2 0 summary
+RUN_ARGS ?= 1 290538 0 0 80 61 0 11 0 0 0 60,40 70,30 1 2 0 summary
 JACOCO_VERSION := 0.8.15
 JACOCO_DIR := $(BUILD_DIR)/tools/jacoco
 JACOCO_AGENT := $(JACOCO_DIR)/org.jacoco.agent-$(JACOCO_VERSION)-runtime.jar
@@ -19,7 +19,7 @@ COVERAGE_EXEC := $(BUILD_DIR)/jacoco.exec
 COVERAGE_REPORT_DIR := $(BUILD_DIR)/reports/coverage
 BENCHMARK_FIXTURES ?= baseline
 BENCHMARK_OUTPUT ?=
-BENCHMARK_JAVA_OPTS ?= -Xms256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.language=en -Duser.country=GB -Duser.timezone=UTC
+BENCHMARK_JAVA_OPTS ?= -Xms256m -Xmx14g -Dfile.encoding=UTF-8 -Duser.language=en -Duser.country=GB -Duser.timezone=UTC
 
 .PHONY: compile compile-tests discover-tests list-tests run test coverage \
 	coverage-tools benchmark benchmark-matrix list-benchmark-fixtures \
