@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 5;
+	public static final int SCHEMA_VERSION = 6;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;

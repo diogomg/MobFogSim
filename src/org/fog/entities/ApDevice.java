@@ -391,7 +391,9 @@ public class ApDevice extends FogDevice {
 
 	@Override
 	public String toString() {
-		return this.getName() + " [serverCloulet=" + serverCloudlet.getName() + "]";
+		String serverName = serverCloudlet == null
+			? "unassigned" : serverCloudlet.getName();
+		return getName() + " [serverCloudlet=" + serverName + "]";
 	}
 
 	public FogDevice getServerCloudlet() {
