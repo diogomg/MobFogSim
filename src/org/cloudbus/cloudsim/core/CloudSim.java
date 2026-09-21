@@ -769,8 +769,8 @@ public class CloudSim {
 	 */
 	public static void runStop() {
 		printMessage("Simulation completed.");
-		System.out.println("Fim: " + Calendar.getInstance().getTime());
-		System.out.println("total: " + countador);
+		Log.printLine("Finished at " + Calendar.getInstance().getTime()
+			+ " after " + countador + " clock iterations");
 	}
 
 	/**

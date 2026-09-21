@@ -19,8 +19,10 @@ import org.fog.entities.Actuator;
 import org.fog.entities.FogDevice;
 import org.fog.entities.Sensor;
 import org.fog.entities.Tuple;
+import org.fog.vmmobile.SimulationEventSink;
 
 public class ModulePlacementEdgewards extends ModulePlacement {
+	private final SimulationEventSink events = SimulationEventSink.current();
 
 	protected ModuleMapping moduleMapping;
 	protected List<Sensor> sensors;
@@ -56,7 +58,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 
 		mapModules();
 
-		System.out.println(getCurrentModuleInstanceNum());
+		events.trace("ModulePlacementEdgewards", () ->
+			"Module instances " + getCurrentModuleInstanceNum());
 		setModuleInstanceCountMap(getCurrentModuleInstanceNum());
 	}
 
@@ -89,8 +92,9 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 		}
 
 		for (int deviceId : getCurrentModuleMap().keySet()) {
-			System.out.println(getFogDeviceById(deviceId).getName() + "--->"
-				+ getCurrentModuleMap().get(deviceId));
+			events.trace("ModulePlacementEdgewards", () ->
+				getFogDeviceById(deviceId).getName() + " ---> "
+					+ getCurrentModuleMap().get(deviceId));
 			for (String module : getCurrentModuleMap().get(deviceId)) {
 				createModuleInstanceOnDevice(getApplication().getModuleByName(module),
 					getFogDeviceById(deviceId));
@@ -99,7 +103,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 	}
 
 	private List<String> getModulesToPlace(List<String> placedOperators) {
-		System.out.println("Placed Modules : " + placedOperators);
+		events.trace("ModulePlacementEdgewards", () ->
+			"Placed modules " + placedOperators);
 		Application app = getApplication();
 		List<String> modulesToPlace_1 = new ArrayList<String>();
 		List<String> modulesToPlace = new ArrayList<String>();
@@ -121,7 +126,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 			if (toBePlaced)
 				modulesToPlace.add(moduleName);
 		}
-		System.out.println("Modules to place : " + modulesToPlace);
+		events.trace("ModulePlacementEdgewards", () ->
+			"Modules to place " + modulesToPlace);
 
 		return modulesToPlace;
 	}
@@ -147,7 +153,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 		}
 
 		for (Integer deviceId : path) {
-			System.out.println("On device " + CloudSim.getEntityName(deviceId));
+			events.trace("ModulePlacementEdgewards", () ->
+				"On device " + CloudSim.getEntityName(deviceId));
 			FogDevice device = getFogDeviceById(deviceId);
 			Map<String, Integer> sensorsAssociated = getAssociatedSensors(device);
 			Map<String, Integer> actuatorsAssociated = getAssociatedActuators(device);
@@ -155,7 +162,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 			placedOperators.addAll(sensorsAssociated.keySet());
 			// Adding all actuators to placed list
 			placedOperators.addAll(actuatorsAssociated.keySet());
-			System.out.println("Currently placed operators = " + placedOperators);
+			events.trace("ModulePlacementEdgewards", () ->
+				"Currently placed operators " + placedOperators);
 			for (String sensor : sensorsAssociated.keySet()) {
 				for (AppEdge edge : getApplication().getEdges()) {
 					if (edge.getSource().equals(sensor)) {
@@ -185,8 +193,9 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 								.get(pair.getSecond());
 							if (!appEdgeToRate.containsKey(outputEdge)
 								|| appEdgeToRate.get(outputEdge) != outputRate) {
-								System.out.println(outputEdge.getSource() + "----->"
-									+ outputEdge.getDestination() + " : " + outputRate);
+								events.trace("ModulePlacementEdgewards", () ->
+									outputEdge.getSource() + " ---> "
+										+ outputEdge.getDestination() + ": " + outputRate);
 								changed = true;
 							}
 							appEdgeToRate.put(outputEdge, outputRate);
@@ -232,36 +241,36 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 						}
 					}
 				} else {
-					System.out.println("+++++++++++++++++++++++++");
 					// Finding out whether placement of operator on device is possible
 					for (AppEdge edge : getApplication().getEdges()) {// take all incoming edges
 						if (edge.getDestination().equals(operatorName)) {
-							System.out.println(edge.getTupleType());
 							double rate = appEdgeToRate.get(edge);
 							totalCpuLoad += rate * edge.getTupleCpuLength();
-							System.out.println("Tuple type = " + edge.getTupleType());
-							System.out.println("Rate = " + rate);
-							System.out.println("Cpu Load = " + rate * edge.getTupleCpuLength());
+							events.trace("ModulePlacementEdgewards", () ->
+								"Tuple " + edge.getTupleType() + " rate " + rate
+									+ " CPU load " + rate * edge.getTupleCpuLength());
 						}
 					}
-					System.out.println("Trying to place module " + operatorName);
+					events.trace("ModulePlacementEdgewards", () ->
+						"Trying to place module " + operatorName + " on "
+							+ device.getName());
 
 					if (totalCpuLoad + getCurrentCpuLoad().get(deviceId) > device.getHost().getTotalMips()) {
-						System.out.println("Placement of operator " + operatorName
-							+ "NOT POSSIBLE on device " + device.getName());
-						System.out.println("CPU load = " + totalCpuLoad);
-						System.out.println("Current CPU load = " + getCurrentCpuLoad().get(deviceId));
-						System.out.println("Max mips = " + device.getHost().getTotalMips());
+						final double rejectedCpuLoad = totalCpuLoad;
+						events.trace("ModulePlacementEdgewards", () ->
+							"Placement of " + operatorName + " rejected on "
+								+ device.getName() + ": requested " + rejectedCpuLoad
+								+ ", current " + getCurrentCpuLoad().get(deviceId)
+								+ ", capacity " + device.getHost().getTotalMips());
 					}
 					else {
-						System.out.println("Placement of operator " + operatorName
-							+ " on device "
-							+ device.getName());
 						getCurrentCpuLoad().put(deviceId,
 							totalCpuLoad + getCurrentCpuLoad().get(deviceId));
 
-						System.out.println("Updated CPU load = "
-							+ getCurrentCpuLoad().get(deviceId));
+						events.trace("ModulePlacementEdgewards", () ->
+							"Placed " + operatorName + " on " + device.getName()
+								+ "; updated CPU load "
+								+ getCurrentCpuLoad().get(deviceId));
 						if (!currentModuleMap.containsKey(deviceId))
 							currentModuleMap.put(deviceId, new ArrayList<String>());
 						currentModuleMap.get(deviceId).add(operatorName);
@@ -280,7 +289,9 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 								max = Math.max(sensorsAssociated.get(edge.getSource()), max);
 						}
 						getCurrentModuleInstanceNum().get(deviceId).put(operatorName, max);
-						System.out.println("Number of instances for operator " + operatorName + " = " + max);
+						final int instanceCount = max;
+						events.trace("ModulePlacementEdgewards", () ->
+							"Instances for " + operatorName + ": " + instanceCount);
 					}
 				}
 				operatorsToPlace.remove(operatorName);
@@ -298,17 +309,19 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 	 */
 	protected List<String> shiftModuleNorth(String moduleName, double cpuLoad,
 		Integer deviceId) {
-		System.out.println("------------------------------------------------");
-		System.out.println("Shifting module " + moduleName + " northwards.");
+		events.detail("ModulePlacementEdgewards", () ->
+			"Shifting module " + moduleName + " northwards");
 
 		PlacementPlan plan = createPlacementPlan(moduleName, cpuLoad, deviceId);
 		if (plan == null) {
-			System.out.println("Could not place module " + moduleName + " northwards.");
+			events.detail("ModulePlacementEdgewards", () ->
+				"Could not place module " + moduleName + " northwards");
 			return Collections.emptyList();
 		}
 
 		commitPlacementPlan(plan);
-		System.out.println("FINALLY placed " + plan.getPlacedModules() + " at device "
+		events.detail("ModulePlacementEdgewards", () -> "Placed "
+			+ plan.getPlacedModules() + " at device "
 			+ CloudSim.getEntityName(plan.getDestinationDeviceId()));
 		return plan.getPlacedModules();
 	}
@@ -715,9 +728,7 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 	}
 
 	private int isPlacedUpstream(String operatorName, List<Integer> path) {
-		System.out.println(path);
-		for (Integer i : path)
-			System.out.println(CloudSim.getEntityName(i));
+		events.trace("ModulePlacementEdgewards", () -> "Placement path " + path);
 		for (int deviceId : path) {
 			if (currentModuleMap.containsKey(deviceId)
 				&& currentModuleMap.get(deviceId).contains(operatorName))

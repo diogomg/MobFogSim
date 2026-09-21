@@ -17,6 +17,7 @@ import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.vmmobile.SimulationEventSink;
 
 public abstract class ModulePlacement {
 
@@ -56,8 +57,11 @@ public abstract class ModulePlacement {
 			module = new AppModule(_module);
 		else
 			module = _module;
+		final AppModule selectedModule = module;
 		if (canBeCreated(device, module)) {
-			System.out.println("Creating " + module.getName() + " on device " + device.getName());
+			SimulationEventSink.current().trace("ModulePlacement", () ->
+				"Creating " + selectedModule.getName() + " on device "
+					+ device.getName());
 			if (!deviceToModuleMap.containsKey(device.getId()))
 				deviceToModuleMap.put(device.getId(), new ArrayList<AppModule>());
 			deviceToModuleMap.get(device.getId()).add(module);
@@ -67,11 +71,9 @@ public abstract class ModulePlacement {
 			moduleToDeviceMap.get(module.getName()).add(device.getId());
 			return true;
 		} else {
-			System.out.println("Creating " + module.getName() + " on device " + device.getName()
-				+ " was not possible");
-			System.err.println("Module " + module.getName() + " cannot be created on device "
-				+ device.getName());
-			System.err.println("Terminating");
+			SimulationEventSink.current().detail("ModulePlacement", () ->
+				"Module " + selectedModule.getName() + " cannot be created on device "
+					+ device.getName());
 			return false;
 		}
 	}

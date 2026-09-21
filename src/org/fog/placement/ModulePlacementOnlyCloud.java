@@ -12,6 +12,7 @@ import org.fog.entities.Actuator;
 import org.fog.entities.FogDevice;
 import org.fog.entities.Sensor;
 import org.fog.entities.Tuple;
+import org.fog.vmmobile.SimulationEventSink;
 
 public class ModulePlacementOnlyCloud extends ModulePlacement {
 
@@ -70,7 +71,8 @@ public class ModulePlacementOnlyCloud extends ModulePlacement {
 					maxInstances);
 			}
 		}
-		System.out.println(getModuleInstanceCountMap());
+		SimulationEventSink.current().trace(getClass().getSimpleName(),
+			() -> "Module instance counts: " + getModuleInstanceCountMap());
 	}
 
 	private boolean isModuleInstanceCalculationComplete() {

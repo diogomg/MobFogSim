@@ -59,6 +59,7 @@ import org.fog.vmmigration.MigrationCoordinator;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.Service;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.MembershipAction;
@@ -751,15 +752,12 @@ public class FogDevice extends PowerDatacenter {
 		// TODO Auto-generated method stub
 
 		MobileDevice smartThing = (MobileDevice) ev.getData();
-		System.out.println("local " + smartThing.getVmLocalServerCloudlet().getName() + " "
-			+ smartThing.getVmLocalServerCloudlet().getActiveApplications() +
-			" apps "
-			+ smartThing.getVmLocalServerCloudlet().getApplicationMap().values().toString());
-		System.out.println("dest: " + smartThing.getDestinationServerCloudlet().getName() + " "
-			+ smartThing.getDestinationServerCloudlet().getActiveApplications() +
-			" apps "
-			+ smartThing.getDestinationServerCloudlet().getApplicationMap().values().toString());
-		System.out.println("smartthing id: " + smartThing.getMyId());
+		SimulationEventSink.current().trace("FogDevice", () -> "Migrating user "
+			+ smartThing.getMyId() + " from "
+			+ smartThing.getVmLocalServerCloudlet().getName() + " applications "
+			+ smartThing.getVmLocalServerCloudlet().getActiveApplications() + " to "
+			+ smartThing.getDestinationServerCloudlet().getName() + " applications "
+			+ smartThing.getDestinationServerCloudlet().getActiveApplications());
 		smartThing.getVmLocalServerCloudlet().applicationMap.values();
 		Application app = smartThing.getVmLocalServerCloudlet().applicationMap.get("MyApp_vr_game"
 			+ smartThing.getMyId());
@@ -786,7 +784,8 @@ public class FogDevice extends PowerDatacenter {
 		mobileController.getModuleMapping().moveModule(
 			smartThing.getVmLocalServerCloudlet().getName(), getName(),
 			((AppModule) smartThing.getVmMobileDevice()).getName(), 1);
-		System.out.println("Antes de entrar no submitApplicationMigration - " + getName());
+		SimulationEventSink.current().trace("FogDevice", () ->
+			"Submitting migrated application on " + getName());
 		mobileController.submitApplicationMigration(smartThing, app, 1);
 
 		sendNow(mobileController.getId(), MobileEvents.APP_SUBMIT_MIGRATE, app);
@@ -855,8 +854,8 @@ public class FogDevice extends PowerDatacenter {
 
 	private void invokeAbortMigration(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
-		System.out.println("*_*_*_*_*_*_*_*_*_*_*_*_*_ABORT MIGRATION -> beforeMigration*_*_*_*_*_*_*_*_*_*_*_*: "
-				+ smartThing.getName());
+		SimulationEventSink.current().detail("FogDevice", () ->
+			"Aborting migration preparation for " + smartThing.getName());
 		migrationCoordinator.abort(smartThing);
 	}
 
@@ -928,17 +927,18 @@ public class FogDevice extends PowerDatacenter {
 					if (entityId != srcId) {// does not delay self messages
 						delay += getNetworkDelay(srcId, entityId);
 					}
+					final double deliveryDelay = delay;
 					send(smartThing.getVmLocalServerCloudlet().getId(), delay,
 						MobileEvents.DELIVERY_VM, smartThing);
 					LogMobile.debug("FogDevice.java", smartThing.getName()
 						+ " was scheduled the DELIVERY_VM  from " +
 						smartThing.getVmLocalServerCloudlet().getName() + " to "
 						+ smartThing.getDestinationServerCloudlet().getName());
-					System.out.println("FogDevice.java" + smartThing.getName()
-						+ " was scheduled the DELIVERY_VM  from " +
-						smartThing.getVmLocalServerCloudlet().getName() + " to "
-						+ smartThing.getDestinationServerCloudlet().getName() + " in "
-						+ CloudSim.clock() + " with delay " + delay);
+					SimulationEventSink.current().trace("FogDevice", () ->
+						smartThing.getName() + " scheduled VM delivery from "
+							+ smartThing.getVmLocalServerCloudlet().getName() + " to "
+							+ smartThing.getDestinationServerCloudlet().getName()
+							+ " with delay " + deliveryDelay);
 
 					sendNow(smartThing.getDestinationServerCloudlet().getId(),
 						MobileEvents.VM_MIGRATE, smartThing);
@@ -951,10 +951,10 @@ public class FogDevice extends PowerDatacenter {
 						"CloudSim.VM_MIGRATE was scheduled  to VM#: "
 							+ smartThing.getVmMobileDevice().getId() + " HOST#: " +
 							smartThing.getDestinationServerCloudlet().getHost().getId());
-					System.out.println("FogDevice.java"
-						+ " CloudSim.VM_MIGRATE was scheduled  to VM#: "
-						+ smartThing.getVmMobileDevice().getId() + " HOST#: " +
-						smartThing.getDestinationServerCloudlet().getHost().getId());
+					SimulationEventSink.current().trace("FogDevice", () ->
+						"Scheduled VM " + smartThing.getVmMobileDevice().getId()
+							+ " migration to host "
+							+ smartThing.getDestinationServerCloudlet().getHost().getId());
 				}
 				else {
 					sendNow(smartThing.getVmLocalServerCloudlet().getId(),
@@ -972,8 +972,8 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void scheduleMigrationAbort(MobileDevice smartThing, String reason) {
-		System.err.println("Clock " + CloudSim.clock() + ": aborting migration for "
-			+ smartThing.getName() + " because " + reason);
+		SimulationEventSink.current().detail("FogDevice", () ->
+			"Aborting migration for " + smartThing.getName() + " because " + reason);
 		FogDevice currentHost = smartThing.getVmLocalServerCloudlet();
 		int abortHandlerId = currentHost == null ? getId() : currentHost.getId();
 		sendNow(abortHandlerId, MobileEvents.ABORT_MIGRATION, smartThing);
@@ -1003,7 +1003,8 @@ public class FogDevice extends PowerDatacenter {
 				smartThing.setMigStatusLive(false);
 					if (MyStatistics.getInstance().getInitialWithoutVmTime().get(smartThing.getMyId()) != null) {
 						MyStatistics.getInstance().finalWithoutVmTime(smartThing.getMyId(), CloudSim.clock());
-						System.out.println("finalWithoutVmTime: " + CloudSim.clock());
+						SimulationEventSink.current().trace("FogDevice", () ->
+							"Finalised without-VM interval for " + smartThing.getName());
 					}
 				LogMobile.debug("FogDevice.java", smartThing.getName()
 					+ " had migStatus to false - deliveryVM");
@@ -1120,8 +1121,9 @@ public class FogDevice extends PowerDatacenter {
 		if (!moduleInstanceCount.containsKey(appId))
 			moduleInstanceCount.put(appId, new HashMap<String, Integer>());
 		moduleInstanceCount.get(appId).put(config.getModule().getName(), config.getInstanceCount());
-		System.out.println(getName() + " Creating " + config.getInstanceCount()
-			+ " instances of module " + config.getModule().getName());
+		SimulationEventSink.current().trace("FogDevice", () -> getName()
+			+ " creating " + config.getInstanceCount() + " instances of module "
+			+ config.getModule().getName());
 	}
 
 	/**
@@ -1183,7 +1185,8 @@ public class FogDevice extends PowerDatacenter {
 	protected void updateActiveApplications(SimEvent ev) {
 		Application app = (Application) ev.getData();
 		activateApplication(app.getAppId());
-		System.out.println(" Apps " + getActiveApplications());
+		SimulationEventSink.current().trace("FogDevice", () ->
+			"Active applications on " + getName() + ": " + getActiveApplications());
 	}
 
 	public String getOperatorName(int vmId) {

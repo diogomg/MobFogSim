@@ -7,16 +7,22 @@ final class SimulationProgressBar {
 	private static final int WIDTH = 40;
 
 	private final PrintStream output;
+	private final boolean enabled;
 	private double finalSimulationTime;
 	private int lastPercentage = -1;
 	private boolean started;
 	private boolean closed;
 
 	SimulationProgressBar(PrintStream output) {
+		this(output, true);
+	}
+
+	SimulationProgressBar(PrintStream output, boolean enabled) {
 		if (output == null) {
 			throw new IllegalArgumentException("Progress output cannot be null");
 		}
 		this.output = output;
+		this.enabled = enabled;
 	}
 
 	void start(double finalSimulationTime) {
@@ -28,11 +34,14 @@ final class SimulationProgressBar {
 		started = true;
 		closed = false;
 		lastPercentage = -1;
+		if (!enabled) {
+			return;
+		}
 		update(0.0);
 	}
 
 	void update(double simulationTime) {
-		if (!started || closed || !Double.isFinite(simulationTime)) {
+		if (!enabled || !started || closed || !Double.isFinite(simulationTime)) {
 			return;
 		}
 		int percentage = (int) Math.floor(simulationTime / finalSimulationTime * 100.0);
@@ -48,7 +57,7 @@ final class SimulationProgressBar {
 	}
 
 	void complete() {
-		if (started && !closed) {
+		if (enabled && started && !closed) {
 			render(100);
 			lastPercentage = 100;
 			finishLine();
@@ -56,7 +65,7 @@ final class SimulationProgressBar {
 	}
 
 	void close() {
-		if (started && !closed) {
+		if (enabled && started && !closed) {
 			finishLine();
 		}
 	}

@@ -6,15 +6,18 @@ import java.util.Map.Entry;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
+import org.fog.vmmobile.SimulationEventSink;
 
 /** Formats the console view of one immutable simulation-metrics snapshot. */
 public final class SimulationResultsService {
+	private final SimulationEventSink events;
 
 	/** Retains the historical constructor while persistence is context-owned. */
 	public SimulationResultsService(RunOutputManager output) {
 		if (output == null) {
 			throw new IllegalArgumentException("Run output manager cannot be null");
 		}
+		this.events = SimulationEventSink.current();
 	}
 
 	/** Writes the console view; the run context publishes the atomic report. */
@@ -34,74 +37,74 @@ public final class SimulationResultsService {
 	}
 
 	private void writePower(SimulationMetricsSnapshot metrics) {
-		System.out.println("=========================================");
-		System.out.println("CLOUDLETS ENERGY CONSUMPTION");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("CLOUDLETS ENERGY CONSUMPTION");
+		line("=========================================");
 		for (SimulationMetricsSnapshot.DeviceEnergy cloudlet : metrics.getCloudlets()) {
-			System.out.println(cloudlet.getName() + ": Power = " + cloudlet.getPower());
-			System.out.println(cloudlet.getName() + ": Energy Consumed = "
+			line(cloudlet.getName() + ": Power = " + cloudlet.getPower());
+			line(cloudlet.getName() + ": Energy Consumed = "
 				+ cloudlet.getEnergy());
 		}
-		System.out.println("Total cloudlet energy: " + metrics.getTotalCloudletEnergy()
+		line("Total cloudlet energy: " + metrics.getTotalCloudletEnergy()
 			+ " Mean: " + metrics.getAverageCloudletEnergy());
-		System.out.println("=========================================");
-		System.out.println("AP DEVICES ENERGY CONSUMPTION");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("AP DEVICES ENERGY CONSUMPTION");
+		line("=========================================");
 		for (SimulationMetricsSnapshot.DeviceEnergy accessPoint
 			: metrics.getAccessPoints()) {
-			System.out.println(accessPoint.getName() + ": Energy Consumed = "
+			line(accessPoint.getName() + ": Energy Consumed = "
 				+ accessPoint.getEnergy());
 		}
-		System.out.println("Total AP energy: " + metrics.getTotalAccessPointEnergy()
+		line("Total AP energy: " + metrics.getTotalAccessPointEnergy()
 			+ " Mean: " + metrics.getAverageAccessPointEnergy());
-		System.out.println("=========================================");
-		System.out.println("SMARTTHINGS ENERGY CONSUMPTION");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("SMARTTHINGS ENERGY CONSUMPTION");
+		line("=========================================");
 		for (SimulationMetricsSnapshot.DeviceEnergy mobileDevice
 			: metrics.getMobileDevices()) {
-			System.out.println(mobileDevice.getName() + ": Power = "
+			line(mobileDevice.getName() + ": Power = "
 				+ mobileDevice.getPower());
-			System.out.println(mobileDevice.getName() + ": Energy Consumed = "
+			line(mobileDevice.getName() + ": Energy Consumed = "
 				+ mobileDevice.getEnergy());
 		}
-		System.out.println("Total SmartThing energy: "
+		line("Total SmartThing energy: "
 			+ metrics.getTotalMobileEnergy() + " Mean: "
 			+ metrics.getAverageMobileEnergy());
 		for (Entry<Integer, Double> power
 			: metrics.getMobilePowerHistory().entrySet()) {
-			System.out.println("SmartThing" + power.getKey() + ": Power = "
+			line("SmartThing" + power.getKey() + ": Power = "
 				+ power.getValue());
 		}
 		for (Entry<Integer, Double> energy
 			: metrics.getMobileEnergyHistory().entrySet()) {
-			System.out.println("SmartThing" + energy.getKey() + ": Energy Consumed = "
+			line("SmartThing" + energy.getKey() + ": Energy Consumed = "
 				+ energy.getValue());
 		}
 	}
 
 	private void writeTiming(SimulationMetricsSnapshot metrics,
 		Map<String, Application> applications) {
-		System.out.println("=========================================");
-		System.out.println("============== RESULTS ==================");
-		System.out.println("=========================================");
-		System.out.println("EXECUTION TIME : " + metrics.getExecutionTimeMillis());
-		System.out.println("=========================================");
-		System.out.println("APPLICATION LOOP DELAYS");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("============== RESULTS ==================");
+		line("=========================================");
+		line("EXECUTION TIME : " + metrics.getExecutionTimeMillis());
+		line("=========================================");
+		line("APPLICATION LOOP DELAYS");
+		line("=========================================");
 		for (SimulationMetricsSnapshot.LoopTiming loop
 			: metrics.getLoopTimings().values()) {
-			System.out.println(loopLabel(loop.getLoopId(), applications) + " ---> "
+			line(loopLabel(loop.getLoopId(), applications) + " ---> "
 				+ loop.getAverage() + " MaxExecutionTime: " + loop.getMaximum());
 		}
-		System.out.println("=========================================");
-		System.out.println("TUPLE CPU EXECUTION DELAY");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("TUPLE CPU EXECUTION DELAY");
+		line("=========================================");
 		for (Entry<String, Double> tupleCpuTime
 			: metrics.getTupleCpuTimes().entrySet()) {
-			System.out.println(tupleCpuTime.getKey() + " ---> "
+			line(tupleCpuTime.getKey() + " ---> "
 				+ tupleCpuTime.getValue());
 		}
-		System.out.println("=========================================");
+		line("=========================================");
 	}
 
 	static String loopLabel(int loopId, Map<String, Application> applications) {
@@ -116,92 +119,96 @@ public final class SimulationResultsService {
 	}
 
 	private void writeNetworkUsage(SimulationMetricsSnapshot metrics) {
-		System.out.println("=========================================");
-		System.out.println("=============NETWORK USAGE===============");
-		System.out.println("=========================================");
-		System.out.println("Tuple bytes transferred = "
+		line("=========================================");
+		line("=============NETWORK USAGE===============");
+		line("=========================================");
+		line("Tuple bytes transferred = "
 			+ metrics.getTupleTransferredBytes());
-		System.out.println("Tuple queue duration (ms) = "
+		line("Tuple queue duration (ms) = "
 			+ metrics.getTupleQueueDurationMilliseconds());
-		System.out.println("Tuple serialization/contention duration (ms) = "
+		line("Tuple serialization/contention duration (ms) = "
 			+ metrics.getTupleTransferDurationMilliseconds());
-		System.out.println("Tuple propagation duration (ms) = "
+		line("Tuple propagation duration (ms) = "
 			+ metrics.getTuplePropagationDurationMilliseconds());
-		System.out.println("Tuple queue usage (byte-ms) = "
+		line("Tuple queue usage (byte-ms) = "
 			+ metrics.getTupleQueueUsageByteMilliseconds());
-		System.out.println("Tuple serialization/contention usage (byte-ms) = "
+		line("Tuple serialization/contention usage (byte-ms) = "
 			+ metrics.getTupleTransferUsageByteMilliseconds());
-		System.out.println("Tuple propagation usage (byte-ms) = "
+		line("Tuple propagation usage (byte-ms) = "
 			+ metrics.getTuplePropagationUsageByteMilliseconds());
-		System.out.println("VM data transferred in migration (MiB) = "
+		line("VM data transferred in migration (MiB) = "
 			+ metrics.getMigrationTransferredMebibytes());
-		System.out.println("Tuple network usage (byte-ms) = "
+		line("Tuple network usage (byte-ms) = "
 			+ metrics.getTupleUsageByteMilliseconds());
-		System.out.println("Migration network usage (total byte-ms) = "
+		line("Migration network usage (total byte-ms) = "
 			+ metrics.getMigrationUsageByteMilliseconds());
-		System.out.println("Migration data-transfer duration (ms) = "
+		line("Migration data-transfer duration (ms) = "
 			+ metrics.getMigrationTransferDurationMilliseconds());
-		System.out.println("Migration network usage (mean byte-ms) = "
+		line("Migration network usage (mean byte-ms) = "
 			+ metrics.getMeanMigrationUsageByteMilliseconds());
-		System.out.println("Total network usage (byte-ms) = "
+		line("Total network usage (byte-ms) = "
 			+ metrics.getTotalUsageByteMilliseconds());
 	}
 
 	private void writeSliceReconfiguration(SimulationMetricsSnapshot metrics) {
-		System.out.println("=========================================");
-		System.out.println("==========SLICE RECONFIGURATION==========");
-		System.out.println("=========================================");
-		System.out.println("Number of slice reconfigurations: "
+		line("=========================================");
+		line("==========SLICE RECONFIGURATION==========");
+		line("=========================================");
+		line("Number of slice reconfigurations: "
 			+ metrics.getSliceReconfigurationCount());
-		System.out.println("Slice outage (seconds): "
+		line("Slice outage (seconds): "
 			+ metrics.getSliceOutageSeconds());
 		for (Entry<Integer, Double> slice
 			: metrics.getReceivedBandwidthBySlice().entrySet()) {
-			System.out.println("Slice " + slice.getKey()
+			line("Slice " + slice.getKey()
 				+ " received bandwidth sum (bit/s): " + slice.getValue());
 		}
-		System.out.println("Wireless queue limit per direction: "
+		line("Wireless queue limit per direction: "
 			+ metrics.getMaximumWirelessQueueSize());
-		System.out.println("Wireless tuples queued at simulation end: "
+		line("Wireless tuples queued at simulation end: "
 			+ metrics.getQueuedWirelessTransferCount());
-		System.out.println("Maximum wireless tuples queued across all directions: "
+		line("Maximum wireless tuples queued across all directions: "
 			+ metrics.getMaximumQueuedWirelessTransferCount());
-		System.out.println("Maximum wireless queue depth for one direction: "
+		line("Maximum wireless queue depth for one direction: "
 			+ metrics.getMaximumWirelessQueueDepth());
-		System.out.println("Wireless tuples dropped at queue limit: "
+		line("Wireless tuples dropped at queue limit: "
 			+ metrics.getDroppedWirelessTupleCount());
 	}
 
 	private void writeMigration(SimulationMetricsSnapshot metrics) {
 		SimulationMetricsSnapshot.Statistics statistics = metrics.getStatistics();
-		System.out.println("=========================================");
-		System.out.println("==============MIGRATIONS=================");
-		System.out.println("=========================================");
-		System.out.println("Total of migrations: " + statistics.getTotalMigrations());
-		System.out.println("Total of handoff: " + statistics.getTotalHandoffs());
+		line("=========================================");
+		line("==============MIGRATIONS=================");
+		line("=========================================");
+		line("Total of migrations: " + statistics.getTotalMigrations());
+		line("Total of handoff: " + statistics.getTotalHandoffs());
 		writeObservation("without connection", statistics.getWithoutConnection());
 		writeObservation("without Vm", statistics.getWithoutVm());
 		writeObservation("delay after new Connection",
 			statistics.getDelayAfterConnection());
 		writeObservation("Time of Migrations", statistics.getMigrationTime());
-		System.out.println("Highest Time of Migrations: "
+		line("Highest Time of Migrations: "
 			+ statistics.getMigrationTime().getMaximum());
 		writeObservation("Downtime", statistics.getDowntime());
-		System.out.println("Max Downtime: " + statistics.getDowntime().getMaximum());
-		System.out.println("Tuple lost: " + statistics.getLostTuplePercentage() + "%");
-		System.out.println("Tuple lost: " + statistics.getLostTuples());
-		System.out.println("Total tuple: " + statistics.getTotalTuples());
+		line("Max Downtime: " + statistics.getDowntime().getMaximum());
+		line("Tuple lost: " + statistics.getLostTuplePercentage() + "%");
+		line("Tuple lost: " + statistics.getLostTuples());
+		line("Total tuple: " + statistics.getTotalTuples());
 	}
 
 	private void writeObservation(String label,
 		SimulationMetricsSnapshot.MetricSeries observation) {
-		System.out.println("---" + label + "---");
+		line("---" + label + "---");
 		for (Entry<Integer, Double> value
 			: observation.getLatestByUserId().entrySet()) {
-			System.out.println("SmartThing" + value.getKey() + ": " + value.getValue()
+			line("SmartThing" + value.getKey() + ": " + value.getValue()
 				+ " - Max: " + observation.getMaximumForUser(value.getKey()));
 		}
-		System.out.println("Average of " + label + ": "
+		line("Average of " + label + ": "
 			+ observation.getAverage());
+	}
+
+	private void line(String value) {
+		events.detailLine(() -> value);
 	}
 }

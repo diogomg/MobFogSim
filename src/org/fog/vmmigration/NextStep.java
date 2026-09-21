@@ -1,6 +1,5 @@
 package org.fog.vmmigration;
 
-import java.util.Calendar;
 import java.util.List;
 
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -13,6 +12,7 @@ import org.fog.localization.Coordinate;
 import org.fog.placement.MobileController;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.SimulationEventSink;
 
 public class NextStep {
 
@@ -103,10 +103,9 @@ public class NextStep {
 		if (smartThing.getCoord().getCoordX() == -1) {
 			return false;
 		}
-		System.out.println(smartThing.getMyId() + "\t"
-			+ smartThing.getCoord().getCoordX() + "\t"
-			+ smartThing.getCoord().getCoordY() + "\t" + CloudSim.clock() + "\t"
-			+ Calendar.getInstance().getTime());
+		SimulationEventSink.current().trace("NextStep", () ->
+			smartThing.getMyId() + "\t" + smartThing.getCoord().getCoordX() + "\t"
+				+ smartThing.getCoord().getCoordY());
 		saveMobility(smartThing);
 		return true;
 	}

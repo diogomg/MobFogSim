@@ -28,7 +28,7 @@ import org.cloudbus.cloudsim.core.SimulationEventCounters;
 
 /** Process-isolated entry point used by the reproducible performance baseline. */
 public final class SimulationBenchmark {
-	static final int BENCHMARK_SCHEMA_VERSION = 8;
+	static final int BENCHMARK_SCHEMA_VERSION = 9;
 
 	private SimulationBenchmark() {
 	}

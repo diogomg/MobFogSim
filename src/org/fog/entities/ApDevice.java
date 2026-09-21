@@ -22,6 +22,7 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.utils.PropagationDelay;
 import org.fog.utils.SimulationDuration;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
 
@@ -93,12 +94,12 @@ public class ApDevice extends FogDevice {
 				+ " was desconnected (inHandoff) to " + getName());
 
 			if (smartThing.isMigStatus()) {
-				System.out .println("+++++++++++++++++MAKING THE HANDOFF DURING MIGRATION+++++++++++++: "
-					+ smartThing.getName() + " temp: " + CloudSim.clock());
+				SimulationEventSink.current().detail("ApDevice", () ->
+					"Completing handoff during migration for " + smartThing.getName());
 			}
 			else {
-				System.out.println("++++++++++++++++++++HandoffSimple++++++++++++++++++++: "
-					+ smartThing.getName() + " temp: " + CloudSim.clock());
+				SimulationEventSink.current().detail("ApDevice", () ->
+					"Completing handoff for " + smartThing.getName());
 			}
 			LogMobile.debug("ApDevice.java", smartThing.getName()
 				+ " was connected (inHandoff) to " + smartThing.getSourceAp().getName());
@@ -106,8 +107,8 @@ public class ApDevice extends FogDevice {
 		}
 		else {
 			recoverRejectedHandoff(smartThing, reservation);
-			System.out.println("*_*_*_*_*_*_*_*_*_*_*_*_*_ABORT MIGRATION*_*_*_*_*_*_*_*_*_*_*_*: "
-				+ smartThing.getId());
+			SimulationEventSink.current().detail("ApDevice", () ->
+				"Aborting handoff migration for entity " + smartThing.getId());
 			smartThing.setMigStatus(false);
 			smartThing.setPostCopyStatus(false);
 			smartThing.setMigStatusLive(false);

@@ -22,6 +22,7 @@ import org.fog.utils.PropagationDelay;
 import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.policy.MovementDirection;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -405,8 +406,9 @@ public class MobileDevice extends FogDevice {
 		if (!moduleInstanceCount.containsKey(appId))
 			moduleInstanceCount.put(appId, new HashMap<String, Integer>());
 		moduleInstanceCount.get(appId).put(config.getModule().getName(), config.getInstanceCount());
-		System.out.println(getName() + " Creating " + config.getInstanceCount()
-			+ " instances of module " + config.getModule().getName());
+		SimulationEventSink.current().trace("MobileDevice", () -> getName()
+			+ " creating " + config.getInstanceCount() + " instances of module "
+			+ config.getModule().getName());
 	}
 
 	private void manageResources(SimEvent ev) {

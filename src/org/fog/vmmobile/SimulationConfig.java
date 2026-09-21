@@ -347,4 +347,16 @@ public final class SimulationConfig {
 			mobilityPredictionError, slicingConfiguration, vmDestinationPolicy,
 			mobilityDirectory, mobilityOrderManifest, runOutputDirectory, outputMode);
 	}
+
+	/** Returns an equivalent configuration using the supplied output policy. */
+	public SimulationConfig withOutputMode(RunOutputMode runOutputMode) {
+		if (runOutputMode == null) {
+			throw new IllegalArgumentException("Run output mode cannot be null");
+		}
+		return new SimulationConfig(migrationEnabled, seed, migrationPointPolicy,
+			migrationStrategyPolicy, maximumUsers, maximumBandwidth,
+			vmMigrationPolicy, cloudletLatency, travelPredictionTime,
+			mobilityPredictionError, slicingConfiguration, vmDestinationPolicy,
+			mobilityDirectory, mobilityOrderManifest, outputDirectory, runOutputMode);
+	}
 }

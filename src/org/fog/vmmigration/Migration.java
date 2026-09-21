@@ -16,6 +16,7 @@ import org.fog.localization.Distances;
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
 import org.fog.vmmobile.AppExample;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.*;
 import org.fog.vmmobile.policy.MovementDirection;
 
@@ -166,14 +167,17 @@ public final class Migration {
 		}
 
 		for (FogDevice sc : oldServerCloudlets) {
-			System.out.println(sumCostFunction(sc, nextAp.get(), smartThing));
+			SimulationEventSink.current().trace("Migration", () ->
+				"Candidate " + sc.getName() + " cost "
+					+ sumCostFunction(sc, nextAp.get(), smartThing));
 		}
 
 		FogDevice selectedServerCloudlet = null;
 		double minimumCost = Double.POSITIVE_INFINITY;
 		for (FogDevice sc : numServerCloudlets) {
 			double sumCost = sumCostFunction(sc, nextAp.get(), smartThing);
-			System.out.println(sumCost);
+			SimulationEventSink.current().trace("Migration", () ->
+				"Eligible candidate " + sc.getName() + " cost " + sumCost);
 			if (sumCost < 0) {
 				continue;
 			}

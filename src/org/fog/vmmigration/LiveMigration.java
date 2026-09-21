@@ -4,6 +4,7 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MovementDirection;
@@ -62,7 +63,8 @@ public class LiveMigration implements VmMigrationTechnique {
 			smartThing.getVmMobileDevice().getSize(), bandwidth);
 		double fixedDelayMillis = getFixedDelayMillis(smartThing);
 		smartThing.setMigTime(transferTimeMillis + fixedDelayMillis);
-		System.out.println("Container VM " + smartThing.getMigTime() + " size: "
+		SimulationEventSink.current().trace("LiveMigration", () -> "Live migration "
+				+ smartThing.getMigTime() + " size: "
 				+ smartThing.getVmMobileDevice().getSize() + " bandwidth: " + bandwidth
 				+ " tempo " + transferTimeMillis
 				+ " cloudlet uplink latency " + smartThing.getVmLocalServerCloudlet().getUplinkLatency()

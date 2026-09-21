@@ -38,7 +38,8 @@ public final class SimulationContext implements AutoCloseable {
 		new NetworkUsageMonitor.Metrics();
 	private final NetworkSlicing.RuntimeState slicingState;
 	private final SimulationClock clock;
-	private final SimulationProgressBar progressBar;
+	private SimulationProgressBar progressBar;
+	private SimulationEventSink eventSink;
 	private RunOutputManager outputManager;
 	private ResultWriter resultWriter;
 	private SimulationMetricsSnapshot metricsSnapshot;
@@ -54,7 +55,6 @@ public final class SimulationContext implements AutoCloseable {
 		}
 		this.configuration = configuration;
 		this.clock = clock;
-		this.progressBar = new SimulationProgressBar(System.out);
 		this.randomStreams = new RandomStreams(configuration.getSeed());
 		this.slicingState = NetworkSlicing.createRuntimeState(
 			configuration.getSlicingConfiguration());
@@ -83,6 +83,11 @@ public final class SimulationContext implements AutoCloseable {
 			VmDestinationPolicy.configure(configuration.getVmDestination());
 			context.outputManager = RunOutputManager.initialize(
 				configuration.getOutputDirectory(), configuration.getOutputMode());
+			context.eventSink = SimulationEventSink.open(context.outputManager,
+				System.out);
+			SimulationEventSink.use(context.eventSink);
+			context.progressBar = new SimulationProgressBar(System.out,
+				context.eventSink.isEnabled(SimulationEventSink.Level.SUMMARY));
 			context.resultWriter = new AtomicResultWriter(context.outputManager);
 			AppExample.useSimulationContext(context);
 			return context;
@@ -145,6 +150,10 @@ public final class SimulationContext implements AutoCloseable {
 		return resultWriter;
 	}
 
+	public SimulationEventSink getEventSink() {
+		return eventSink;
+	}
+
 	public SimulationClock getClock() {
 		return clock;
 	}
@@ -186,6 +195,7 @@ public final class SimulationContext implements AutoCloseable {
 			throw new IllegalStateException(
 				"Cannot publish results before metrics are recorded");
 		}
+		eventSink.finish();
 		BufferedFileManager.closeAll();
 		resultWriter.write(RunReport.capture(configuration, metricsSnapshot));
 	}
@@ -239,10 +249,25 @@ public final class SimulationContext implements AutoCloseable {
 			}
 			RuntimeException failure = null;
 			try {
-				progressBar.close();
+				if (progressBar != null) {
+					progressBar.close();
+				}
 			}
 			catch (RuntimeException error) {
 				failure = error;
+			}
+			try {
+				if (eventSink != null) {
+					eventSink.close();
+				}
+			}
+			catch (RuntimeException error) {
+				if (failure == null) {
+					failure = error;
+				}
+				else {
+					failure.addSuppressed(error);
+				}
 			}
 			try {
 				BufferedFileManager.closeAll();
@@ -256,6 +281,7 @@ public final class SimulationContext implements AutoCloseable {
 				}
 			}
 			try {
+				SimulationEventSink.reset();
 				AppExample.releaseSimulationContext(this);
 				MobileController.resetRunState();
 				NetworkTopology.reset();

@@ -2,6 +2,7 @@ package org.fog.vmmigration;
 
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.policy.ServiceType;
 
 public class ServiceAgreement {
@@ -32,10 +33,11 @@ public class ServiceAgreement {
 				return true; // the smartThing agrees
 			}
 			else {
-				System.out.println("The value is expensive for the " + serverCloudlet.getName());
-				System.out.println(smartThing.getName() + ": Source "
-					+ smartThing.getSourceServerCloudlet().getName() +
-					" - LocalVm " + smartThing.getVmLocalServerCloudlet().getName());
+				SimulationEventSink.current().trace("ServiceAgreement", () ->
+					"Service at " + serverCloudlet.getName() + " is too expensive for "
+						+ smartThing.getName() + "; source "
+						+ smartThing.getSourceServerCloudlet().getName() + ", VM host "
+						+ smartThing.getVmLocalServerCloudlet().getName());
 				return false;
 			}
 		}

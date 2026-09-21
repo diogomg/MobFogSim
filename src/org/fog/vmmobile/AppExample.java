@@ -1,6 +1,5 @@
 package org.fog.vmmobile;
 
-import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -23,7 +22,6 @@ import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
 import org.cloudbus.cloudsim.util.RunOutputMode;
-import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
@@ -194,7 +192,8 @@ public class AppExample {
 		 */
 
 		Log.disable();
-		System.out.println(configuration.toSummaryLine());
+		SimulationEventSink events = SimulationContext.requireCurrent().getEventSink();
+		events.summary(configuration::toSummaryLine);
 
 		int numUser = 1; // number of cloud users
 		Calendar calendar = Calendar.getInstance();
@@ -354,7 +353,7 @@ public class AppExample {
 		}
 
 		for (MobileDevice st : getSmartThings()) {
-			System.out.println(
+			events.detail("AppExample", () ->
 				st.getName() + "- X: " + st.getCoord().getCoordX() + " Y: "
 					+ st.getCoord().getCoordY() + " Direction: "
 					+ st.getDirection() + " Speed: " + st.getSpeed()
@@ -362,23 +361,11 @@ public class AppExample {
 		}
 		SimulationContext context = SimulationContext.requireCurrent();
 		context.startProgress(expectedSimulationEndTime(getSmartThings()));
-		PrintStream console = System.out;
-		try (PrintStream simulationOutput = RunOutputManager.getInstance()
-			.newFullPrintStream("out.txt")) {
-			System.setOut(simulationOutput);
-			System.out.println("Inicio: " + Calendar.getInstance().getTime());
-			CloudSim.startSimulation();
-			context.completeProgress();
-			System.out.println("Simulation over");
-			simulationOutput.flush();
-			if (simulationOutput.checkError()) {
-				throw new IllegalStateException(
-					"Could not complete the streamed simulation output");
-			}
-		}
-		finally {
-			System.setOut(console);
-		}
+		events.detail("AppExample", () -> "Started at "
+			+ Calendar.getInstance().getTime());
+		CloudSim.startSimulation();
+		context.completeProgress();
+		events.detail("AppExample", () -> "Simulation over");
 	}
 
 	private static double expectedSimulationEndTime(

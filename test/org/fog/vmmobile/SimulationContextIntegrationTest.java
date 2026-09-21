@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.cloudbus.cloudsim.NetworkTopology;
+import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.placement.SimulationMetricsSnapshot;
 import org.junit.After;
 import org.junit.Before;
@@ -59,38 +60,56 @@ public class SimulationContextIntegrationTest {
 	}
 
 	@Test
-	public void identicalRunsInOneJvmHaveIsolatedDeterministicResults()
+	public void outputModesHaveIsolatedIdenticalResultsAndExpectedOutput()
 		throws Exception {
-		SimulationConfig configuration = referenceConfiguration()
-			.withOutputDirectory(temporaryDirectory.resolve("run"));
+		Path noneDirectory = temporaryDirectory.resolve("none");
+		Path summaryDirectory = temporaryDirectory.resolve("summary");
+		Path fullDirectory = temporaryDirectory.resolve("full");
+		SimulationConfig configuration = referenceConfiguration();
 		PrintStream originalOutput = System.out;
-		SimulationRunResult first;
-		SimulationRunResult second;
-		try (PrintStream quiet = new PrintStream(new ByteArrayOutputStream())) {
-			System.setOut(quiet);
-			first = AppExample.run(configuration);
+		ByteArrayOutputStream noneConsole = new ByteArrayOutputStream();
+		ByteArrayOutputStream summaryConsole = new ByteArrayOutputStream();
+		ByteArrayOutputStream fullConsole = new ByteArrayOutputStream();
+		SimulationRunResult none;
+		SimulationRunResult summary;
+		SimulationRunResult full;
+		try (PrintStream noneOutput = new PrintStream(noneConsole);
+			PrintStream summaryOutput = new PrintStream(summaryConsole);
+			PrintStream fullOutput = new PrintStream(fullConsole)) {
+			System.setOut(noneOutput);
+			none = AppExample.run(configuration
+				.withOutputDirectory(noneDirectory)
+				.withOutputMode(RunOutputMode.NONE));
 			assertContextWasReleased();
-			second = AppExample.run(configuration);
+			System.setOut(summaryOutput);
+			summary = AppExample.run(configuration
+				.withOutputDirectory(summaryDirectory)
+				.withOutputMode(RunOutputMode.SUMMARY));
+			assertContextWasReleased();
+			System.setOut(fullOutput);
+			full = AppExample.run(configuration
+				.withOutputDirectory(fullDirectory)
+				.withOutputMode(RunOutputMode.FULL));
 		}
 		finally {
 			System.setOut(originalOutput);
 		}
 
-		assertEquals(first.getCloudSimEntityCount(),
-			second.getCloudSimEntityCount());
-		assertEquals(first.getGeneratedFogEntityCount(),
-			second.getGeneratedFogEntityCount());
-		assertEquals(first.getGeneratedTupleCount(),
-			second.getGeneratedTupleCount());
-		assertEquals(first.getGeneratedActualTupleCount(),
-			second.getGeneratedActualTupleCount());
-		assertEquals(first.getEventCounters(), second.getEventCounters());
-		assertEquals(first.getTopologySize(), second.getTopologySize());
-		assertReferenceTopology(first.getTopologySize());
-		assertEquals(first.toSemanticSnapshot(), second.toSemanticSnapshot());
-		assertEquals(first.toCharacterisationText(),
-			second.toCharacterisationText());
-		assertMetricSnapshotsEqual(first.getMetrics(), second.getMetrics());
+		assertEquivalent(none, summary);
+		assertEquivalent(none, full);
+		assertReferenceTopology(none.getTopologySize());
+		assertEquals(0, noneConsole.size());
+		assertTrue("Summary console output must remain bounded",
+			summaryConsole.size() < 32768);
+		assertTrue(summaryConsole.size() > 0);
+		assertTrue("Full console output must remain bounded",
+			fullConsole.size() < 32768);
+		assertFalse(Files.exists(noneDirectory.resolve("out.txt")));
+		assertFalse(Files.exists(summaryDirectory.resolve("out.txt")));
+		assertTrue(Files.size(fullDirectory.resolve("out.txt")) > 0);
+		assertFalse(Files.exists(noneDirectory.resolve("report")));
+		assertTrue(Files.exists(summaryDirectory.resolve("report/summary.csv")));
+		assertTrue(Files.exists(fullDirectory.resolve("report/summary.csv")));
 		assertContextWasReleased();
 	}
 
@@ -142,6 +161,22 @@ public class SimulationContextIntegrationTest {
 		assertEquals(288, topology.getNetworkNodeCount());
 		assertEquals(10440, topology.getNetworkLinkCount());
 		assertEquals(20592L, topology.getServerAdjacencyEntryCount());
+	}
+
+	private static void assertEquivalent(SimulationRunResult first,
+		SimulationRunResult second) {
+		assertEquals(first.getCloudSimEntityCount(), second.getCloudSimEntityCount());
+		assertEquals(first.getGeneratedFogEntityCount(),
+			second.getGeneratedFogEntityCount());
+		assertEquals(first.getGeneratedTupleCount(), second.getGeneratedTupleCount());
+		assertEquals(first.getGeneratedActualTupleCount(),
+			second.getGeneratedActualTupleCount());
+		assertEquals(first.getEventCounters(), second.getEventCounters());
+		assertEquals(first.getTopologySize(), second.getTopologySize());
+		assertEquals(first.toSemanticSnapshot(), second.toSemanticSnapshot());
+		assertEquals(first.toCharacterisationText(),
+			second.toCharacterisationText());
+		assertMetricSnapshotsEqual(first.getMetrics(), second.getMetrics());
 	}
 
 	private static void assertMetricSnapshotsEqual(

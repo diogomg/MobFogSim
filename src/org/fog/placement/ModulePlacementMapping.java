@@ -8,6 +8,7 @@ import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.FogDevice;
 import org.fog.vmmobile.SimulationBuildException;
+import org.fog.vmmobile.SimulationEventSink;
 
 public class ModulePlacementMapping extends ModulePlacement {
 
@@ -45,8 +46,8 @@ public class ModulePlacementMapping extends ModulePlacement {
 	protected void mapModulesMigrate(FogDevice serverCloudlet) {
 		Map<String, Map<String, Integer>> mapping = moduleMapping.getModuleMapping();
 
-		System.out.println("ModulePlacementMapping.java: " + serverCloudlet.getName());
-		System.out.println("mapping: " + mapping);
+		SimulationEventSink.current().trace("ModulePlacementMapping", () ->
+			"Migrating modules to " + serverCloudlet.getName() + " from " + mapping);
 		for (String moduleName : mapping.get(serverCloudlet.getName()).keySet()) {
 			AppModule module = getApplication().getModuleByName(moduleName);
 			if (module == null)
@@ -91,7 +92,8 @@ public class ModulePlacementMapping extends ModulePlacement {
 		for (FogDevice device : getFogDevices()) {
 			if (moduleInstanceCountRegistry().put(device.getId(),
 				new HashMap<String, Integer>()) == null) {
-				System.out.println(getModuleInstanceCountMap() + " - " + device.getName());
+				SimulationEventSink.current().trace("ModulePlacementMapping", () ->
+					getModuleInstanceCountMap() + " - " + device.getName());
 			}
 			mapModulesMigrate(device);
 		}

@@ -25,6 +25,7 @@ import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
+import org.fog.vmmobile.SimulationEventSink;
 
 public class Controller extends SimEntity {
 
@@ -39,10 +40,12 @@ public class Controller extends SimEntity {
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
 	private boolean shutdownRequested;
+	private final SimulationEventSink events;
 
 	public Controller(String name, List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, ModuleMapping moduleMapping) {
 		super(name);
+		this.events = SimulationEventSink.current();
 		this.applications = new HashMap<String, Application>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
 		setModuleMapping(moduleMapping);
@@ -79,7 +82,7 @@ public class Controller extends SimEntity {
 			if (getAppLaunchDelays().get(appId) == 0)
 				processAppSubmit(applications.get(appId));
 			else {
-				System.out.println("startEntity");
+				line("startEntity");
 				send(getId(), getAppLaunchDelays().get(appId), FogEvents.APP_SUBMIT,
 					applications.get(appId));
 			}
@@ -130,9 +133,9 @@ public class Controller extends SimEntity {
 			getFogDevices(), Collections.<ApDevice>emptyList(),
 			Collections.<MobileDevice>emptyList(), MyStatistics.getInstance(),
 			TimeKeeper.getInstance(), CloudSim.clock(), 0L);
-		System.out.println("Total network usage (byte-ms) = "
+		line("Total network usage (byte-ms) = "
 			+ metrics.getTotalUsageByteMilliseconds());
-		System.out.println("Mean bytes in flight over simulation horizon (bytes) = "
+		line("Mean bytes in flight over simulation horizon (bytes) = "
 			+ metrics.perSimulationMillisecond(
 				metrics.getTotalUsageByteMilliseconds()));
 
@@ -146,13 +149,13 @@ public class Controller extends SimEntity {
 	}
 
 	private void printCostDetails() {
-		System.out.println("Cost of execution in cloud = " + getCloud().getTotalCost());
+		line("Cost of execution in cloud = " + getCloud().getTotalCost());
 	}
 
 	private void printPowerDetails() {
 		// TODO Auto-generated method stub
 		for (FogDevice fogDevice : getFogDevices()) {
-			System.out.println(fogDevice.getName() + " : Energy Consumed = "
+			line(fogDevice.getName() + " : Energy Consumed = "
 				+ fogDevice.getEnergyConsumption());
 		}
 	}
@@ -169,30 +172,30 @@ public class Controller extends SimEntity {
 	}
 
 	private void printTimeDetails() {
-		System.out.println("=========================================");
-		System.out.println("============== RESULTS ==================");
-		System.out.println("=========================================");
-		System.out.println("EXECUTION TIME : "
+		line("=========================================");
+		line("============== RESULTS ==================");
+		line("=========================================");
+		line("EXECUTION TIME : "
 			+ (Calendar.getInstance().getTimeInMillis() - TimeKeeper.getInstance()
 				.getSimulationStartTime()));
-		System.out.println("=========================================");
-		System.out.println("APPLICATION LOOP DELAYS");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("APPLICATION LOOP DELAYS");
+		line("=========================================");
 		for (Integer loopId : TimeKeeper.getInstance().getLoopIdToTupleIds().keySet()) {
 
-			System.out.println(getStringForLoopId(loopId) + " ---> "
+			line(getStringForLoopId(loopId) + " ---> "
 				+ TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loopId));
 		}
-		System.out.println("=========================================");
-		System.out.println("TUPLE CPU EXECUTION DELAY");
-		System.out.println("=========================================");
+		line("=========================================");
+		line("TUPLE CPU EXECUTION DELAY");
+		line("=========================================");
 
 		for (String tupleType : TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().keySet()) {
-			System.out.println(tupleType + " ---> "
+			line(tupleType + " ---> "
 				+ TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().get(tupleType));
 		}
 
-		System.out.println("=========================================");
+		line("=========================================");
 	}
 
 	protected void manageResources() {
@@ -200,6 +203,10 @@ public class Controller extends SimEntity {
 	}
 
 	private void processTupleFinished(SimEvent ev) {}
+
+	private void line(String value) {
+		events.detailLine(() -> value);
+	}
 
 	@Override
 	public void shutdownEntity() {
@@ -240,7 +247,7 @@ public class Controller extends SimEntity {
 	}
 
 	private void processAppSubmit(Application application) {
-		System.out.println("Controller " + CloudSim.clock() + " Submitted application "
+		line("Controller " + CloudSim.clock() + " Submitted application "
 			+ application.getAppId());
 		FogUtils.registerApplicationCoverage(application.getAppId(),
 			application.getGeoCoverage());
@@ -257,7 +264,7 @@ public class Controller extends SimEntity {
 			.getModuleInstanceCountMap();
 		for (Integer deviceId : deviceToModuleMap.keySet()) {
 			for (AppModule module : deviceToModuleMap.get(deviceId)) {
-				System.out.println("processAppSubmit");
+				line("processAppSubmit");
 				sendNow(deviceId, FogEvents.APP_SUBMIT, application);
 				sendNow(deviceId, FogEvents.LAUNCH_MODULE, module);
 				sendNow(deviceId, FogEvents.LAUNCH_MODULE_INSTANCE,

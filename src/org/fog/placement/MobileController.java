@@ -55,6 +55,7 @@ import org.fog.vmmobile.MobileUserApplicationFactory;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.SimulationBuildException;
 import org.fog.vmmobile.SimulationContext;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -289,8 +290,8 @@ public class MobileController extends SimEntity {
 	}
 
 	private void processAppSubmit(Application application) {
-		System.out.println("MobileController 213 processAppSubmit " + CloudSim.clock()
-			+ " Submitted application " + application.getAppId());
+		SimulationEventSink.current().detail("MobileController", () ->
+			"Submitted application " + application.getAppId());
 		FogUtils.registerApplicationCoverage(application.getAppId(),
 			application.getGeoCoverage());
 		applications.put(application.getAppId(), application);
@@ -318,7 +319,8 @@ public class MobileController extends SimEntity {
 			.getModuleInstanceCountMap();
 		for (Integer deviceId : deviceToModuleMap.keySet()) {
 			for (AppModule module : deviceToModuleMap.get(deviceId)) {
-				System.out.println("MobileController 240 ProcessAppSubmit");
+				SimulationEventSink.current().trace("MobileController", () ->
+					"Launching module " + module.getName() + " on entity " + deviceId);
 				sendNow(deviceId, FogEvents.APP_SUBMIT, application);
 				sendNow(deviceId, FogEvents.LAUNCH_MODULE, module);
 				sendNow(deviceId, FogEvents.LAUNCH_MODULE_INSTANCE,
@@ -329,8 +331,8 @@ public class MobileController extends SimEntity {
 
 	private void processAppSubmitMigration(SimEvent ev) {
 		Application application = (Application) ev.getData();
-		System.out.println(CloudSim.clock() + " Submitted application after migration "
-			+ application.getAppId());
+		SimulationEventSink.current().detail("MobileController", () ->
+			"Submitted application after migration " + application.getAppId());
 		FogUtils.registerApplicationCoverage(application.getAppId(),
 			application.getGeoCoverage());
 		applications.put(application.getAppId(), application);
@@ -346,7 +348,9 @@ public class MobileController extends SimEntity {
 		Map<Integer, Map<String, Integer>> instanceCountMap = modulePlacement
 			.getModuleInstanceCountMap();
 		for (AppModule module : deviceToModuleMap.get(sc.getId())) {
-			System.out.println("MobileController 268 processAppSubmitMigration");
+			SimulationEventSink.current().trace("MobileController", () ->
+				"Launching migrated module " + module.getName() + " on "
+					+ sc.getName());
 			sendNow(sc.getId(), FogEvents.APP_SUBMIT, application);
 			sendNow(sc.getId(), FogEvents.LAUNCH_MODULE, module);
 			sendNow(
@@ -367,14 +371,16 @@ public class MobileController extends SimEntity {
 	public void processEvent(SimEvent ev) {
 		switch (ev.getTag()) {
 		case FogEvents.APP_SUBMIT:
-			System.out.println("APP_SUBMIT");
+			SimulationEventSink.current().trace("MobileController", () ->
+				"Received APP_SUBMIT");
 			processAppSubmit(ev);
 			break;
 		case MobileEvents.APP_SUBMIT_MIGRATE:
 			processAppSubmitMigration(ev);
 			break;
 		case FogEvents.TUPLE_FINISHED:
-			System.out.println("TUPLE_FINISHED");
+			SimulationEventSink.current().trace("MobileController", () ->
+				"Received TUPLE_FINISHED");
 			processTupleFinished(ev);
 			break;
 		case FogEvents.CONTROLLER_RESOURCE_MANAGE:
@@ -448,10 +454,9 @@ public class MobileController extends SimEntity {
 		}
 		shutdownRequested = true;
 		migrationDecisionGeneration++;
-		System.out
-			.println("*********************Stopping simulation********************");
-		System.out.println("CloudSim.clock(): " + CloudSim.clock());
-		System.out.println("Size SmartThings: " + getSmartThings().size());
+		SimulationEventSink.current().detail("MobileController", () ->
+			"Stopping simulation with " + getSmartThings().size()
+				+ " active mobile devices");
 		SimulationContext context = SimulationContext.currentOrNull();
 		long wallTime = context == null
 			? Calendar.getInstance().getTimeInMillis()
@@ -996,20 +1001,12 @@ public class MobileController extends SimEntity {
 			}
 
 			if (st.getSourceAp() != null) {
-				System.out.println(st.getName() + "\t" + st.getCoord().getCoordX() + "\t"
-					+ st.getCoord().getCoordY());
-				System.out.println(st.getSourceAp().getName() + "\t"
-					+ st.getSourceAp().getCoord().getCoordX() + "\t"
-					+ st.getSourceAp().getCoord().getCoordY());
-				System.out.println(Distances.checkDistance(st.getCoord(), st.getSourceAp()
-					.getCoord()));
 				if (!st.isLockedToHandoff()) {
 					double distance = Distances.checkDistance(st.getCoord(), st.getSourceAp()
 						.getCoord());
-
-					System.out.println("Distance " + distance + "Diff "
-						+ (MaxAndMin.AP_COVERAGE - MaxAndMin.MAX_DISTANCE_TO_HANDOFF) + " max "
-						+ MaxAndMin.AP_COVERAGE);
+					SimulationEventSink.current().trace("MobileController", () ->
+						st.getName() + " at " + st.getCoord() + " is " + distance
+							+ "m from " + st.getSourceAp().getName());
 					if (distance >= MaxAndMin.AP_COVERAGE - MaxAndMin.MAX_DISTANCE_TO_HANDOFF
 						&& distance < MaxAndMin.AP_COVERAGE) {
 						Optional<ApDevice> nextAp = Migration.nextAp(getApDevices(), st);
@@ -1135,9 +1132,10 @@ public class MobileController extends SimEntity {
 	}
 
 	private static void saveHandOff(MobileDevice st) {
-		System.out.println("HANDOFF " + st.getMyId() + " Position: " + st.getCoord().getCoordX()
-			+ ", " + st.getCoord().getCoordY() + " Direction: " + st.getDirection() + " Speed: "
-			+ st.getSpeed());
+		SimulationEventSink.current().detail("MobileController", () ->
+			"HANDOFF " + st.getMyId() + " Position: " + st.getCoord().getCoordX()
+				+ ", " + st.getCoord().getCoordY() + " Direction: "
+				+ st.getDirection() + " Speed: " + st.getSpeed());
 		try (PrintWriter out = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(st.getMyId() + "handoff.txt", true))
 		{

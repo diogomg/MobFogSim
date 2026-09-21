@@ -13,6 +13,7 @@ import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.MigrationTechniquePolicy;
@@ -172,7 +173,8 @@ public final class MigrationCoordinator {
 		}
 
 		double preparationDelay = preparation.dataprepare(mobileDevice);
-		System.out.println("delayProcess" + preparationDelay);
+		SimulationEventSink.current().trace("MigrationCoordinator", () ->
+			"Migration preparation delay " + preparationDelay);
 		if (preparationDelay < 0.0) {
 			return;
 		}
@@ -225,14 +227,16 @@ public final class MigrationCoordinator {
 				continue;
 			}
 
-			System.out.println("====================ToMigrate================== "
-				+ mobileDevice.getName() + " " + mobileDevice.getId());
+			SimulationEventSink.current().detail("MigrationCoordinator", () ->
+				"Migration selected for " + mobileDevice.getName() + " (entity "
+					+ mobileDevice.getId() + ")");
 			LogMobile.debug("MigrationCoordinator.java", "Distance between "
 				+ mobileDevice.getName() + " and "
 				+ mobileDevice.getSourceAp().getName() + ": "
 				+ Distances.checkDistance(mobileDevice.getCoord(),
 					mobileDevice.getSourceAp().getCoord()));
-			System.out.println("Migration time: " + mobileDevice.getMigTime());
+			SimulationEventSink.current().trace("MigrationCoordinator", () ->
+				"Migration time " + mobileDevice.getMigTime());
 			LogMobile.debug("MigrationCoordinator.java", "Made the decisionMigration for "
 				+ mobileDevice.getName());
 			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
@@ -282,10 +286,11 @@ public final class MigrationCoordinator {
 	}
 
 	private static void writeDecision(MobileDevice mobileDevice) {
-		System.out.println("MIGRATION " + mobileDevice.getMyId() + " Position: "
-			+ mobileDevice.getCoord().getCoordX() + ", "
-			+ mobileDevice.getCoord().getCoordY() + " Direction: "
-			+ mobileDevice.getDirection() + " Speed: " + mobileDevice.getSpeed());
+		SimulationEventSink.current().detail("MigrationCoordinator", () ->
+			"MIGRATION " + mobileDevice.getMyId() + " Position: "
+				+ mobileDevice.getCoord().getCoordX() + ", "
+				+ mobileDevice.getCoord().getCoordY() + " Direction: "
+				+ mobileDevice.getDirection() + " Speed: " + mobileDevice.getSpeed());
 		try (PrintWriter writer = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(mobileDevice.getMyId() + "migration.txt", true)) {
 			writer.println(mobileDevice.getMyId() + "\t"
