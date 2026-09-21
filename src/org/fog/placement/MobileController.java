@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,8 @@ import org.fog.vmmobile.policy.MembershipAction;
 import org.fog.scheduler.TupleScheduler;
 
 public class MobileController extends SimEntity {
+	static final double MIGRATION_DECISION_INTERVAL_MILLIS = 1000.0;
+
 	private static boolean migrationAble;
 	private static MigrationPointPolicy migPointPolicy = MigrationPointPolicy.FIXED;
 
@@ -88,6 +91,7 @@ public class MobileController extends SimEntity {
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
 	private boolean shutdownRequested;
+	private long migrationDecisionGeneration;
 	private final SimulationResultsService resultsService;
 	private final MobilityService mobilityService;
 	private final MobileAssociationService associationService;
@@ -257,10 +261,11 @@ public class MobileController extends SimEntity {
 		}
 
 		if (isMigrationAble()) {
-			for (FogDevice sc : getServerCloudlets()) {
-				schedulePeriodic(sc.getId(), 0, 1000, MaxAndMin.MAX_SIMULATION_TIME,
-					MobileEvents.MAKE_DECISION_MIGRATION, sc.getSmartThings());
-			}
+			migrationDecisionGeneration++;
+			schedulePeriodic(getId(), 0, MIGRATION_DECISION_INTERVAL_MILLIS,
+				MaxAndMin.MAX_SIMULATION_TIME,
+				MobileEvents.MIGRATION_DECISION_TICK,
+				new MigrationDecisionTick(migrationDecisionGeneration));
 		}
 
 		for (MobileDevice st : getSmartThings()) {
@@ -381,10 +386,59 @@ public class MobileController extends SimEntity {
 		case MobileEvents.MOBILITY_UPDATE:
 			processMobilityUpdate(ev);
 			break;
+		case MobileEvents.MIGRATION_DECISION_TICK:
+			processMigrationDecisionTick(ev);
+			break;
 		case MobileEvents.STOP_SIMULATION:
 			requestSimulationStop();
 			break;
 
+		}
+	}
+
+	private void processMigrationDecisionTick(SimEvent event) {
+		if (!(event.getData() instanceof MigrationDecisionTick)) {
+			return;
+		}
+		MigrationDecisionTick tick = (MigrationDecisionTick) event.getData();
+		if (tick.generation != migrationDecisionGeneration || shutdownRequested) {
+			return;
+		}
+		evaluateMigrationDecisions();
+	}
+
+	/**
+	 * Evaluates only occupied servers. Sorting by entity ID reproduces the
+	 * order in which CloudSim ran the former per-server periodic events.
+	 */
+	void evaluateMigrationDecisions() {
+		for (FogDevice serverCloudlet
+			: migrationDecisionTargets(getServerCloudlets())) {
+			serverCloudlet.evaluateMigrationDecisions();
+		}
+	}
+
+	static List<FogDevice> migrationDecisionTargets(
+		List<FogDevice> configuredServers) {
+		if (configuredServers == null || configuredServers.isEmpty()) {
+			return Collections.emptyList();
+		}
+		List<FogDevice> targets = new ArrayList<FogDevice>();
+		for (FogDevice serverCloudlet : configuredServers) {
+			if (serverCloudlet != null
+				&& !serverCloudlet.getSmartThings().isEmpty()) {
+				targets.add(serverCloudlet);
+			}
+		}
+		Collections.sort(targets, Comparator.comparingInt(FogDevice::getId));
+		return Collections.unmodifiableList(targets);
+	}
+
+	private static final class MigrationDecisionTick {
+		private final long generation;
+
+		private MigrationDecisionTick(long generation) {
+			this.generation = generation;
 		}
 	}
 
@@ -393,6 +447,7 @@ public class MobileController extends SimEntity {
 			return;
 		}
 		shutdownRequested = true;
+		migrationDecisionGeneration++;
 		System.out
 			.println("*********************Stopping simulation********************");
 		System.out.println("CloudSim.clock(): " + CloudSim.clock());

@@ -27,5 +27,7 @@ public class MobileEvents {
 	public static final int SET_MIG_STATUS_TRUE = 5019;
 	public static final int START_MIGRATION_TRANSFER = 5020;
 	public static final int MOBILITY_UPDATE = 5021;
+	/** One controller-owned priority occurrence for migration evaluation. */
+	public static final int MIGRATION_DECISION_TICK = 5022;
 
 }

@@ -1084,6 +1084,15 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	private void invokeDecisionMigration(SimEvent ev) {
+		evaluateMigrationDecisions();
+	}
+
+	/**
+	 * Evaluates the users currently attached to this server. The mobile
+	 * controller calls this entry point from its single priority decision tick,
+	 * avoiding one periodic CloudSim event for every empty server.
+	 */
+	public void evaluateMigrationDecisions() {
 		migrationCoordinator.decide(getSmartThings(), getId(),
 			(destinationId, delay, eventTag, payload) ->
 				send(destinationId, delay, eventTag, payload));
