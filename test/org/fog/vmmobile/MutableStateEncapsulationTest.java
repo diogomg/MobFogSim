@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +87,15 @@ public class MutableStateEncapsulationTest {
 	@Test
 	public void simulationTopologyExposesOnlyReadViews() {
 		SimulationTopology topology = new SimulationTopology();
-		topology.mobileDeviceRegistry().add(new MobileDevice());
+		MobileDevice mobileDevice = new MobileDevice();
+		topology.mobileDeviceRegistry().add(mobileDevice);
+		topology.activateRegisteredMobileDevices(
+			Collections.singletonList(mobileDevice));
 
+		assertEquals(1, topology.getMobileDevices().size());
+		assertEquals(1, topology.getActiveMobileDevices().size());
+		assertTrue(topology.retireMobileDevice(mobileDevice));
+		assertTrue(topology.getActiveMobileDevices().isEmpty());
 		assertEquals(1, topology.getMobileDevices().size());
 		assertUnsupported(new Runnable() {
 			@Override

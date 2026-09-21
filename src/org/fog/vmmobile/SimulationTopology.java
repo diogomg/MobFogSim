@@ -17,6 +17,8 @@ import org.fog.utils.GeoCoverage;
 public final class SimulationTopology {
 	private final List<MobileDevice> mobileDevices =
 		new ArrayList<MobileDevice>();
+	private final List<MobileDevice> activeMobileDevices =
+		new ArrayList<MobileDevice>();
 	private final List<FogDevice> serverCloudlets = new ArrayList<FogDevice>();
 	private final List<ApDevice> accessPoints = new ArrayList<ApDevice>();
 	private final List<FogBroker> brokers = new ArrayList<FogBroker>();
@@ -27,6 +29,39 @@ public final class SimulationTopology {
 
 	public List<MobileDevice> getMobileDevices() {
 		return Collections.unmodifiableList(mobileDevices);
+	}
+
+	/**
+	 * Returns the users that can still participate in the simulation. The
+	 * all-user registry returned by {@link #getMobileDevices()} is archival and
+	 * is never shortened when a trace completes.
+	 */
+	public List<MobileDevice> getActiveMobileDevices() {
+		return Collections.unmodifiableList(activeMobileDevices);
+	}
+
+	/** Initialises the active view from the already-built all-user registry. */
+	public void activateRegisteredMobileDevices(List<MobileDevice> devices) {
+		if (devices == null) {
+			throw new IllegalArgumentException("Active mobile-device list cannot be null");
+		}
+		for (MobileDevice device : devices) {
+			if (device == null || !mobileDevices.contains(device)) {
+				throw new IllegalArgumentException(
+					"Active mobile devices must belong to the all-user registry");
+			}
+		}
+		activeMobileDevices.clear();
+		for (MobileDevice device : devices) {
+			if (!activeMobileDevices.contains(device)) {
+				activeMobileDevices.add(device);
+			}
+		}
+	}
+
+	/** Retires a user from active processing without erasing its identity. */
+	public boolean retireMobileDevice(MobileDevice device) {
+		return device != null && activeMobileDevices.remove(device);
 	}
 
 	public List<FogDevice> getServerCloudlets() {

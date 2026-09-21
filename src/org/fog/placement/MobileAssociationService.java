@@ -96,16 +96,17 @@ public final class MobileAssociationService {
 		}
 	}
 
-	/** Releases network/migration state and permanently finishes a trace. */
-	public void finish(MobileDevice mobileDevice) {
-		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
-			return;
-		}
+	/**
+	 * Releases association and transfer state for the controller-owned user
+	 * retirement transaction.
+	 */
+	void releaseForRetirement(MobileDevice mobileDevice) {
 		if (mobileDevice.getLifecycleState() == MobileDeviceLifecycle.DISCONNECTED) {
 			MyStatistics.getInstance().finalWithoutConnection(
 				mobileDevice.getMyId(), CloudSim.clock());
 		}
 		NetworkSlicing.releaseBandwidth(mobileDevice);
+		NetworkSlicing.cancelWirelessTransfers(mobileDevice);
 		mobileDevice.setMigStatus(false);
 		mobileDevice.setMigStatusLive(false);
 		mobileDevice.setPostCopyStatus(false);

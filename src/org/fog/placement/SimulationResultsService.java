@@ -81,6 +81,9 @@ public final class SimulationResultsService {
 			System.out.println(mobileDevice.getName() + ": Energy Consumed = "
 				+ mobileDevice.getEnergy());
 		}
+		System.out.println("Total SmartThing energy: "
+			+ metrics.getTotalMobileEnergy() + " Mean: "
+			+ metrics.getAverageMobileEnergy());
 		for (Entry<Integer, Double> power : metrics.getMobilePowerHistory().entrySet()) {
 			System.out.println("SmartThing" + power.getKey() + ": Power = "
 				+ power.getValue());

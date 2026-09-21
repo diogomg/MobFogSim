@@ -36,7 +36,6 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.utils.SimulationDuration;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
-import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.TopologyService;
@@ -97,10 +96,10 @@ public class P0CorrectnessRegressionTest {
 		activeUsers.add(user);
 		MobileController.setSmartThings(activeUsers);
 		MobileUserRegistration.preparePendingUser(user);
-		MobileAssociationService service = new MobileAssociationService();
+		MobileController controller = new MobileController();
 
-		service.finish(user);
-		service.finish(user);
+		controller.finishMobileUser(user);
+		controller.finishMobileUser(user);
 
 		assertEquals(MobileDeviceLifecycle.FINISHED, user.getLifecycleState());
 		assertFalse(user.isStatus());
@@ -212,24 +211,40 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c2FinishedUsersMustRemainInTerminalMetricInventory() {
-		requireKnownDefectRun("C2");
 		MobileDevice first = mobile("finishedFirst", 6);
 		MobileDevice second = mobile("finishedSecond", 7);
+		first.setEnergyConsumption(10.0);
+		second.setEnergyConsumption(30.0);
 		List<MobileDevice> activeUsers = new ArrayList<MobileDevice>(
 			Arrays.asList(first, second));
 		MobileController.setSmartThings(activeUsers);
+		MobileController controller = new MobileController();
 
-		NextStep.finishMobility(first);
-		NextStep.finishMobility(second);
+		controller.finishMobileUser(first);
+		assertEquals(1, MobileController.getSmartThings().size());
+		SimulationMetricsSnapshot mixedLifecycleSnapshot =
+			SimulationMetricsSnapshot.capture(
+				Collections.<FogDevice>emptyList(),
+				Collections.<ApDevice>emptyList(),
+				MobileController.getAllSmartThings(), new MyStatistics(),
+				new TimeKeeper(), 10.0, 0L);
+		assertEquals("Energy includes retired and active-at-stop users", 40.0,
+			mixedLifecycleSnapshot.getTotalMobileEnergy(), DELTA);
+		controller.finishMobileUser(second);
 
 		assertTrue("The active-user view should be empty",
 			MobileController.getSmartThings().isEmpty());
+		assertEquals("The archival all-user registry must remain intact", 2,
+			MobileController.getAllSmartThings().size());
 		SimulationMetricsSnapshot snapshot = SimulationMetricsSnapshot.capture(
 			Collections.<FogDevice>emptyList(),
-			Collections.<ApDevice>emptyList(), MobileController.getSmartThings(),
+			Collections.<ApDevice>emptyList(), MobileController.getAllSmartThings(),
 			new MyStatistics(), new TimeKeeper(), 20.0, 0L);
 		assertEquals("C2: both completed users must be captured exactly once",
 			2, snapshot.getMobileDevices().size());
+		assertEquals(40.0, snapshot.getTotalMobileEnergy(), DELTA);
+		assertEquals(20.0, snapshot.getAverageMobileEnergy(), DELTA);
+		assertEquals(2, MyStatistics.getInstance().getEnergyHistory().size());
 	}
 
 	@Test
@@ -281,13 +296,14 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c4FinishedUserMustReleaseItsVmResources() {
-		requireKnownDefectRun("C4");
 		RegistrationFixture fixture = new RegistrationFixture(10);
 		assertTrue(fixture.controller.activateMobileUser(fixture.user));
 		Vm registeredVm = fixture.user.getVmMobileDevice();
 		assertTrue(fixture.server.getHost().getVmList().contains(registeredVm));
+		double finalEnergy = fixture.user.getEnergyConsumption();
 
-		new MobileAssociationService().finish(fixture.user);
+		fixture.controller.finishMobileUser(fixture.user);
+		fixture.controller.finishMobileUser(fixture.user);
 
 		assertEquals(MobileDeviceLifecycle.FINISHED,
 			fixture.user.getLifecycleState());
@@ -296,6 +312,16 @@ public class P0CorrectnessRegressionTest {
 		assertFalse(fixture.server.getSmartThingsWithVm().contains(fixture.user));
 		assertNull(fixture.user.getVmMobileDevice());
 		assertNull(fixture.user.getVmLocalServerCloudlet());
+		assertTrue(fixture.moduleMapping.getModuleMapping().isEmpty());
+		assertTrue(fixture.brokers.get(0).getVmList().isEmpty());
+		assertTrue("C4: terminal metrics must survive VM deallocation",
+			MyStatistics.getInstance().getEnergyHistory()
+				.containsKey(fixture.user.getMyId()));
+		assertEquals(finalEnergy, MyStatistics.getInstance().getEnergyHistory()
+			.get(fixture.user.getMyId()), DELTA);
+		assertTrue("C4: released host capacity must accept a later VM",
+			fixture.server.getHost().vmCreate(registeredVm));
+		fixture.server.getHost().vmDestroy(registeredVm);
 	}
 
 	@Test

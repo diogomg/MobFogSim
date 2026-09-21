@@ -341,6 +341,16 @@ public final class SimulationMetricsSnapshot {
 		return totalEnergy(accessPoints);
 	}
 
+	/** Total terminal energy of all configured users, including retired users. */
+	public double getTotalMobileEnergy() {
+		return totalEnergy(mobileDevices);
+	}
+
+	/** Mean terminal energy across all configured users. */
+	public double getAverageMobileEnergy() {
+		return averageEnergy(mobileDevices);
+	}
+
 	public Map<Integer, Double> getMobilePowerHistory() {
 		return mobilePowerHistory;
 	}

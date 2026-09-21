@@ -2,6 +2,7 @@ package org.fog.placement;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class ModuleMapping {
@@ -77,6 +78,24 @@ public class ModuleMapping {
 
 	public boolean removeDevice(String deviceName) {
 		return moduleMapping.remove(deviceName) != null;
+	}
+
+	/** Removes one module from every device and prunes empty device entries. */
+	public boolean removeModule(String moduleName) {
+		if (moduleName == null || moduleName.trim().isEmpty()) {
+			throw new IllegalArgumentException("Module name cannot be empty");
+		}
+		boolean removed = false;
+		Iterator<Map.Entry<String, Map<String, Integer>>> entries =
+			moduleMapping.entrySet().iterator();
+		while (entries.hasNext()) {
+			Map.Entry<String, Map<String, Integer>> entry = entries.next();
+			removed |= entry.getValue().remove(moduleName) != null;
+			if (entry.getValue().isEmpty()) {
+				entries.remove();
+			}
+		}
+		return removed;
 	}
 
 	/** Moves VM placement between devices without exposing intermediate state. */

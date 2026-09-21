@@ -71,6 +71,7 @@ public class MobileController extends SimEntity {
 
 	private static List<FogDevice> serverCloudlets;
 	private static List<MobileDevice> smartThings;
+	private static List<MobileDevice> allSmartThings;
 	private static final Map<String, Integer> activeSensorApplications =
 		new HashMap<String, Integer>();
 	private static List<ApDevice> apDevices;
@@ -103,6 +104,7 @@ public class MobileController extends SimEntity {
 		seed = 0;
 		serverCloudlets = new ArrayList<FogDevice>();
 		smartThings = new ArrayList<MobileDevice>();
+		allSmartThings = new ArrayList<MobileDevice>();
 		activeSensorApplications.clear();
 		apDevices = new ArrayList<ApDevice>();
 		brokerList = new ArrayList<FogBroker>();
@@ -395,8 +397,11 @@ public class MobileController extends SimEntity {
 		long wallTime = context == null
 			? Calendar.getInstance().getTimeInMillis()
 			: context.getClock().wallTimeMillis();
+		for (MobileDevice mobileDevice : getAllSmartThings()) {
+			recordTerminalPowerAndEnergy(mobileDevice);
+		}
 		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
-			getServerCloudlets(), getApDevices(), getSmartThings(),
+			getServerCloudlets(), getApDevices(), getAllSmartThings(),
 			MyStatistics.getInstance(), TimeKeeper.getInstance(), CloudSim.clock(),
 			wallTime
 				- TimeKeeper.getInstance().getSimulationStartTime());
@@ -527,9 +532,20 @@ public class MobileController extends SimEntity {
 		associationService.disconnect(mobileDevice);
 	}
 
-	private void finishMobileUser(MobileDevice mobileDevice) {
-		associationService.finish(mobileDevice);
+	/**
+	 * Default user-retirement transaction. It is deliberately idempotent: the
+	 * broker and archival user identity remain for CloudSim compatibility and
+	 * final reporting, while runtime network, application and VM allocation
+	 * state is released.
+	 */
+	void finishMobileUser(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			return;
+		}
+		recordTerminalPowerAndEnergy(mobileDevice);
+		associationService.releaseForRetirement(mobileDevice);
 		retireApplication(mobileDevice);
+		MyStatistics.getInstance().discardOpenIntervals(mobileDevice.getMyId());
 	}
 
 	void retireApplication(MobileDevice mobileDevice) {
@@ -544,6 +560,31 @@ public class MobileController extends SimEntity {
 			fogDevice.unregisterHostedMobileVm(mobileDevice);
 			fogDevice.removeApplication(applicationId);
 		}
+		if (getModuleMapping() != null) {
+			getModuleMapping().removeModule(
+				"AppModuleVm_" + mobileDevice.getName());
+			getModuleMapping().removeDevice(mobileDevice.getName());
+		}
+		FogBroker broker = brokersByMobileId.get(mobileDevice.getMyId());
+		if (broker != null && vm != null) {
+			broker.getVmList().remove(vm);
+			broker.getVmsCreatedList().remove(vm);
+		}
+		mobileDevice.setVmMobileDevice(null);
+		mobileDevice.setVmLocalServerCloudlet(null);
+		mobileDevice.setDestinationServerCloudlet(null);
+		mobileDevice.setServerCloudletToVmMigrate(null);
+	}
+
+	private static void recordTerminalPowerAndEnergy(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			return;
+		}
+		double power = mobileDevice.getCharacteristics() == null
+			|| mobileDevice.getHostList().isEmpty()
+			? 0.0 : mobileDevice.getHost().getPower();
+		MyStatistics.getInstance().recordPowerAndEnergy(mobileDevice.getMyId(),
+			power, mobileDevice.getEnergyConsumption());
 	}
 
 	private static void releaseVmFromHost(FogDevice serverCloudlet, Vm vm) {
@@ -1014,8 +1055,30 @@ public class MobileController extends SimEntity {
 			: Collections.unmodifiableList(smartThings);
 	}
 
+	/** Returns every user registered for this run, including retired users. */
+	public static List<MobileDevice> getAllSmartThings() {
+		return allSmartThings == null ? null
+			: Collections.unmodifiableList(allSmartThings);
+	}
+
 	public static void setSmartThings(List<MobileDevice> smartThings) {
-		MobileController.smartThings = smartThings;
+		if (smartThings == null) {
+			MobileController.smartThings = null;
+			MobileController.allSmartThings = null;
+			rebuildActiveSensorApplications();
+			return;
+		}
+		MobileController.smartThings =
+			new ArrayList<MobileDevice>(smartThings);
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context == null) {
+			MobileController.allSmartThings =
+				new ArrayList<MobileDevice>(smartThings);
+		}
+		else {
+			context.getTopology().activateRegisteredMobileDevices(smartThings);
+			MobileController.allSmartThings = context.getTopology().getMobileDevices();
+		}
 		rebuildActiveSensorApplications();
 	}
 
@@ -1052,8 +1115,12 @@ public class MobileController extends SimEntity {
 	}
 
 	public static boolean removeSmartThing(MobileDevice smartThing) {
-		if (!smartThings.remove(smartThing)) {
+		if (smartThings == null || !smartThings.remove(smartThing)) {
 			return false;
+		}
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context != null) {
+			context.getTopology().retireMobileDevice(smartThing);
 		}
 		for (Sensor sensor : smartThing.getSensors()) {
 			if (!sensor.isEnabled()) {

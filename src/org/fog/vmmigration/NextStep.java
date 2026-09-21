@@ -90,6 +90,10 @@ public class NextStep {
 			coordinate.newCoordinate(st);
 			if (!processCurrentPosition(st)) {
 				finishMobility(st);
+				// This legacy API receives an active-user working list. The controller
+				// now owns a distinct copy so retiring a user cannot erase the
+				// topology's archival all-user registry.
+				smartThings.remove(i);
 			}
 		}
 	}
