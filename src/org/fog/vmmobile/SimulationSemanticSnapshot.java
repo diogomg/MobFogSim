@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 4;
+	public static final int SCHEMA_VERSION = 5;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;
@@ -95,12 +95,28 @@ public final class SimulationSemanticSnapshot {
 			metrics.getTupleCpuTimes());
 		put(values, "network.tuple_usage_byte_ms",
 			metrics.getTupleUsageByteMilliseconds());
+		put(values, "network.tuple_transferred_bytes",
+			metrics.getTupleTransferredBytes());
+		put(values, "network.tuple_queue_duration_ms",
+			metrics.getTupleQueueDurationMilliseconds());
+		put(values, "network.tuple_transfer_duration_ms",
+			metrics.getTupleTransferDurationMilliseconds());
+		put(values, "network.tuple_propagation_duration_ms",
+			metrics.getTuplePropagationDurationMilliseconds());
+		put(values, "network.tuple_queue_usage_byte_ms",
+			metrics.getTupleQueueUsageByteMilliseconds());
+		put(values, "network.tuple_transfer_usage_byte_ms",
+			metrics.getTupleTransferUsageByteMilliseconds());
+		put(values, "network.tuple_propagation_usage_byte_ms",
+			metrics.getTuplePropagationUsageByteMilliseconds());
 		put(values, "network.migration_usage_byte_ms",
 			metrics.getMigrationUsageByteMilliseconds());
 		put(values, "network.total_usage_byte_ms",
 			metrics.getTotalUsageByteMilliseconds());
 		put(values, "network.migration_transferred_bytes",
 			metrics.getMigrationTransferredBytes());
+		put(values, "network.migration_transfer_duration_ms",
+			metrics.getMigrationTransferDurationMilliseconds());
 		put(values, "network_slicing.reconfigurations",
 			metrics.getSliceReconfigurationCount());
 		put(values, "network_slicing.outage_seconds",

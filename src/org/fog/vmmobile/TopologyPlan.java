@@ -2,6 +2,7 @@ package org.fog.vmmobile;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,6 +13,9 @@ import java.util.Set;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.localization.Distances;
+import org.fog.localization.GridGenerator;
+import org.fog.localization.GridPosition;
+import org.fog.vmmobile.constants.MaxAndMin;
 
 /** Immutable, fully validated physical-topology mutations. */
 public final class TopologyPlan {
@@ -108,14 +112,45 @@ public final class TopologyPlan {
 		}
 		Map<FogDevice, Map<FogDevice, Double>> adjacency =
 			buildAdjacency(serverCloudlets);
+		final Map<FogDevice, GridPosition> positions =
+			new HashMap<FogDevice, GridPosition>();
+		for (FogDevice cloudlet : serverCloudlets) {
+			positions.put(cloudlet, positionOf(cloudlet));
+		}
+		List<FogDevice> orderedCloudlets =
+			new ArrayList<FogDevice>(serverCloudlets);
+		Collections.sort(orderedCloudlets, new Comparator<FogDevice>() {
+			@Override
+			public int compare(FogDevice first, FogDevice second) {
+				GridPosition firstPosition = positions.get(first);
+				GridPosition secondPosition = positions.get(second);
+				int xComparison = Integer.compare(firstPosition.getX(),
+					secondPosition.getX());
+				if (xComparison != 0) {
+					return xComparison;
+				}
+				int yComparison = Integer.compare(firstPosition.getY(),
+					secondPosition.getY());
+				if (yComparison != 0) {
+					return yComparison;
+				}
+				int nameComparison = first.getName().compareTo(second.getName());
+				return nameComparison != 0 ? nameComparison
+					: Integer.compare(first.getId(), second.getId());
+			}
+		});
+		double gridSpacing = GridGenerator.spacingForCoverage(
+			MaxAndMin.CLOUDLET_COVERAGE);
 		List<Link> links = new ArrayList<Link>();
-		for (int sourceIndex = 0; sourceIndex < serverCloudlets.size(); sourceIndex++) {
-			FogDevice source = serverCloudlets.get(sourceIndex);
+		for (int sourceIndex = 0; sourceIndex < orderedCloudlets.size(); sourceIndex++) {
+			FogDevice source = orderedCloudlets.get(sourceIndex);
 			for (int destinationIndex = 0; destinationIndex < sourceIndex;
 				destinationIndex++) {
-				FogDevice destination = serverCloudlets.get(destinationIndex);
-				int rowDistance = Math.abs(destinationIndex / 12 - sourceIndex / 12);
-				int columnDistance = Math.abs(destinationIndex % 12 - sourceIndex % 12);
+				FogDevice destination = orderedCloudlets.get(destinationIndex);
+				GridPosition sourcePosition = positions.get(source);
+				GridPosition destinationPosition = positions.get(destination);
+				double gridDistance = sourcePosition.chebyshevDistanceTo(
+					destinationPosition) / gridSpacing;
 				double sampledLatency;
 				try {
 					sampledLatency = random.nextDouble();
@@ -127,8 +162,7 @@ public final class TopologyPlan {
 				links.add(new Link(source.getId(), destination.getId(),
 					Math.min(source.getUplinkBandwidth(),
 						destination.getDownlinkBandwidth()),
-					Math.max(rowDistance, columnDistance) * baseLatency
-						+ sampledLatency));
+					gridDistance * baseLatency + sampledLatency));
 			}
 		}
 		return new TopologyPlan(adjacency, links,
@@ -258,6 +292,17 @@ public final class TopologyPlan {
 				throw new IllegalArgumentException(
 					"Server cloudlet list cannot contain duplicate devices");
 			}
+		}
+	}
+
+	private static GridPosition positionOf(FogDevice cloudlet) {
+		try {
+			return new GridPosition(cloudlet.getCoord().getCoordX(),
+				cloudlet.getCoord().getCoordY());
+		}
+		catch (IllegalArgumentException error) {
+			throw new SimulationBuildException("Server cloudlet "
+				+ cloudlet.getName() + " has an invalid grid coordinate", error);
 		}
 	}
 }

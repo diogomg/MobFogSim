@@ -15,14 +15,16 @@ import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.Actuator;
+import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
+import org.fog.entities.MobileDevice;
 import org.fog.entities.Sensor;
 import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
-import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
+import org.fog.vmmigration.MyStatistics;
 
 public class Controller extends SimEntity {
 
@@ -124,9 +126,15 @@ public class Controller extends SimEntity {
 	}
 
 	private void printNetworkUsageDetails() {
+		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+			getFogDevices(), Collections.<ApDevice>emptyList(),
+			Collections.<MobileDevice>emptyList(), MyStatistics.getInstance(),
+			TimeKeeper.getInstance(), CloudSim.clock(), 0L);
 		System.out.println("Total network usage (byte-ms) = "
-			+ NetworkUsageMonitor.getTotalUsageByteMilliseconds()
-			/ Config.MAX_SIMULATION_TIME);
+			+ metrics.getTotalUsageByteMilliseconds());
+		System.out.println("Mean bytes in flight over simulation horizon (bytes) = "
+			+ metrics.perSimulationMillisecond(
+				metrics.getTotalUsageByteMilliseconds()));
 
 	}
 

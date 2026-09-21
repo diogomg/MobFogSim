@@ -9,15 +9,25 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
+import org.fog.localization.GridGenerator;
+import org.fog.localization.GridPosition;
+import org.fog.localization.MapBounds;
+import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmigration.ServiceAgreement;
+import org.fog.vmmobile.policy.MigrationPointPolicy;
+import org.fog.vmmobile.policy.MigrationStrategyPolicy;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,6 +40,16 @@ public class ServerCloudletNetworkTest {
 	public void setUp() {
 		Log.disable();
 		CloudSim.init(1, Calendar.getInstance(), false);
+		NetworkTopology.reset();
+		AppExample.setServerCloudlets(new ArrayList<FogDevice>());
+		AppExample.setApDevices(new ArrayList<ApDevice>());
+		AppExample.setRand(new Random(1L));
+		AppExample.setMaxBandwidth(11);
+		AppExample.setMigrationPointPolicy(MigrationPointPolicy.FIXED);
+		AppExample.setMigrationStrategyPolicy(
+			MigrationStrategyPolicy.LOWEST_LATENCY);
+		AppExample.setMigrationTechniquePolicy(
+			MigrationTechniquePolicy.COMPLETE_VM);
 	}
 
 	@Test
@@ -136,6 +156,108 @@ public class ServerCloudletNetworkTest {
 		assertEquals(closest.getId(), accessPoint.getParentId());
 		assertTrue(closest.getApDevices().contains(accessPoint));
 		assertFalse(farther.getApDevices().contains(accessPoint));
+	}
+
+	@Test
+	public void transportLatencyUsesCoordinatesOnANonTwelveColumnGrid() {
+		int spacing = GridGenerator.spacingForCoverage(
+			MaxAndMin.CLOUDLET_COVERAGE);
+		List<FogDevice> cloudlets = cloudletsAt(
+			new GridGenerator(new MapBounds(spacing * 3, spacing * 2))
+				.fixedPositions(spacing));
+
+		TopologyPlan plan = TopologyPlan.transport(cloudlets, 4.0,
+			new ZeroRandom());
+
+		assertEquals(8.0, latency(plan, "cloudlet-0", "cloudlet-4"), DELTA);
+		assertEquals(4.0, latency(plan, "cloudlet-0", "cloudlet-3"), DELTA);
+	}
+
+	@Test
+	public void shuffledServerInputDoesNotChangeLinkCharacteristics() {
+		int spacing = GridGenerator.spacingForCoverage(
+			MaxAndMin.CLOUDLET_COVERAGE);
+		List<FogDevice> cloudlets = cloudletsAt(
+			new GridGenerator(new MapBounds(spacing * 3, spacing * 2))
+				.fixedPositions(spacing));
+		TopologyPlan ordered = TopologyPlan.transport(cloudlets, 4.0,
+			new Random(37L));
+		List<FogDevice> shuffled = new ArrayList<FogDevice>(cloudlets);
+		Collections.shuffle(shuffled, new Random(91L));
+		TopologyPlan reordered = TopologyPlan.transport(shuffled, 4.0,
+			new Random(37L));
+
+		assertEquals(linkCharacteristics(ordered), linkCharacteristics(reordered));
+	}
+
+	@Test
+	public void randomServerBuilderUsesTheRectangularHeightBound() {
+		List<FogDevice> cloudlets = new ArrayList<FogDevice>();
+		AppExample.setServerCloudlets(cloudlets);
+		AppExample.setRand(new MaximumRandom());
+
+		AppExample.addServerCloudlet(cloudlets, null, 0,
+			new MapBounds(17, 5));
+
+		assertEquals(16, cloudlets.get(0).getCoord().getCoordX());
+		assertEquals(4, cloudlets.get(0).getCoord().getCoordY());
+	}
+
+	private static List<FogDevice> cloudletsAt(List<GridPosition> positions) {
+		List<FogDevice> cloudlets = new ArrayList<FogDevice>();
+		for (int index = 0; index < positions.size(); index++) {
+			GridPosition position = positions.get(index);
+			FogDevice cloudlet = new FogDevice("cloudlet-" + index,
+				position.getX(), position.getY(), index);
+			cloudlet.setUplinkBandwidth(100.0 + index);
+			cloudlet.setDownlinkBandwidth(200.0 + index);
+			cloudlets.add(cloudlet);
+		}
+		return cloudlets;
+	}
+
+	private static double latency(TopologyPlan plan, String first,
+		String second) {
+		return linkCharacteristics(plan).get(pair(first, second)).get(1);
+	}
+
+	private static Map<String, List<Double>> linkCharacteristics(
+		TopologyPlan plan) {
+		Map<Integer, String> names = new HashMap<Integer, String>();
+		for (FogDevice cloudlet : plan.getAdjacency().keySet()) {
+			names.put(cloudlet.getId(), cloudlet.getName());
+		}
+		Map<String, List<Double>> characteristics =
+			new java.util.TreeMap<String, List<Double>>();
+		for (TopologyPlan.Link link : plan.getLinks()) {
+			characteristics.put(pair(names.get(link.getSourceId()),
+				names.get(link.getDestinationId())), Arrays.asList(
+					link.getBandwidth(), link.getLatency()));
+		}
+		return characteristics;
+	}
+
+	private static String pair(String first, String second) {
+		return first.compareTo(second) < 0 ? first + ":" + second
+			: second + ":" + first;
+	}
+
+	private static final class ZeroRandom extends Random {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public double nextDouble() {
+			return 0.0;
+		}
+	}
+
+	private static final class MaximumRandom extends Random {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public int nextInt(int bound) {
+			return bound - 1;
+		}
 	}
 
 	private static FogDevice cloudlet(String name, double uplink,

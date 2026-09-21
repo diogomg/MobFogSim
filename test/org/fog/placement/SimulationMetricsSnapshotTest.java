@@ -19,6 +19,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.NetworkTransferUsage;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
@@ -98,6 +99,36 @@ public class SimulationMetricsSnapshotTest {
 		assertEquals((5.8736831999993116E7 + 40.0) / 2.0,
 			snapshot.getAverageCloudletEnergy(), DELTA);
 		assertEquals(20.0, snapshot.getAverageAccessPointEnergy(), DELTA);
+	}
+
+	@Test
+	public void networkAccountingIsCapturedWithExplicitDimensions() {
+		NetworkUsageMonitor.recordCompletedTuple(new NetworkTransferUsage(
+			10.0, 2.0, 3.0, 5.0));
+		NetworkUsageMonitor.recordCompletedMigration(20.0, 7.0);
+
+		SimulationMetricsSnapshot snapshot = capture(
+			Collections.<FogDevice>emptyList(),
+			Collections.<ApDevice>emptyList(), 100.0, 1L);
+		NetworkUsageMonitor.reset();
+
+		assertEquals(10.0, snapshot.getTupleTransferredBytes(), DELTA);
+		assertEquals(2.0,
+			snapshot.getTupleQueueDurationMilliseconds(), DELTA);
+		assertEquals(3.0,
+			snapshot.getTupleTransferDurationMilliseconds(), DELTA);
+		assertEquals(5.0,
+			snapshot.getTuplePropagationDurationMilliseconds(), DELTA);
+		assertEquals(20.0,
+			snapshot.getTupleQueueUsageByteMilliseconds(), DELTA);
+		assertEquals(30.0,
+			snapshot.getTupleTransferUsageByteMilliseconds(), DELTA);
+		assertEquals(50.0,
+			snapshot.getTuplePropagationUsageByteMilliseconds(), DELTA);
+		assertEquals(7.0,
+			snapshot.getMigrationTransferDurationMilliseconds(), DELTA);
+		assertEquals(240.0,
+			snapshot.getTotalUsageByteMilliseconds(), DELTA);
 	}
 
 	@Test

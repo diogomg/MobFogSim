@@ -222,6 +222,7 @@ public final class NetworkSlicing {
 		private final Tuple tuple;
 		private final int destinationEntityId;
 		private final double propagationDelayMillis;
+		private final double queueDurationMillis;
 		private final double transferDurationMillis;
 
 		private WirelessTransferResult(WirelessTransferMetadata metadata,
@@ -229,6 +230,7 @@ public final class NetworkSlicing {
 			this.tuple = metadata.tuple;
 			this.destinationEntityId = metadata.destinationEntityId;
 			this.propagationDelayMillis = metadata.propagationDelayMillis;
+			this.queueDurationMillis = metadata.getQueueDurationMillis();
 			this.transferDurationMillis = completion.getDurationMillis();
 		}
 
@@ -242,6 +244,10 @@ public final class NetworkSlicing {
 
 		public double getPropagationDelayMillis() {
 			return propagationDelayMillis;
+		}
+
+		public double getQueueDurationMillis() {
+			return queueDurationMillis;
 		}
 
 		public double getTransferDurationMillis() {
@@ -327,6 +333,8 @@ public final class NetworkSlicing {
 		private final int destinationEntityId;
 		private final double propagationDelayMillis;
 		private final String mobileDirectionKey;
+		private final double enqueuedAtMillis;
+		private double activatedAtMillis = Double.NaN;
 		private boolean active;
 
 		private WirelessTransferMetadata(long transferId, ApDevice accessPoint,
@@ -342,6 +350,15 @@ public final class NetworkSlicing {
 			this.destinationEntityId = destinationEntityId;
 			this.propagationDelayMillis = propagationDelayMillis;
 			this.mobileDirectionKey = mobileDirectionKey(mobileDevice, direction);
+			this.enqueuedAtMillis = CloudSim.clock();
+		}
+
+		private double getQueueDurationMillis() {
+			if (!Double.isFinite(activatedAtMillis)) {
+				throw new IllegalStateException(
+					"A completed wireless transfer must have an activation time");
+			}
+			return Math.max(0.0, activatedAtMillis - enqueuedAtMillis);
 		}
 	}
 
@@ -805,8 +822,11 @@ public final class NetworkSlicing {
 			return null;
 		}
 		state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
-		NetworkUsageMonitor.sendingTuple(metadata.propagationDelayMillis,
-			metadata.tuple.getCloudletFileSize());
+		NetworkUsageMonitor.recordCompletedTuple(new NetworkTransferUsage(
+			metadata.tuple.getCloudletFileSize(),
+			metadata.getQueueDurationMillis(),
+			schedulerCompletion.getDurationMillis(),
+			metadata.propagationDelayMillis));
 		WirelessTransferResult result = new WirelessTransferResult(metadata,
 			schedulerCompletion);
 
@@ -814,6 +834,7 @@ public final class NetworkSlicing {
 			removeQueuedWirelessTransfer(metadata.mobileDirectionKey,
 				next.transferId);
 			next.active = true;
+			next.activatedAtMillis = CloudSim.clock();
 			state().activeWirelessTransfers.put(next.mobileDirectionKey, next.transferId);
 		}
 		applyWirelessSchedules(schedulerCompletion.getSchedules());
@@ -1075,6 +1096,7 @@ public final class NetworkSlicing {
 	private static void startWirelessTransfer(
 		WirelessTransferMetadata metadata) {
 		metadata.active = true;
+		metadata.activatedAtMillis = CloudSim.clock();
 		double accessPointBandwidth = metadata.direction == WirelessDirection.UPLINK
 			? metadata.accessPoint.getUplinkBandwidth()
 			: metadata.accessPoint.getDownlinkBandwidth();

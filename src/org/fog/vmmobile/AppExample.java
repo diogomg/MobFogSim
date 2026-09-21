@@ -37,6 +37,9 @@ import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileSensor;
 import org.fog.entities.Tuple;
 import org.fog.localization.Coordinate;
+import org.fog.localization.GridGenerator;
+import org.fog.localization.GridPosition;
+import org.fog.localization.MapBounds;
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
 import org.fog.placement.MobileController;
@@ -432,26 +435,25 @@ public class AppExample {
 
 	private static void addApDevicesFixed(List<ApDevice> apDevices,
 		Coordinate coordDevices) {
-		int i = 0;
-		boolean control = true;
-		int coordY = 0;
-		for (int coordX = 0; coordX < MaxAndMin.MAX_X; coordX += (2
-			* MaxAndMin.AP_COVERAGE
-			- (2 * MaxAndMin.AP_COVERAGE / 3))) { /* evenly distributed */
-			for (coordY = 0; coordY < MaxAndMin.MAX_Y; coordY += (2
-				* MaxAndMin.AP_COVERAGE
-				- (2 * MaxAndMin.AP_COVERAGE / 3)), i++) {
+		addApDevicesFixed(apDevices, coordDevices, MapBounds.defaults());
+	}
 
-				ApDevice ap = new ApDevice("AccessPoint" + Integer.toString(i), // name
-					coordX, coordY, i// ap.set//id
-					, 100 * 1024 * 1024// downLinkBandwidth - 100Mbits
-					, 200// engergyConsuption
-					, MaxAndMin.MAX_ST_IN_AP// maxSmartThing
-					, 100 * 1024 * 1024// upLinkBandwidth - 100Mbits
-					, 4// upLinkLatency
-				);
-				apDevices.add(i, ap);
-			}
+	static void addApDevicesFixed(List<ApDevice> apDevices,
+		Coordinate coordDevices, MapBounds bounds) {
+		int i = 0;
+		GridGenerator grid = new GridGenerator(bounds);
+		for (GridPosition position : grid.fixedPositions(
+			GridGenerator.spacingForCoverage(MaxAndMin.AP_COVERAGE))) {
+			ApDevice ap = new ApDevice("AccessPoint" + Integer.toString(i), // name
+				position.getX(), position.getY(), i// ap.set//id
+				, 100 * 1024 * 1024// downLinkBandwidth - 100Mbits
+				, 200// engergyConsuption
+				, MaxAndMin.MAX_ST_IN_AP// maxSmartThing
+				, 100 * 1024 * 1024// upLinkBandwidth - 100Mbits
+				, 4// upLinkLatency
+			);
+			apDevices.add(i, ap);
+			i++;
 		}
 		LogMobile.debug("AppExample.java", "Total of accessPoints: " + i);
 
@@ -459,11 +461,14 @@ public class AppExample {
 
 	private static void addApDevicesRandon(List<ApDevice> apDevices,
 		Coordinate coordDevices, int i) {
-		int coordX, coordY;
-		coordX = getRand().nextInt(MaxAndMin.MAX_X);
-		coordY = getRand().nextInt(MaxAndMin.MAX_Y);
+		addApDevicesRandom(apDevices, coordDevices, i, MapBounds.defaults());
+	}
+
+	static void addApDevicesRandom(List<ApDevice> apDevices,
+		Coordinate coordDevices, int i, MapBounds bounds) {
+		GridPosition position = new GridGenerator(bounds).randomPosition(getRand());
 		ApDevice ap = new ApDevice("AccessPoint" + Integer.toString(i), // name
-			coordX, coordY, i// id
+			position.getX(), position.getY(), i// id
 			, 100 * 1024 * 1024// downLinkBandwidth - 100 Mbits
 			, 200// engergyConsuption
 			, MaxAndMin.MAX_ST_IN_AP// maxSmartThing
@@ -612,11 +617,16 @@ public class AppExample {
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
 		Coordinate coordDevices, int i) {
+		addServerCloudlet(serverCloudlets, coordDevices, i, MapBounds.defaults());
+	}
+
+	static void addServerCloudlet(List<FogDevice> serverCloudlets,
+		Coordinate coordDevices, int i, MapBounds bounds) {
 		int listSizeBefore = serverCloudlets.size();
 		CloudSim.EntityRegistrationCheckpoint checkpoint =
 			CloudSim.checkpointEntityRegistrations();
 		try {
-			buildRandomServerCloudlet(serverCloudlets, coordDevices, i);
+			buildRandomServerCloudlet(serverCloudlets, coordDevices, i, bounds);
 		}
 		catch (RuntimeException error) {
 			truncateList(serverCloudlets, listSizeBefore);
@@ -626,9 +636,9 @@ public class AppExample {
 	}
 
 	private static void buildRandomServerCloudlet(
-		List<FogDevice> serverCloudlets, Coordinate coordDevices, int i) {
+		List<FogDevice> serverCloudlets, Coordinate coordDevices, int i,
+		MapBounds bounds) {
 
-		int coordX, coordY;
 		DecisionMigration migrationStrategy;
 		if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 			migrationStrategy = new LowestLatency(getServerCloudlets(),
@@ -698,8 +708,8 @@ public class AppExample {
 			serviceOffer.setValue(0);
 		}
 		try {
-			coordX = getRand().nextInt(MaxAndMin.MAX_X);
-			coordY = getRand().nextInt(MaxAndMin.MAX_X);
+			GridPosition position = new GridGenerator(bounds)
+				.randomPosition(getRand());
 			double maxBandwidth = getMaxBandwidth() * 1024.0 * 1024.0;
 			double minBandwidth = (getMaxBandwidth() - 1) * 1024.0 * 1024.0;
 			double upLinkRandom = minBandwidth
@@ -714,7 +724,7 @@ public class AppExample {
 				, downLinkRandom// downlinkBandwidth
 				, 4// rand.nextDouble()//uplinkLatency
 				, 0.01// mipsPer..
-				, coordX, coordY, i, serviceOffer, migrationStrategy,
+				, position.getX(), position.getY(), i, serviceOffer, migrationStrategy,
 				getMigrationTechniquePolicy(), beforeMigration);
 			serverCloudlets.add(i, sc);
 		} catch (Exception e) {
@@ -725,11 +735,16 @@ public class AppExample {
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
 		Coordinate coordDevices) {
+		addServerCloudlet(serverCloudlets, coordDevices, MapBounds.defaults());
+	}
+
+	static void addServerCloudlet(List<FogDevice> serverCloudlets,
+		Coordinate coordDevices, MapBounds bounds) {
 		int listSizeBefore = serverCloudlets.size();
 		CloudSim.EntityRegistrationCheckpoint checkpoint =
 			CloudSim.checkpointEntityRegistrations();
 		try {
-			buildFixedServerCloudlets(serverCloudlets, coordDevices);
+			buildFixedServerCloudlets(serverCloudlets, coordDevices, bounds);
 		}
 		catch (RuntimeException error) {
 			truncateList(serverCloudlets, listSizeBefore);
@@ -739,17 +754,15 @@ public class AppExample {
 	}
 
 	private static void buildFixedServerCloudlets(
-		List<FogDevice> serverCloudlets, Coordinate coordDevices) {
+		List<FogDevice> serverCloudlets, Coordinate coordDevices,
+		MapBounds bounds) {
 		int i = 0;
-		int coordX, coordY;
+		GridGenerator grid = new GridGenerator(bounds);
 
-		for (coordX = 0; coordX < MaxAndMin.MAX_X; coordX += (2
-			* MaxAndMin.CLOUDLET_COVERAGE
-			- (2 * MaxAndMin.CLOUDLET_COVERAGE / 3))) { /* evenly distributed */
-			for (coordY = 0; coordY < MaxAndMin.MAX_X; coordY += (2
-				* MaxAndMin.CLOUDLET_COVERAGE
-				- (2 * MaxAndMin.CLOUDLET_COVERAGE
-				/ 3)), i++) { /* evenly distributed */
+		for (GridPosition position : grid.fixedPositions(
+			GridGenerator.spacingForCoverage(MaxAndMin.CLOUDLET_COVERAGE))) {
+				int coordX = position.getX();
+				int coordY = position.getY();
 				DecisionMigration migrationStrategy;
 				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
 					migrationStrategy = new LowestLatency(getServerCloudlets(),
@@ -843,7 +856,7 @@ public class AppExample {
 						"Could not create fixed server cloudlet " + i
 							+ " at (" + coordX + ", " + coordY + ")", e);
 				}
-			}
+				i++;
 		}
 		LogMobile.debug("AppExample.java", "Total of serverCloudlets: " + i);
 	}

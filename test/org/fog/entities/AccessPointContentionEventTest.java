@@ -81,6 +81,14 @@ public class AccessPointContentionEventTest {
 		runUntil(1500.0);
 
 		assertEquals(1010.0, server.arrivalTime(1), DELTA);
+		assertEquals(TUPLE_BYTES,
+			NetworkUsageMonitor.getTupleTransferredBytes(), DELTA);
+		assertEquals(1000.0,
+			NetworkUsageMonitor.getTupleTransferDurationMilliseconds(), DELTA);
+		assertEquals(PROPAGATION_DELAY_MILLIS,
+			NetworkUsageMonitor.getTuplePropagationDurationMilliseconds(), DELTA);
+		assertEquals(TUPLE_BYTES * (1000.0 + PROPAGATION_DELAY_MILLIS),
+			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
 	}
 
 	@Test
@@ -102,7 +110,12 @@ public class AccessPointContentionEventTest {
 		assertEquals(1000.0 * 8.0 * 1000.0 / 5600.0
 			+ PROPAGATION_DELAY_MILLIS, server.arrivalTime(1), DELTA);
 		assertEquals(2010.0, server.arrivalTime(2), DELTA);
-		assertEquals(2.0 * TUPLE_BYTES * PROPAGATION_DELAY_MILLIS,
+		double firstTransferDuration = 1000.0 * 8.0 * 1000.0 / 5600.0;
+		assertEquals(firstTransferDuration + 2000.0,
+			NetworkUsageMonitor.getTupleTransferDurationMilliseconds(), DELTA);
+		assertEquals(2.0 * TUPLE_BYTES
+			* (PROPAGATION_DELAY_MILLIS + 0.5
+				* (firstTransferDuration + 2000.0)),
 			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
 		assertEquals(4L, NetworkSlicing.getReconfigurationCount());
 		assertEquals(0.0, NetworkSlicing.getSliceOutageSeconds(), DELTA);
@@ -191,6 +204,14 @@ public class AccessPointContentionEventTest {
 
 		assertEquals(1010.0, server.arrivalTime(1), DELTA);
 		assertEquals(2010.0, server.arrivalTime(2), DELTA);
+		assertEquals(1000.0,
+			NetworkUsageMonitor.getTupleQueueDurationMilliseconds(), DELTA);
+		assertEquals(2000.0,
+			NetworkUsageMonitor.getTupleTransferDurationMilliseconds(), DELTA);
+		assertEquals(2.0 * PROPAGATION_DELAY_MILLIS,
+			NetworkUsageMonitor.getTuplePropagationDurationMilliseconds(), DELTA);
+		assertEquals(TUPLE_BYTES * 3020.0,
+			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
 	}
 
 	@Test
@@ -221,6 +242,8 @@ public class AccessPointContentionEventTest {
 			accessPoint, NetworkSlicing.WirelessDirection.UPLINK));
 		assertEquals(0.0,
 			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
+		assertEquals(0.0,
+			NetworkUsageMonitor.getTupleTransferredBytes(), DELTA);
 	}
 
 	@Test

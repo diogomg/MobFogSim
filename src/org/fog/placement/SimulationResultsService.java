@@ -142,6 +142,20 @@ public final class SimulationResultsService {
 		System.out.println("=========================================");
 		double transferredMebibytes = metrics.getMigrationTransferredMebibytes();
 		double deviceNetworkUsage = metrics.getTupleUsageByteMilliseconds();
+		System.out.println("Tuple bytes transferred = "
+			+ metrics.getTupleTransferredBytes());
+		System.out.println("Tuple queue duration (ms) = "
+			+ metrics.getTupleQueueDurationMilliseconds());
+		System.out.println("Tuple serialization/contention duration (ms) = "
+			+ metrics.getTupleTransferDurationMilliseconds());
+		System.out.println("Tuple propagation duration (ms) = "
+			+ metrics.getTuplePropagationDurationMilliseconds());
+		System.out.println("Tuple queue usage (byte-ms) = "
+			+ metrics.getTupleQueueUsageByteMilliseconds());
+		System.out.println("Tuple serialization/contention usage (byte-ms) = "
+			+ metrics.getTupleTransferUsageByteMilliseconds());
+		System.out.println("Tuple propagation usage (byte-ms) = "
+			+ metrics.getTuplePropagationUsageByteMilliseconds());
 		System.out.println("VM data transferred in migration (MiB) = "
 			+ transferredMebibytes);
 		String migrationTransfer = rateLine(metrics, transferredMebibytes);
@@ -153,6 +167,8 @@ public final class SimulationResultsService {
 		appendSummary(deviceUsage, "deviceNetworkUsage.txt");
 		System.out.println("Migration network usage (total byte-ms) = "
 			+ metrics.getMigrationUsageByteMilliseconds());
+		System.out.println("Migration data-transfer duration (ms) = "
+			+ metrics.getMigrationTransferDurationMilliseconds());
 		System.out.println("Migration network usage (mean byte-ms) = "
 			+ metrics.getMeanMigrationUsageByteMilliseconds());
 		String migrationUsage = rateLine(metrics,

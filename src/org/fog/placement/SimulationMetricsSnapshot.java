@@ -229,10 +229,7 @@ public final class SimulationMetricsSnapshot {
 	private final double averageLoopDelay;
 	private final double averageMaximumLoopDelay;
 	private final Map<String, Double> tupleCpuTimes;
-	private final double tupleUsageByteMilliseconds;
-	private final double migrationUsageByteMilliseconds;
-	private final double totalUsageByteMilliseconds;
-	private final double migrationTransferredBytes;
+	private final NetworkUsageMonitor.Snapshot networkUsage;
 	private final long sliceReconfigurationCount;
 	private final double sliceOutageSeconds;
 	private final Map<Integer, Double> receivedBandwidthBySlice;
@@ -264,14 +261,7 @@ public final class SimulationMetricsSnapshot {
 			timeKeeper.getMaxLoopExecutionTime().values());
 		this.tupleCpuTimes = immutableStringDoubleMap(
 			timeKeeper.getTupleTypeToAverageCpuTime());
-		this.tupleUsageByteMilliseconds = finiteOrZero(
-			NetworkUsageMonitor.getTupleUsageByteMilliseconds());
-		this.migrationUsageByteMilliseconds = finiteOrZero(
-			NetworkUsageMonitor.getMigrationUsageByteMilliseconds());
-		this.totalUsageByteMilliseconds = finiteOrZero(
-			NetworkUsageMonitor.getTotalUsageByteMilliseconds());
-		this.migrationTransferredBytes = finiteOrZero(
-			NetworkUsageMonitor.getMigrationTransferredBytes());
+		this.networkUsage = NetworkUsageMonitor.snapshot();
 		this.sliceReconfigurationCount = NetworkSlicing.getReconfigurationCount();
 		this.sliceOutageSeconds = finiteOrZero(
 			NetworkSlicing.getSliceOutageSeconds());
@@ -376,28 +366,60 @@ public final class SimulationMetricsSnapshot {
 	}
 
 	public double getTupleUsageByteMilliseconds() {
-		return tupleUsageByteMilliseconds;
+		return networkUsage.getTupleUsageByteMilliseconds();
+	}
+
+	public double getTupleTransferredBytes() {
+		return networkUsage.getTupleTransferredBytes();
+	}
+
+	public double getTupleQueueDurationMilliseconds() {
+		return networkUsage.getTupleQueueDurationMilliseconds();
+	}
+
+	public double getTupleTransferDurationMilliseconds() {
+		return networkUsage.getTupleTransferDurationMilliseconds();
+	}
+
+	public double getTuplePropagationDurationMilliseconds() {
+		return networkUsage.getTuplePropagationDurationMilliseconds();
+	}
+
+	public double getTupleQueueUsageByteMilliseconds() {
+		return networkUsage.getTupleQueueUsageByteMilliseconds();
+	}
+
+	public double getTupleTransferUsageByteMilliseconds() {
+		return networkUsage.getTupleTransferUsageByteMilliseconds();
+	}
+
+	public double getTuplePropagationUsageByteMilliseconds() {
+		return networkUsage.getTuplePropagationUsageByteMilliseconds();
 	}
 
 	public double getMigrationUsageByteMilliseconds() {
-		return migrationUsageByteMilliseconds;
+		return networkUsage.getMigrationUsageByteMilliseconds();
 	}
 
 	public double getTotalUsageByteMilliseconds() {
-		return totalUsageByteMilliseconds;
+		return networkUsage.getTotalUsageByteMilliseconds();
 	}
 
 	public double getMigrationTransferredBytes() {
-		return migrationTransferredBytes;
+		return networkUsage.getMigrationTransferredBytes();
+	}
+
+	public double getMigrationTransferDurationMilliseconds() {
+		return networkUsage.getMigrationTransferDurationMilliseconds();
 	}
 
 	public double getMigrationTransferredMebibytes() {
-		return migrationTransferredBytes / BYTES_PER_MEBIBYTE;
+		return getMigrationTransferredBytes() / BYTES_PER_MEBIBYTE;
 	}
 
 	public double getMeanMigrationUsageByteMilliseconds() {
 		return statistics.totalMigrations == 0 ? 0.0
-			: migrationUsageByteMilliseconds / statistics.totalMigrations;
+			: getMigrationUsageByteMilliseconds() / statistics.totalMigrations;
 	}
 
 	public long getSliceReconfigurationCount() {
