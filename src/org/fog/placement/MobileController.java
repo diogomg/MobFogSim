@@ -28,8 +28,10 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.HandoffReservation;
+import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
+import org.fog.entities.MobileSensor;
 import org.fog.entities.Sensor;
 import org.fog.localization.Coordinate;
 import org.fog.localization.MobilityTimeline;
@@ -37,6 +39,7 @@ import org.fog.localization.Distances;
 import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
+import org.fog.utils.GeoCoverage;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.SimulationDuration;
@@ -49,6 +52,7 @@ import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.MobileUserApplicationFactory;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.SimulationBuildException;
 import org.fog.vmmobile.SimulationContext;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
@@ -509,6 +513,8 @@ public class MobileController extends SimEntity {
 			|| mobileDevice.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
 			return false;
 		}
+		MobileDeviceLifecycle lifecycleBefore = mobileDevice.getLifecycleState();
+		boolean statusBefore = mobileDevice.isStatus();
 		MobileDeviceLifecycle previousState = associationService.associate(
 			mobileDevice, getApDevices(), getRand());
 		if (mobileDevice.getSourceAp() == null) {
@@ -521,11 +527,39 @@ public class MobileController extends SimEntity {
 			+ " connected to access point " + sourceAp.getName()
 			+ " and server cloudlet "
 			+ mobileDevice.getSourceServerCloudlet().getName());
-		if (mobileDevice.getVmMobileDevice() == null) {
-			registerMobileUser(mobileDevice);
+		boolean registrationRequired = mobileDevice.getVmMobileDevice() == null;
+		MobileUserRegistrationTransaction registration = null;
+		try {
+			if (registrationRequired) {
+				registration = registerMobileUser(mobileDevice);
+				registration.apply();
+			}
+			associationService.activate(mobileDevice, previousState);
+			if (registration != null) {
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.PERIPHERALS_ACTIVATED);
+				registerActiveSensors(mobileDevice);
+				registration.commit();
+			}
+			return true;
 		}
-		associationService.activate(mobileDevice, previousState);
-		return true;
+		catch (RuntimeException error) {
+			if (registration != null) {
+				registration.rollback();
+			}
+			else if (registrationRequired) {
+				rollbackFailedEntry(mobileDevice);
+			}
+			if (registrationRequired) {
+				mobileDevice.setLifecycleState(lifecycleBefore);
+				mobileDevice.setStatus(statusBefore);
+			}
+			if (error instanceof SimulationBuildException) {
+				throw error;
+			}
+			throw new SimulationBuildException("Could not register entering user "
+				+ mobileDevice.getName(), error);
+		}
 	}
 
 	private void disconnectMobileUser(MobileDevice mobileDevice) {
@@ -599,50 +633,299 @@ public class MobileController extends SimEntity {
 		}
 	}
 
-	private void registerMobileUser(MobileDevice mobileDevice) {
-		FogBroker broker;
-		try {
-			broker = new FogBroker("My_broker" + mobileDevice.getMyId());
-		} catch (Exception error) {
-			throw new IllegalStateException("Could not create broker for entering user "
-				+ mobileDevice.getName(), error);
+	private MobileUserRegistrationTransaction registerMobileUser(
+		MobileDevice mobileDevice) {
+		MobileUserPlan plan = MobileUserPlan.create(mobileDevice,
+			getModuleMapping(), applications, brokersByMobileId);
+		return new MobileUserRegistrationTransaction(plan);
+	}
+
+	/** Registration milestones exposed to deterministic failure-injection tests. */
+	protected enum RegistrationStep {
+		BROKER_REGISTERED,
+		VM_ALLOCATED,
+		VM_REGISTRATION_PUBLISHED,
+		PERIPHERALS_CONFIGURED,
+		MODULE_MAPPINGS_ADDED,
+		APPLICATION_SUBMITTED,
+		APPLICATION_DEPLOYED,
+		PERIPHERALS_ACTIVATED
+	}
+
+	/** Hook for failure-injection tests; production registration performs no work. */
+	protected void onRegistrationStep(MobileDevice mobileDevice,
+		RegistrationStep step) {
+	}
+
+	private final class MobileUserRegistrationTransaction {
+		private final MobileUserPlan plan;
+		private final Map<String, Map<String, Integer>> moduleMappingBefore;
+		private final Map<String, Application> applicationsBefore;
+		private final Map<String, Integer> appLaunchDelaysBefore;
+		private final Map<Integer, Double> cpuLoadBefore;
+		private final Map<String, Integer> activeSensorApplicationsBefore;
+		private final boolean applicationCoverageExisted;
+		private final GeoCoverage applicationCoverageBefore;
+		private final List<SensorRegistrationState> sensorStates;
+		private final List<ActuatorRegistrationState> actuatorStates;
+		private final CloudSim.EntityRegistrationCheckpoint entitiesBefore;
+		private FogBroker broker;
+		private AppModule vm;
+		private Application application;
+		private boolean committed;
+		private boolean rolledBack;
+
+		private MobileUserRegistrationTransaction(MobileUserPlan plan) {
+			this.plan = plan;
+			this.moduleMappingBefore = getModuleMapping().getModuleMapping();
+			this.applicationsBefore =
+				new HashMap<String, Application>(applications);
+			this.appLaunchDelaysBefore =
+				new HashMap<String, Integer>(appLaunchDelays);
+			this.cpuLoadBefore =
+				new HashMap<Integer, Double>(globalCurrentCpuLoad);
+			this.activeSensorApplicationsBefore =
+				new HashMap<String, Integer>(activeSensorApplications);
+			this.applicationCoverageExisted = FogUtils.getApplicationCoverage()
+				.containsKey(plan.getApplicationId());
+			this.applicationCoverageBefore = FogUtils.getApplicationCoverage()
+				.get(plan.getApplicationId());
+			this.sensorStates = captureSensorStates(plan.getMobileDevice());
+			this.actuatorStates = captureActuatorStates(plan.getMobileDevice());
+			this.entitiesBefore = CloudSim.checkpointEntityRegistrations();
 		}
-		addBrokerFor(mobileDevice, broker);
 
-		String appId = "MyApp_vr_game" + mobileDevice.getMyId();
-		CloudletScheduler scheduler = new TupleScheduler(500, 1);
-		long vmSize = 128;
-		AppModule vm = new AppModule(mobileDevice.getMyId(),
-			"AppModuleVm_" + mobileDevice.getName(), appId, broker.getId(), 281,
-			128, 1000, vmSize, "Vm_" + mobileDevice.getName(), scheduler,
-			new HashMap<Pair<String, String>, SelectivityModel>());
-		mobileDevice.setVmMobileDevice(vm);
+		private void apply() {
+			MobileDevice mobileDevice = plan.getMobileDevice();
+			try {
+				broker = new FogBroker("My_broker" + mobileDevice.getMyId());
+				addBrokerFor(mobileDevice, broker);
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.BROKER_REGISTERED);
 
-		if (!mobileDevice.getSourceServerCloudlet().getHost().vmCreate(vm)) {
+				CloudletScheduler scheduler = new TupleScheduler(500, 1);
+				long vmSize = 128;
+				vm = new AppModule(mobileDevice.getMyId(), plan.getVmName(),
+					plan.getApplicationId(), broker.getId(), 281, 128, 1000,
+					vmSize, "Vm_" + mobileDevice.getName(), scheduler,
+					new HashMap<Pair<String, String>, SelectivityModel>());
+				mobileDevice.setVmMobileDevice(vm);
+				if (!plan.getServerCloudlet().getHost().vmCreate(vm)) {
+					throw new SimulationBuildException(
+						"Could not allocate VM for entering user "
+							+ mobileDevice.getName() + " on "
+							+ plan.getServerCloudlet().getName());
+				}
+				onRegistrationStep(mobileDevice, RegistrationStep.VM_ALLOCATED);
+
+				mobileDevice.setVmLocalServerCloudlet(plan.getServerCloudlet());
+				mobileDevice.setLockedToMigration(false);
+				plan.getServerCloudlet().setSmartThingsWithVm(mobileDevice,
+					MembershipAction.ADD);
+				MobileUserRegistration.submitVm(broker, mobileDevice);
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.VM_REGISTRATION_PUBLISHED);
+
+				application = MobileUserApplicationFactory.create(
+					plan.getApplicationId(), broker.getId(), mobileDevice.getMyId(), vm);
+				MobileUserRegistration.configurePeripherals(mobileDevice, broker,
+					plan.getApplicationId());
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.PERIPHERALS_CONFIGURED);
+
+				getModuleMapping().addModuleToDevice(plan.getVmName(),
+					plan.getServerCloudlet().getName(), 1);
+				getModuleMapping().addModuleToDevice(plan.getClientModuleName(),
+					mobileDevice.getName(), 1);
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.MODULE_MAPPINGS_ADDED);
+
+				submitApplication(application, 0);
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.APPLICATION_SUBMITTED);
+				processAppSubmit(application);
+				onRegistrationStep(mobileDevice,
+					RegistrationStep.APPLICATION_DEPLOYED);
+			}
+			catch (RuntimeException error) {
+				rollback();
+				if (error instanceof SimulationBuildException) {
+					throw error;
+				}
+				throw new SimulationBuildException(
+					"Could not register entering user " + mobileDevice.getName(),
+					error);
+			}
+			catch (Exception error) {
+				rollback();
+				throw new SimulationBuildException(
+					"Could not create broker for entering user "
+						+ mobileDevice.getName(), error);
+			}
+		}
+
+		private void commit() {
+			committed = true;
+		}
+
+		private void rollback() {
+			if (committed || rolledBack) {
+				return;
+			}
+			rolledBack = true;
+			MobileDevice mobileDevice = plan.getMobileDevice();
+			for (SimEntity entity : CloudSim.getEntityList()) {
+				if (!(entity instanceof FogDevice)) {
+					continue;
+				}
+				FogDevice fogDevice = (FogDevice) entity;
+				releaseApplicationVms(fogDevice, plan.getApplicationId(), vm);
+				fogDevice.unregisterHostedMobileVm(mobileDevice);
+				fogDevice.removeApplication(plan.getApplicationId());
+			}
+			getModuleMapping().setModuleMapping(moduleMappingBefore);
+			setApplications(applicationsBefore);
+			setAppLaunchDelays(appLaunchDelaysBefore);
+			setGlobalCurrentCpuLoad(cpuLoadBefore);
+			activeSensorApplications.clear();
+			activeSensorApplications.putAll(activeSensorApplicationsBefore);
+			if (applicationCoverageExisted) {
+				FogUtils.registerApplicationCoverage(plan.getApplicationId(),
+					applicationCoverageBefore);
+			}
+			else {
+				FogUtils.unregisterApplicationCoverage(plan.getApplicationId());
+			}
+			if (broker != null) {
+				broker.getVmList().clear();
+				broker.getVmsCreatedList().clear();
+				removeBrokerFor(mobileDevice, broker);
+			}
+			CloudSim.restoreEntityRegistrations(entitiesBefore);
 			mobileDevice.setVmMobileDevice(null);
-			removeBrokerFor(mobileDevice, broker);
-			throw new IllegalStateException("Could not allocate VM for entering user "
-				+ mobileDevice.getName() + " on "
-				+ mobileDevice.getSourceServerCloudlet().getName());
+			mobileDevice.setVmLocalServerCloudlet(null);
+			mobileDevice.setDestinationServerCloudlet(null);
+			mobileDevice.setServerCloudletToVmMigrate(null);
+			restoreSensorStates(sensorStates);
+			restoreActuatorStates(actuatorStates);
+			rollbackFailedEntry(mobileDevice);
 		}
+	}
 
-		mobileDevice.setVmLocalServerCloudlet(mobileDevice.getSourceServerCloudlet());
-		mobileDevice.setLockedToMigration(false);
-		mobileDevice.getSourceServerCloudlet().setSmartThingsWithVm(
-			mobileDevice, MembershipAction.ADD);
-		MobileUserRegistration.submitVm(broker, mobileDevice);
+	private static void rollbackFailedEntry(MobileDevice mobileDevice) {
+		MobileUserRegistration.disconnectNetwork(mobileDevice);
+		MobileUserRegistration.awaitAssociation(mobileDevice);
+	}
 
-		Application application = MobileUserApplicationFactory.create(appId,
-			broker.getId(), mobileDevice.getMyId(), vm);
-		MobileUserRegistration.configurePeripherals(mobileDevice, broker, appId);
-		getModuleMapping().addModuleToDevice(vm.getName(),
-			mobileDevice.getSourceServerCloudlet().getName(), 1);
-		getModuleMapping().addModuleToDevice("client" + mobileDevice.getMyId(),
-			mobileDevice.getName(), 1);
-		submitApplication(application, 0);
-		processAppSubmit(application);
-		MobileUserRegistration.activatePeripherals(mobileDevice);
-		registerActiveSensors(mobileDevice);
+	private static void releaseApplicationVms(FogDevice fogDevice,
+		String applicationId, Vm registeredVm) {
+		if (fogDevice.getCharacteristics() == null
+			|| fogDevice.getHostList().isEmpty()) {
+			return;
+		}
+		List<Vm> hostedVms = new ArrayList<Vm>(fogDevice.getHost().getVmList());
+		for (Vm hostedVm : hostedVms) {
+			boolean belongsToApplication = hostedVm == registeredVm
+				|| hostedVm instanceof AppModule
+					&& applicationId.equals(((AppModule) hostedVm).getAppId());
+			if (belongsToApplication) {
+				while (fogDevice.getHost().getVmList().contains(hostedVm)) {
+					fogDevice.getHost().vmDestroy(hostedVm);
+				}
+			}
+		}
+	}
+
+	private static final class SensorRegistrationState {
+		private final MobileSensor sensor;
+		private final String applicationId;
+		private final int userId;
+		private final int gatewayDeviceId;
+		private final Double latency;
+		private final Application application;
+		private final boolean enabled;
+
+		private SensorRegistrationState(MobileSensor sensor) {
+			this.sensor = sensor;
+			this.applicationId = sensor.getAppId();
+			this.userId = sensor.getUserId();
+			this.gatewayDeviceId = sensor.getGatewayDeviceId();
+			this.latency = sensor.getLatency();
+			this.application = sensor.getApp();
+			this.enabled = sensor.isEnabled();
+		}
+	}
+
+	private static final class ActuatorRegistrationState {
+		private final MobileActuator actuator;
+		private final String applicationId;
+		private final int userId;
+		private final int gatewayDeviceId;
+		private final double latency;
+		private final String actuatorType;
+		private final Application application;
+		private final boolean enabled;
+
+		private ActuatorRegistrationState(MobileActuator actuator) {
+			this.actuator = actuator;
+			this.applicationId = actuator.getAppId();
+			this.userId = actuator.getUserId();
+			this.gatewayDeviceId = actuator.getGatewayDeviceId();
+			this.latency = actuator.getLatency();
+			this.actuatorType = actuator.getActuatorType();
+			this.application = actuator.getApp();
+			this.enabled = actuator.isEnabled();
+		}
+	}
+
+	private static List<SensorRegistrationState> captureSensorStates(
+		MobileDevice mobileDevice) {
+		List<SensorRegistrationState> states =
+			new ArrayList<SensorRegistrationState>();
+		for (MobileSensor sensor : mobileDevice.getSensors()) {
+			states.add(new SensorRegistrationState(sensor));
+		}
+		return states;
+	}
+
+	private static List<ActuatorRegistrationState> captureActuatorStates(
+		MobileDevice mobileDevice) {
+		List<ActuatorRegistrationState> states =
+			new ArrayList<ActuatorRegistrationState>();
+		for (MobileActuator actuator : mobileDevice.getActuators()) {
+			states.add(new ActuatorRegistrationState(actuator));
+		}
+		return states;
+	}
+
+	private static void restoreSensorStates(
+		List<SensorRegistrationState> states) {
+		for (SensorRegistrationState state : states) {
+			state.sensor.setAppId(state.applicationId);
+			state.sensor.setUserId(state.userId);
+			state.sensor.setGatewayDeviceId(state.gatewayDeviceId);
+			state.sensor.setLatency(state.latency);
+			if (state.application == null) {
+				state.sensor.clearApplication();
+			}
+			else {
+				state.sensor.setApp(state.application);
+			}
+			state.sensor.setEnabled(state.enabled);
+		}
+	}
+
+	private static void restoreActuatorStates(
+		List<ActuatorRegistrationState> states) {
+		for (ActuatorRegistrationState state : states) {
+			state.actuator.setAppId(state.applicationId);
+			state.actuator.setUserId(state.userId);
+			state.actuator.setGatewayDeviceId(state.gatewayDeviceId);
+			state.actuator.setLatency(state.latency);
+			state.actuator.setActuatorType(state.actuatorType);
+			state.actuator.setApp(state.application);
+			state.actuator.setEnabled(state.enabled);
+		}
 	}
 
 	protected void checkNewStep(MobileDevice st) {

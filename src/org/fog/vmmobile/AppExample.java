@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -194,44 +195,60 @@ public class AppExample {
 		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
 		 **/
 
-		/* It is creating Access Points. It makes according positionApPolicy */
-		if (positionApPolicy == LocationPolicy.FIXED) {
-			// it creates the Access Point according coordDevices' size
-			addApDevicesFixed(apDevices, coordDevices);
-		} else {
-			// it creates the Access Points
-			for (int i = 0; i < MaxAndMin.MAX_AP_DEVICE; i++) {
-				addApDevicesRandon(apDevices, coordDevices, i);
+		CloudSim.EntityRegistrationCheckpoint topologyCheckpoint =
+			CloudSim.checkpointEntityRegistrations();
+		try {
+			/* It is creating Access Points. It makes according positionApPolicy */
+			if (positionApPolicy == LocationPolicy.FIXED) {
+				// it creates the Access Point according coordDevices' size
+				addApDevicesFixed(apDevices, coordDevices);
+			} else {
+				// it creates the Access Points
+				for (int i = 0; i < MaxAndMin.MAX_AP_DEVICE; i++) {
+					addApDevicesRandon(apDevices, coordDevices, i);
+				}
 			}
-		}
 
-		/* It is creating Server Cloudlets. */
-		if (getServerCloudletLocationPolicy() == LocationPolicy.FIXED) {
-			addServerCloudlet(serverCloudlets, coordDevices);
-		} else {
-			// it creates the ServerCloudlets
-			for (int i = 0; i < MaxAndMin.MAX_SERVER_CLOUDLET; i++) {
-				addServerCloudlet(serverCloudlets, coordDevices, i);
+			/* It is creating Server Cloudlets. */
+			if (getServerCloudletLocationPolicy() == LocationPolicy.FIXED) {
+				addServerCloudlet(serverCloudlets, coordDevices);
+			} else {
+				// it creates the ServerCloudlets
+				for (int i = 0; i < MaxAndMin.MAX_SERVER_CLOUDLET; i++) {
+					addServerCloudlet(serverCloudlets, coordDevices, i);
+				}
 			}
+			TOPOLOGY_SERVICE.createTransportNetwork(getServerCloudlets(),
+				getLatencyBetweenCloudlets(), getRand());
+
+			/* It is creating Smart Things. */
+			int[] userSliceAssignments = NetworkSlicing.getUserSliceAssignments(
+				getMaxSmartThings());
+			List<MobileDevice> plannedSmartThings = new ArrayList<MobileDevice>();
+			for (int i = 0; i < getMaxSmartThings(); i++) {
+				addSmartThing(plannedSmartThings, coordDevices, i);
+				plannedSmartThings.get(i)
+					.setNetworkSliceId(userSliceAssignments[i]);
+			}
+			smartThings.addAll(plannedSmartThings);
+
+			TOPOLOGY_SERVICE.loadMobility(getMobilityDirectory(),
+				getMobilityOrderManifest(), getSmartThings());
+			MobileUserRegistration.preparePendingUsers(getSmartThings());
+
+			TOPOLOGY_SERVICE.connectAccessPoints(getServerCloudlets(),
+				getApDevices(), getRand());
+			SimulationContext.requireCurrent().recordInitialTopologySize();
 		}
-		TOPOLOGY_SERVICE.createTransportNetwork(getServerCloudlets(),
-			getLatencyBetweenCloudlets(), getRand());
-
-		/* It is creating Smart Things. */
-		int[] userSliceAssignments = NetworkSlicing.getUserSliceAssignments(
-			getMaxSmartThings());
-		for (int i = 0; i < getMaxSmartThings(); i++) {// it creates the SmartThings
-			addSmartThing(smartThings, coordDevices, i);
-			smartThings.get(i).setNetworkSliceId(userSliceAssignments[i]);
+		catch (Exception error) {
+			apDevices.clear();
+			serverCloudlets.clear();
+			smartThings.clear();
+			NetworkTopology.reset();
+			CloudSim.restoreEntityRegistrations(topologyCheckpoint);
+			throw new SimulationBuildException(
+				"Could not assemble the simulation topology", error);
 		}
-
-		TOPOLOGY_SERVICE.loadMobility(getMobilityDirectory(),
-			getMobilityOrderManifest(), getSmartThings());
-		MobileUserRegistration.preparePendingUsers(getSmartThings());
-
-		TOPOLOGY_SERVICE.connectAccessPoints(getServerCloudlets(),
-			getApDevices(), getRand());
-		SimulationContext.requireCurrent().recordInitialTopologySize();
 
 		/**
 		 * STEP 3: CREATE CONTROLLER. Brokers, VMs, and applications are created
@@ -458,6 +475,21 @@ public class AppExample {
 
 	public static void addSmartThing(List<MobileDevice> smartThing,
 		Coordinate coordDevices, int i) {
+		int listSizeBefore = smartThing.size();
+		CloudSim.EntityRegistrationCheckpoint checkpoint =
+			CloudSim.checkpointEntityRegistrations();
+		try {
+			buildSmartThing(smartThing, coordDevices, i);
+		}
+		catch (RuntimeException error) {
+			truncateList(smartThing, listSizeBefore);
+			CloudSim.restoreEntityRegistrations(checkpoint);
+			throw error;
+		}
+	}
+
+	private static void buildSmartThing(List<MobileDevice> smartThing,
+		Coordinate coordDevices, int i) {
 
 		int coordX = 0, coordY = 0;
 		MovementDirection direction;
@@ -573,12 +605,28 @@ public class AppExample {
 			st.setMobilityPredictionError(getMobilityPrecitionError());
 			smartThing.add(i, st);
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new SimulationBuildException("Could not create mobile user " + i,
+				e);
 		}
 	}
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
 		Coordinate coordDevices, int i) {
+		int listSizeBefore = serverCloudlets.size();
+		CloudSim.EntityRegistrationCheckpoint checkpoint =
+			CloudSim.checkpointEntityRegistrations();
+		try {
+			buildRandomServerCloudlet(serverCloudlets, coordDevices, i);
+		}
+		catch (RuntimeException error) {
+			truncateList(serverCloudlets, listSizeBefore);
+			CloudSim.restoreEntityRegistrations(checkpoint);
+			throw error;
+		}
+	}
+
+	private static void buildRandomServerCloudlet(
+		List<FogDevice> serverCloudlets, Coordinate coordDevices, int i) {
 
 		int coordX, coordY;
 		DecisionMigration migrationStrategy;
@@ -670,12 +718,28 @@ public class AppExample {
 				getMigrationTechniquePolicy(), beforeMigration);
 			serverCloudlets.add(i, sc);
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new SimulationBuildException(
+				"Could not create random server cloudlet " + i, e);
 		}
 	}
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
 		Coordinate coordDevices) {
+		int listSizeBefore = serverCloudlets.size();
+		CloudSim.EntityRegistrationCheckpoint checkpoint =
+			CloudSim.checkpointEntityRegistrations();
+		try {
+			buildFixedServerCloudlets(serverCloudlets, coordDevices);
+		}
+		catch (RuntimeException error) {
+			truncateList(serverCloudlets, listSizeBefore);
+			CloudSim.restoreEntityRegistrations(checkpoint);
+			throw error;
+		}
+	}
+
+	private static void buildFixedServerCloudlets(
+		List<FogDevice> serverCloudlets, Coordinate coordDevices) {
 		int i = 0;
 		int coordX, coordY;
 
@@ -775,11 +839,19 @@ public class AppExample {
 					serverCloudlets.add(i, sc);
 					sc.setParentId(-1);
 				} catch (Exception e) {
-					e.printStackTrace();
+					throw new SimulationBuildException(
+						"Could not create fixed server cloudlet " + i
+							+ " at (" + coordX + ", " + coordY + ")", e);
 				}
 			}
 		}
 		LogMobile.debug("AppExample.java", "Total of serverCloudlets: " + i);
+	}
+
+	private static <T> void truncateList(List<T> values, int targetSize) {
+		while (values.size() > targetSize) {
+			values.remove(values.size() - 1);
+		}
 	}
 
 	@SuppressWarnings("unused")

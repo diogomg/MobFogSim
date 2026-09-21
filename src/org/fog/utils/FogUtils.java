@@ -53,6 +53,20 @@ public class FogUtils {
 		context.getTopology().registerApplicationCoverage(applicationId, coverage);
 	}
 
+	/** Removes application coverage published by a rolled-back registration. */
+	public static void unregisterApplicationCoverage(String applicationId) {
+		if (applicationId == null) {
+			return;
+		}
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context == null) {
+			LEGACY_APPLICATION_COVERAGE.remove(applicationId);
+		}
+		else {
+			context.getTopology().unregisterApplicationCoverage(applicationId);
+		}
+	}
+
 	private static SimulationIdentifiers identifiers() {
 		SimulationContext context = SimulationContext.currentOrNull();
 		return context == null ? LEGACY_IDENTIFIERS : context.getIdentifiers();

@@ -282,6 +282,11 @@ public class Sensor extends SimEntity {
 		this.app = app;
 	}
 
+	/** Clears a provisional application during transactional rollback. */
+	public void clearApplication() {
+		this.app = null;
+	}
+
 	public Double getLatency() {
 		return latency;
 	}

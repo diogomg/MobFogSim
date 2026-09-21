@@ -3,11 +3,9 @@ package org.fog.vmmobile;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -16,7 +14,6 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
-import org.fog.localization.Distances;
 
 /**
  * Loads mobility input and builds the physical topology used by a simulation.
@@ -45,81 +42,39 @@ public final class TopologyService {
 	/** Creates the complete transport graph and registers its physical links. */
 	public void createTransportNetwork(List<FogDevice> serverCloudlets,
 		double baseLatency, Random random) {
-		validateServerCloudlets(serverCloudlets);
-		if (!Double.isFinite(baseLatency) || baseLatency < 0.0) {
-			throw new IllegalArgumentException(
-				"Cloudlet base latency must be finite and non-negative");
-		}
-		if (random == null) {
-			throw new IllegalArgumentException("Random generator cannot be null");
-		}
-		createServerCloudletAdjacency(serverCloudlets);
-
-		// CloudSim models these links as undirected. Register each pair once,
-		// retaining the lower-triangle order for seeded reproducibility.
-		for (int sourceIndex = 0; sourceIndex < serverCloudlets.size(); sourceIndex++) {
-			FogDevice source = serverCloudlets.get(sourceIndex);
-			for (int destinationIndex = 0; destinationIndex < sourceIndex;
-				destinationIndex++) {
-				FogDevice destination = serverCloudlets.get(destinationIndex);
-				int rowDistance = Math.abs(destinationIndex / 12 - sourceIndex / 12);
-				int columnDistance = Math.abs(destinationIndex % 12 - sourceIndex % 12);
-				double bandwidth = Math.min(source.getUplinkBandwidth(),
-					destination.getDownlinkBandwidth());
-				double latency = Math.max(rowDistance, columnDistance)
-					* baseLatency + random.nextDouble();
-				NetworkTopology.addLink(source.getId(), destination.getId(), bandwidth,
-					latency);
-			}
+		TopologyPlan plan = TopologyPlan.transport(serverCloudlets, baseLatency,
+			random);
+		commitAdjacency(plan);
+		for (TopologyPlan.Link link : plan.getLinks()) {
+			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
+				link.getBandwidth(), link.getLatency());
 		}
 	}
 
 	/** Associates each access point with its closest server cloudlet. */
 	public void connectAccessPoints(List<FogDevice> serverCloudlets,
 		List<ApDevice> accessPoints, Random random) {
-		validateServerCloudlets(serverCloudlets);
-		if (accessPoints == null) {
-			throw new IllegalArgumentException("Access point list cannot be null");
-		}
-		if (random == null) {
-			throw new IllegalArgumentException("Random generator cannot be null");
-		}
-		for (ApDevice accessPoint : accessPoints) {
-			if (accessPoint == null) {
-				throw new IllegalArgumentException(
-					"Access point list cannot contain null entries");
-			}
-			if (accessPoint.getMaxSmartThing() <= 0) {
-				throw new IllegalArgumentException(
-					"Access-point capacity must be positive: "
-						+ accessPoint.getName());
-			}
-		}
-
-		for (ApDevice accessPoint : accessPoints) {
-			FogDevice closestServerCloudlet = Distances
-				.findClosestServerCloudletToAp(serverCloudlets, accessPoint)
-				.orElseThrow(() -> new IllegalStateException(
-					"Cannot connect access point without a server cloudlet"));
-			closestServerCloudlet.attachAccessPoint(accessPoint);
-			NetworkTopology.addLink(closestServerCloudlet.getId(),
-				accessPoint.getId(), accessPoint.getDownlinkBandwidth(),
-				random.nextDouble());
+		TopologyPlan plan = TopologyPlan.accessPoints(serverCloudlets,
+			accessPoints, random);
+		for (TopologyPlan.AccessPointAttachment attachment
+			: plan.getAccessPointAttachments()) {
+			attachment.getServerCloudlet().attachAccessPoint(
+				attachment.getAccessPoint());
+			TopologyPlan.Link link = attachment.getLink();
+			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
+				link.getBandwidth(), link.getLatency());
 		}
 	}
 
 	/** Assigns an independent, complete directed adjacency map to each cloudlet. */
 	public void createServerCloudletAdjacency(List<FogDevice> serverCloudlets) {
-		validateServerCloudlets(serverCloudlets);
-		for (FogDevice source : serverCloudlets) {
-			HashMap<FogDevice, Double> adjacency = new HashMap<FogDevice, Double>();
-			for (FogDevice destination : serverCloudlets) {
-				if (source != destination) {
-					adjacency.put(destination, Math.min(source.getUplinkBandwidth(),
-						destination.getDownlinkBandwidth()));
-				}
-			}
-			source.setNetServerCloudlets(adjacency);
+		commitAdjacency(TopologyPlan.adjacency(serverCloudlets));
+	}
+
+	private static void commitAdjacency(TopologyPlan plan) {
+		for (Map.Entry<FogDevice, Map<FogDevice, Double>> entry
+			: plan.getAdjacency().entrySet()) {
+			entry.getKey().setNetServerCloudlets(entry.getValue());
 		}
 	}
 
@@ -162,20 +117,4 @@ public final class TopologyService {
 		}
 	}
 
-	private void validateServerCloudlets(List<FogDevice> serverCloudlets) {
-		if (serverCloudlets == null) {
-			throw new IllegalArgumentException("Server cloudlet list cannot be null");
-		}
-		Set<FogDevice> uniqueCloudlets = new HashSet<FogDevice>();
-		for (FogDevice serverCloudlet : serverCloudlets) {
-			if (serverCloudlet == null) {
-				throw new IllegalArgumentException(
-					"Server cloudlet list cannot contain null entries");
-			}
-			if (!uniqueCloudlets.add(serverCloudlet)) {
-				throw new IllegalArgumentException(
-					"Server cloudlet list cannot contain duplicate devices");
-			}
-		}
-	}
 }

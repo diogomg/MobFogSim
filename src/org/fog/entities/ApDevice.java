@@ -363,6 +363,7 @@ public class ApDevice extends FogDevice {
 		super(name, coordX, coordY, id);
 		smartThings = new HashSet<>();
 		setServerCloudlet(null);
+		setParentId(-1);
 		setMaxSmartThing(0);
 		setStatus(true);
 		setEdge(0);
@@ -375,6 +376,7 @@ public class ApDevice extends FogDevice {
 		super(name, coordX, coordY, id);
 		smartThings = new HashSet<>();
 		setServerCloudlet(null);
+		setParentId(-1);
 		setMaxSmartThing(0);
 		setStatus(true);
 		setEdge(0);

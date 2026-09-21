@@ -7,15 +7,16 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -28,16 +29,19 @@ import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
+import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.MobileSensor;
 import org.fog.localization.Coordinate;
+import org.fog.utils.FogUtils;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.SimulationDuration;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.SimulationBuildException;
 import org.fog.vmmobile.TopologyService;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -47,15 +51,11 @@ import org.junit.Test;
 /**
  * Executable specifications for the C1-C5 P0 correctness findings.
  *
- * <p>The known-defect cases are skipped by the normal suite. Run them with
- * {@code -Dmobfogsim.runKnownP0Defects=true} to observe the desired invariants
- * fail before their Phase 1 fixes. Remove each assumption when its defect is
- * fixed; a fixed invariant must become part of the ordinary regression suite.</p>
+ * <p>All C1-C5 invariants are part of the ordinary regression suite after their
+ * corresponding Phase 1 fixes.</p>
  */
 public class P0CorrectnessRegressionTest {
 
-	private static final String RUN_KNOWN_DEFECTS_PROPERTY =
-		"mobfogsim.runKnownP0Defects";
 	private static final double DELTA = 0.000001;
 
 	@Before
@@ -326,7 +326,6 @@ public class P0CorrectnessRegressionTest {
 
 	@Test
 	public void c5TopologyFailureMustRollBackEarlierAttachments() {
-		requireKnownDefectRun("C5");
 		FogDevice server = new FogDevice("transactionServer", 0, 0, 0);
 		ApDevice first = accessPoint("firstValidAp", 1, 4.0);
 		List<ApDevice> accessPoints = new ArrayList<ApDevice>();
@@ -352,8 +351,76 @@ public class P0CorrectnessRegressionTest {
 	}
 
 	@Test
+	public void c5TopologyPlanningFailureMustPublishNothing() {
+		List<FogDevice> servers = Arrays.asList(
+			new FogDevice("planServer0", 0, 0, 0),
+			new FogDevice("planServer1", 0, 0, 1),
+			new FogDevice("planServer2", 0, 0, 2));
+		Random failingRandom = new Random(1) {
+			private static final long serialVersionUID = 1L;
+			private int samples;
+
+			@Override
+			public double nextDouble() {
+				if (++samples == 2) {
+					throw new SimulationBuildException(
+						"Injected topology-planning failure");
+				}
+				return super.nextDouble();
+			}
+		};
+
+		try {
+			new TopologyService().createTransportNetwork(servers, 1.0,
+				failingRandom);
+			fail("Expected injected topology-planning failure");
+		}
+		catch (SimulationBuildException expected) {
+			// All random values are sampled before adjacency or links are committed.
+			assertTrue(expected.getMessage().contains("transport link"));
+		}
+
+		for (FogDevice server : servers) {
+			assertTrue(server.getNetServerCloudlets().isEmpty());
+		}
+		assertFalse(NetworkTopology.isNetworkEnabled());
+	}
+
+	@Test
+	public void c5DeviceFactoriesFailFastWithoutLeakingEntities() {
+		List<FogDevice> servers = new ArrayList<FogDevice>();
+		List<ApDevice> accessPoints = new ArrayList<ApDevice>();
+		List<MobileDevice> users = new ArrayList<MobileDevice>();
+		configureAppExample(servers, accessPoints, users);
+		int entityCountBefore = CloudSim.getNumEntities();
+
+		try {
+			AppExample.addSmartThing(Collections.<MobileDevice>emptyList(),
+				new Coordinate(), 0);
+			fail("Expected immutable user registry to reject publication");
+		}
+		catch (SimulationBuildException expected) {
+			assertTrue(expected.getMessage().contains("mobile user 0"));
+		}
+		assertEquals(entityCountBefore, CloudSim.getNumEntities());
+		assertNull(CloudSim.getEntity("Sensor0"));
+		assertNull(CloudSim.getEntity("Actuator0"));
+		assertNull(CloudSim.getEntity("SmartThing0"));
+
+		try {
+			AppExample.addServerCloudlet(Collections.<FogDevice>emptyList(),
+				new Coordinate(), 0);
+			fail("Expected immutable server registry to reject publication");
+		}
+		catch (SimulationBuildException expected) {
+			assertTrue(expected.getMessage().contains("server cloudlet 0"));
+		}
+		assertEquals(entityCountBefore, CloudSim.getNumEntities());
+		assertNull(CloudSim.getEntity("ServerCloudlet0"));
+	}
+
+	@Test
 	public void c5LateRegistrationFailureMustRollBackEveryMutation() {
-		requireKnownDefectRun("C5");
 		RegistrationFixture fixture = new RegistrationFixture(11);
 		Set<MobileSensor> malformedSensors = new HashSet<MobileSensor>();
 		malformedSensors.add(null);
@@ -364,7 +431,7 @@ public class P0CorrectnessRegressionTest {
 			fail("Expected injected late registration failure");
 		}
 		catch (RuntimeException expected) {
-			// The null sensor injects failure after broker and VM registration.
+			// The validated plan rejects malformed peripherals before registration.
 		}
 
 		boolean unchanged = fixture.brokers.isEmpty()
@@ -382,9 +449,87 @@ public class P0CorrectnessRegressionTest {
 			unchanged);
 	}
 
-	private static void requireKnownDefectRun(String finding) {
-		assumeTrue(finding + " remains an opt-in red regression until fixed",
-			Boolean.getBoolean(RUN_KNOWN_DEFECTS_PROPERTY));
+	@Test
+	public void c5EveryRegistrationStepRollsBackToThePreEntryState() {
+		for (MobileController.RegistrationStep step
+			: MobileController.RegistrationStep.values()) {
+			initialiseServices();
+			RegistrationFixture fixture = new RegistrationFixture(
+				20 + step.ordinal(), step);
+			MobileSensor sensor = fixture.user.getSensors().iterator().next();
+			MobileActuator actuator = fixture.user.getActuators().iterator().next();
+			int entityCountBefore = CloudSim.getNumEntities();
+			int eventCountBefore = CloudSim.getFutureEventCount();
+			long serverStorageBefore = fixture.server.getHost().getStorage();
+			long mobileStorageBefore = fixture.user.getHost().getStorage();
+			Map<Integer, Double> cpuLoadBefore = new HashMap<Integer, Double>(
+				fixture.controller.getGlobalCurrentCpuLoad());
+			String sensorAppIdBefore = sensor.getAppId();
+			int sensorUserBefore = sensor.getUserId();
+			int sensorGatewayBefore = sensor.getGatewayDeviceId();
+			Double sensorLatencyBefore = sensor.getLatency();
+			String actuatorAppIdBefore = actuator.getAppId();
+			int actuatorUserBefore = actuator.getUserId();
+			int actuatorGatewayBefore = actuator.getGatewayDeviceId();
+			double actuatorLatencyBefore = actuator.getLatency();
+			String actuatorTypeBefore = actuator.getActuatorType();
+			String applicationId = "MyApp_vr_game" + fixture.user.getMyId();
+			boolean coverageExistedBefore = FogUtils.getApplicationCoverage()
+				.containsKey(applicationId);
+
+			try {
+				fixture.controller.activateMobileUser(fixture.user);
+				fail("Expected failure after registration step " + step);
+			}
+			catch (SimulationBuildException expected) {
+				assertTrue(expected.getMessage().contains(fixture.user.getName()));
+			}
+
+			assertEquals("Entity leak after " + step, entityCountBefore,
+				CloudSim.getNumEntities());
+			assertEquals("Event leak after " + step, eventCountBefore,
+				CloudSim.getFutureEventCount());
+			assertNull(CloudSim.getEntity("My_broker" + fixture.user.getMyId()));
+			assertEquals(serverStorageBefore,
+				fixture.server.getHost().getStorage());
+			assertEquals(mobileStorageBefore, fixture.user.getHost().getStorage());
+			assertTrue(fixture.server.getHost().getVmList().isEmpty());
+			assertTrue(fixture.user.getHost().getVmList().isEmpty());
+			assertTrue(fixture.server.getSmartThingsWithVm().isEmpty());
+			assertTrue(fixture.server.getApplicationMap().isEmpty());
+			assertTrue(fixture.user.getApplicationMap().isEmpty());
+			assertEquals(cpuLoadBefore,
+				fixture.controller.getGlobalCurrentCpuLoad());
+			assertTrue(fixture.brokers.isEmpty());
+			assertTrue(fixture.controller.getApplications().isEmpty());
+			assertTrue(fixture.controller.getAppLaunchDelays().isEmpty());
+			assertTrue(fixture.moduleMapping.getModuleMapping().isEmpty());
+			assertEquals(coverageExistedBefore, FogUtils.getApplicationCoverage()
+				.containsKey(applicationId));
+			assertTrue(fixture.accessPoint.getSmartThings().isEmpty());
+			assertTrue(fixture.server.getSmartThings().isEmpty());
+			assertNull(fixture.user.getSourceAp());
+			assertNull(fixture.user.getSourceServerCloudlet());
+			assertNull(fixture.user.getDestinationAp());
+			assertNull(fixture.user.getVmMobileDevice());
+			assertNull(fixture.user.getVmLocalServerCloudlet());
+			assertEquals(MobileDeviceLifecycle.SCHEDULED,
+				fixture.user.getLifecycleState());
+			assertFalse(fixture.user.isStatus());
+			assertEquals(sensorAppIdBefore, sensor.getAppId());
+			assertEquals(sensorUserBefore, sensor.getUserId());
+			assertEquals(sensorGatewayBefore, sensor.getGatewayDeviceId());
+			assertEquals(sensorLatencyBefore, sensor.getLatency());
+			assertNull(sensor.getApp());
+			assertFalse(sensor.isEnabled());
+			assertEquals(actuatorAppIdBefore, actuator.getAppId());
+			assertEquals(actuatorUserBefore, actuator.getUserId());
+			assertEquals(actuatorGatewayBefore, actuator.getGatewayDeviceId());
+			assertEquals(actuatorLatencyBefore, actuator.getLatency(), DELTA);
+			assertEquals(actuatorTypeBefore, actuator.getActuatorType());
+			assertNull(actuator.getApp());
+			assertFalse(actuator.isEnabled());
+		}
 	}
 
 	private static MobileDevice mobile(String name, int id) {
@@ -433,6 +578,11 @@ public class P0CorrectnessRegressionTest {
 		private final MobileController controller;
 
 		private RegistrationFixture(int userId) {
+			this(userId, null);
+		}
+
+		private RegistrationFixture(int userId,
+			MobileController.RegistrationStep failureStep) {
 			configureAppExample(servers, accessPoints, users);
 			AppExample.addServerCloudlet(servers, new Coordinate(), 0);
 			server = servers.get(0);
@@ -445,10 +595,38 @@ public class P0CorrectnessRegressionTest {
 			user.setCoord(0, 0);
 			user.setTravelTimeId(0);
 			MobileUserRegistration.preparePendingUser(user);
-			controller = new MobileController("registrationController" + userId,
-				servers, accessPoints, users, brokers, moduleMapping,
+			controller = failureStep == null
+				? new MobileController("registrationController" + userId,
+					servers, accessPoints, users, brokers, moduleMapping,
+					Policies.FIXED_MIGRATION_POINT, Policies.LOWEST_LATENCY, 1,
+					new Coordinate(), 1, false)
+				: new FailingRegistrationController(
+					"registrationController" + userId, servers, accessPoints,
+					users, brokers, moduleMapping, failureStep);
+		}
+	}
+
+	private static final class FailingRegistrationController
+		extends MobileController {
+		private final RegistrationStep failureStep;
+
+		private FailingRegistrationController(String name,
+			List<FogDevice> servers, List<ApDevice> accessPoints,
+			List<MobileDevice> users, List<FogBroker> brokers,
+			ModuleMapping moduleMapping, RegistrationStep failureStep) {
+			super(name, servers, accessPoints, users, brokers, moduleMapping,
 				Policies.FIXED_MIGRATION_POINT, Policies.LOWEST_LATENCY, 1,
 				new Coordinate(), 1, false);
+			this.failureStep = failureStep;
+		}
+
+		@Override
+		protected void onRegistrationStep(MobileDevice mobileDevice,
+			RegistrationStep step) {
+			if (step == failureStep) {
+				throw new SimulationBuildException("Injected failure for "
+					+ mobileDevice.getName() + " after " + step);
+			}
 		}
 	}
 }

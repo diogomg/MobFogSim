@@ -7,6 +7,7 @@ import java.util.Map;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.FogDevice;
+import org.fog.vmmobile.SimulationBuildException;
 
 public class ModulePlacementMapping extends ModulePlacement {
 
@@ -19,15 +20,22 @@ public class ModulePlacementMapping extends ModulePlacement {
 
 		for (String deviceName : mapping.keySet()) {
 			FogDevice device = getDeviceByName(deviceName);
+			if (device == null) {
+				throw new SimulationBuildException(
+					"Module mapping references unknown device " + deviceName);
+			}
 			for (String moduleName : mapping.get(deviceName).keySet()) {
 				AppModule module = getApplication().getModuleByName(moduleName);
 				if (module == null)
 					continue;
 
 				int numModules = mapping.get(deviceName).get(moduleName).intValue();
+				if (!createModuleInstanceOnDevice(module, device)) {
+					throw new SimulationBuildException("Could not place module "
+						+ moduleName + " on " + deviceName);
+				}
 				getCurrentCpuLoad().put(device.getId(),
 					getCurrentCpuLoad().get(device.getId()) + (module.getMips() * numModules));
-				createModuleInstanceOnDevice(module, device);
 				moduleInstanceCountRegistry().get(device.getId()).put(moduleName,
 					mapping.get(deviceName).get(moduleName));
 			}
@@ -44,9 +52,12 @@ public class ModulePlacementMapping extends ModulePlacement {
 			if (module == null)
 				continue;
 			int numModules = mapping.get(serverCloudlet.getName()).get(moduleName).intValue();
+			if (!createModuleInstanceOnDevice(module, serverCloudlet)) {
+				throw new SimulationBuildException("Could not place migrating module "
+					+ moduleName + " on " + serverCloudlet.getName());
+			}
 			getCurrentCpuLoad().put(serverCloudlet.getId(),
 				getCurrentCpuLoad().get(serverCloudlet.getId()) + (module.getMips() * numModules));
-			createModuleInstanceOnDevice(module, serverCloudlet);
 			moduleInstanceCountRegistry().get(serverCloudlet.getId()).put(moduleName,
 				mapping.get(serverCloudlet.getName()).get(moduleName));
 			return;

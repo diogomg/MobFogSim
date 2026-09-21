@@ -437,6 +437,78 @@ public class CloudSim {
 		return entities.size();
 	}
 
+	/** Returns the number of ordinary events currently awaiting dispatch. */
+	public static int getFutureEventCount() {
+		return future.size();
+	}
+
+	/** Opaque snapshot of pending events for one synchronous unit of work. */
+	private static final class FutureEventCheckpoint {
+		private final FutureQueue.Checkpoint checkpoint;
+
+		private FutureEventCheckpoint(FutureQueue.Checkpoint checkpoint) {
+			this.checkpoint = checkpoint;
+		}
+	}
+
+	/** Opaque boundary for constructors that auto-register CloudSim entities. */
+	public static final class EntityRegistrationCheckpoint {
+		private final int entityCount;
+		private final FutureEventCheckpoint futureEvents;
+		private final Map<String, SimEntity> entityNames;
+
+		private EntityRegistrationCheckpoint(int entityCount,
+			FutureEventCheckpoint futureEvents,
+			Map<String, SimEntity> entityNames) {
+			this.entityCount = entityCount;
+			this.futureEvents = futureEvents;
+			this.entityNames = entityNames;
+		}
+	}
+
+	/** Captures pending events so a failed synchronous mutation can undo them. */
+	private static FutureEventCheckpoint checkpointFutureEvents() {
+		return new FutureEventCheckpoint(future.checkpoint());
+	}
+
+	/** Restores the pending-event queue to an earlier transaction boundary. */
+	private static void restoreFutureEvents(FutureEventCheckpoint checkpoint) {
+		if (checkpoint == null) {
+			throw new IllegalArgumentException(
+				"Future-event checkpoint cannot be null");
+		}
+		future.restore(checkpoint.checkpoint);
+	}
+
+	/** Captures the entity registry and constructor-generated events. */
+	public static EntityRegistrationCheckpoint checkpointEntityRegistrations() {
+		return new EntityRegistrationCheckpoint(entities.size(),
+			checkpointFutureEvents(),
+			new LinkedHashMap<String, SimEntity>(entitiesByName));
+	}
+
+	/**
+	 * Removes every entity registered after the supplied construction boundary.
+	 * This is safe because entities receive dense, append-only IDs.
+	 */
+	public static void restoreEntityRegistrations(
+		EntityRegistrationCheckpoint checkpoint) {
+		if (checkpoint == null) {
+			throw new IllegalArgumentException(
+				"Entity-registration checkpoint cannot be null");
+		}
+		if (entities.size() < checkpoint.entityCount) {
+			throw new IllegalStateException(
+				"Cannot restore an entity checkpoint after earlier entities were removed");
+		}
+		restoreFutureEvents(checkpoint.futureEvents);
+		while (entities.size() > checkpoint.entityCount) {
+			removeLatestEntity(entities.get(entities.size() - 1));
+		}
+		entitiesByName.clear();
+		entitiesByName.putAll(checkpoint.entityNames);
+	}
+
 	/**
 	 * Returns an immutable counter snapshot for the current or most recently
 	 * completed run. Counters are reset by the next call to {@link #init}.
@@ -560,6 +632,17 @@ public class CloudSim {
 			entities.add(e);
 			entitiesByName.put(e.getName(), e);
 		}
+	}
+
+	private static void removeLatestEntity(SimEntity entity) {
+		int entityId = entity.getId();
+		entities.remove(entityId);
+		if (entitiesByName.get(entity.getName()) == entity) {
+			entitiesByName.remove(entity.getName());
+		}
+		runnableEntities.remove(entityId);
+		waitPredicates.remove(entityId);
+		entity.setId(-1);
 	}
 
 	/**

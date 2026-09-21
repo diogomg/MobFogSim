@@ -120,4 +120,10 @@ public final class SimulationTopology {
 		}
 		applicationCoverage.put(applicationId, coverage);
 	}
+
+	public void unregisterApplicationCoverage(String applicationId) {
+		if (applicationId != null) {
+			applicationCoverage.remove(applicationId);
+		}
+	}
 }

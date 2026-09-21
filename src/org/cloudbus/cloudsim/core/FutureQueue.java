@@ -23,6 +23,17 @@ import java.util.TreeSet;
  */
 public class FutureQueue {
 
+	/** Opaque snapshot used to undo events appended by a failed transaction. */
+	static final class Checkpoint {
+		private final SortedSet<SimEvent> events;
+		private final long serial;
+
+		private Checkpoint(SortedSet<SimEvent> events, long serial) {
+			this.events = events;
+			this.serial = serial;
+		}
+	}
+
 	/** The sorted set. */
 	private final SortedSet<SimEvent> sortedSet = new TreeSet<SimEvent>();
 
@@ -97,6 +108,19 @@ public class FutureQueue {
 	 */
 	public void clear() {
 		sortedSet.clear();
+	}
+
+	Checkpoint checkpoint() {
+		return new Checkpoint(new TreeSet<SimEvent>(sortedSet), serial);
+	}
+
+	void restore(Checkpoint checkpoint) {
+		if (checkpoint == null) {
+			throw new IllegalArgumentException("Future-queue checkpoint cannot be null");
+		}
+		sortedSet.clear();
+		sortedSet.addAll(checkpoint.events);
+		serial = checkpoint.serial;
 	}
 
 }

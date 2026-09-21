@@ -106,7 +106,7 @@ list-benchmark-fixtures: compile-tests
 	java -classpath '$(TEST_CLASSPATH)' org.fog.vmmobile.SimulationBenchmark \
 		--list $(BENCHMARK_FIXTURES)
 
-# Expected to fail until C1-C5 are fixed; each resolved case joins the normal suite.
+# Historical entry point retained for explicitly running the C1-C5 safety net.
 demonstrate-p0-defects: compile-tests
 	java -Dmobfogsim.runKnownP0Defects=true -classpath '$(TEST_CLASSPATH)' \
 		org.junit.runner.JUnitCore $(P0_REGRESSION_SUITES)
