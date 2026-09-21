@@ -17,6 +17,7 @@ import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.vmmobile.FogDeviceIndex;
 import org.fog.vmmobile.SimulationEventSink;
 
 public abstract class ModulePlacement {
@@ -26,6 +27,7 @@ public abstract class ModulePlacement {
 	public static int USER_MAPPING = 3;
 
 	private List<FogDevice> fogDevices;
+	private FogDeviceIndex fogDeviceIndex = FogDeviceIndex.empty();
 	private List<MobileDevice> mobileDevices;
 	private Application application;
 	private Map<String, List<Integer>> moduleToDeviceMap;
@@ -43,7 +45,7 @@ public abstract class ModulePlacement {
 	}
 
 	protected FogDevice getFogDeviceById(int fogDeviceId) {
-		return (FogDevice) CloudSim.getEntity(fogDeviceId);
+		return fogDeviceIndex.getById(fogDeviceId);
 	}
 
 	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device,
@@ -79,19 +81,11 @@ public abstract class ModulePlacement {
 	}
 
 	protected FogDevice getDeviceByName(String deviceName) {
-		for (FogDevice dev : getFogDevices()) {
-			if (dev.getName().equals(deviceName))
-				return dev;
-		}
-		return null;
+		return fogDeviceIndex.getByName(deviceName);
 	}
 
 	protected FogDevice getDeviceById(int id) {
-		for (FogDevice dev : getFogDevices()) {
-			if (dev.getId() == id)
-				return dev;
-		}
-		return null;
+		return fogDeviceIndex.getById(id);
 	}
 
 	public List<FogDevice> getFogDevices() {
@@ -99,7 +93,10 @@ public abstract class ModulePlacement {
 	}
 
 	public void setFogDevices(List<FogDevice> fogDevices) {
-		this.fogDevices = copyList(fogDevices, "Fog device list");
+		List<FogDevice> copy = copyList(fogDevices, "Fog device list");
+		FogDeviceIndex index = FogDeviceIndex.copyOf(copy);
+		this.fogDevices = copy;
+		this.fogDeviceIndex = index;
 	}
 
 	public Application getApplication() {

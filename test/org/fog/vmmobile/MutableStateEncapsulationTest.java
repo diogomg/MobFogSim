@@ -2,6 +2,8 @@ package org.fog.vmmobile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -103,6 +105,49 @@ public class MutableStateEncapsulationTest {
 				topology.getMobileDevices().clear();
 			}
 		});
+	}
+
+	@Test
+	public void simulationTopologyIndexesEveryFogDeviceTransactionally() {
+		SimulationTopology topology = new SimulationTopology();
+		FogDevice server = new FogDevice("server", 0, 0, 1);
+		ApDevice accessPoint = new ApDevice("access-point", 0, 0, 2);
+		MobileDevice mobileDevice = new MobileDevice("mobile", 0, 0, 3, 1, 1);
+
+		topology.serverCloudletRegistry().add(server);
+		topology.accessPointRegistry().add(accessPoint);
+		topology.mobileDeviceRegistry().add(mobileDevice);
+
+		assertSame(server, topology.getFogDeviceById(server.getId()));
+		assertSame(accessPoint,
+			topology.getFogDeviceByName(accessPoint.getName()));
+		assertSame(mobileDevice,
+			topology.getFogDeviceById(mobileDevice.getId()));
+		assertEquals(3, topology.getFogDevicesById().size());
+		assertEquals(3, topology.getFogDevicesByName().size());
+
+		topology.accessPointRegistry().remove(accessPoint);
+		assertNull(topology.getFogDeviceById(accessPoint.getId()));
+		assertNull(topology.getFogDeviceByName(accessPoint.getName()));
+		assertEquals(2, topology.getFogDevicesById().size());
+	}
+
+	@Test
+	public void duplicateTopologyRegistrationDoesNotPartiallyMutateIndexes() {
+		SimulationTopology topology = new SimulationTopology();
+		FogDevice server = new FogDevice("server", 0, 0, 1);
+
+		try {
+			topology.serverCloudletRegistry().addAll(Arrays.asList(server, server));
+			fail("Expected duplicate topology membership to be rejected");
+		}
+		catch (IllegalArgumentException expected) {
+			assertTrue(expected.getMessage().contains("Duplicate"));
+		}
+
+		assertTrue(topology.getServerCloudlets().isEmpty());
+		assertTrue(topology.getFogDevicesById().isEmpty());
+		assertTrue(topology.getFogDevicesByName().isEmpty());
 	}
 
 	@Test

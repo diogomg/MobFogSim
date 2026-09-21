@@ -198,14 +198,15 @@ public final class Bridge {
 		if (graph == null) {
 			throw new IllegalArgumentException("Graph cannot be null");
 		}
+		GraphSnapshot snapshot = graph.snapshot();
 		TopologyType type = TopologyType.VIRTUAL;
-		for (Node node : graph.getAdjacencyList().keySet()) {
+		for (Node node : snapshot.nodes()) {
 			if (node.getNodeType().isPhysicalNode()) {
 				type = TopologyType.PHYSICAL;
 				break;
 			}
 		}
-		return graphToJson(graph, type);
+		return graphToJson(snapshot, type);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -214,13 +215,18 @@ public final class Bridge {
 			throw new IllegalArgumentException(
 				"Graph and topology type cannot be null");
 		}
+		return graphToJson(graph.snapshot(), type);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static String graphToJson(GraphSnapshot snapshot, TopologyType type) {
 		JSONObject topology = new JSONObject();
 		JSONArray nodes = new JSONArray();
 		JSONArray links = new JSONArray();
 		Map<UndirectedLink, Double> physicalLinks =
 			new HashMap<UndirectedLink, Double>();
 		Set<String> nodeNames = new HashSet<String>();
-		Map<Node, List<Edge>> adjacency = graph.getAdjacencyList();
+		Map<Node, List<Edge>> adjacency = snapshot.asMap();
 
 		for (Entry<Node, List<Edge>> entry : adjacency.entrySet()) {
 			Node source = entry.getKey();

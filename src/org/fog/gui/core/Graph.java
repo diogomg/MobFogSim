@@ -2,7 +2,6 @@ package org.fog.gui.core;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +16,7 @@ public class Graph implements Serializable {
 	private static final long serialVersionUID = 745864022429447529L;
 
 	private Map<Node, List<Edge>> adjacencyList;
+	private transient GraphSnapshot cachedSnapshot;
 
 	public Graph() {
 		// when creating a new graph ensure that a new adjacencyList is created
@@ -40,14 +40,23 @@ public class Graph implements Serializable {
 			copy.put(entry.getKey(), new ArrayList<Edge>(entry.getValue()));
 		}
 		this.adjacencyList = copy;
+		invalidateSnapshot();
 	}
 
 	public Map<Node, List<Edge>> getAdjacencyList() {
-		Map<Node, List<Edge>> view = new HashMap<Node, List<Edge>>();
-		for (Entry<Node, List<Edge>> entry : adjacencyList.entrySet()) {
-			view.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+		return snapshot().asMap();
+	}
+
+	/** Returns one cached immutable view until the graph is next mutated. */
+	public GraphSnapshot snapshot() {
+		if (cachedSnapshot == null) {
+			cachedSnapshot = new GraphSnapshot(adjacencyList);
 		}
-		return Collections.unmodifiableMap(view);
+		return cachedSnapshot;
+	}
+
+	private void invalidateSnapshot() {
+		cachedSnapshot = null;
 	}
 
 	/**
@@ -79,6 +88,7 @@ public class Graph implements Serializable {
 
 			adjacencyList.put(key, edges);
 		}
+		invalidateSnapshot();
 	}
 
 	/** Simply adds a new node, without setting any edges */
@@ -100,6 +110,7 @@ public class Graph implements Serializable {
 		}
 
 		edges.remove(value);
+		invalidateSnapshot();
 		if (value.getEdgeType() != Edge.EdgeType.PHYSICAL) {
 			return;
 		}
@@ -140,10 +151,12 @@ public class Graph implements Serializable {
 			}
 			entry.getValue().removeAll(toRemove);
 		}
+		invalidateSnapshot();
 	}
 
 	public void clearGraph() {
 		adjacencyList.clear();
+		invalidateSnapshot();
 	}
 
 	public String toJsonString() {

@@ -30,6 +30,7 @@ import javax.swing.SpringLayout;
 
 import org.fog.gui.core.Edge;
 import org.fog.gui.core.Graph;
+import org.fog.gui.core.GraphSnapshot;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeCellRenderer;
 import org.fog.gui.core.SpringUtilities;
@@ -66,6 +67,7 @@ public class AddAppEdge extends JDialog {
 
 	@SuppressWarnings("unchecked")
 	private JPanel createInputPanel() {
+		final GraphSnapshot snapshot = graph.snapshot();
 
 		Component rigid = Box.createRigidArea(new Dimension(10, 0));
 
@@ -81,7 +83,7 @@ public class AddAppEdge extends JDialog {
 		JPanel textAreaPanel2 = new JPanel();
 		textAreaPanel2.setLayout(new BoxLayout(textAreaPanel2, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet()
+		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(snapshot.nodes()
 			.toArray());
 
 		sourceNodeModel.setSelectedItem(null);
@@ -112,11 +114,11 @@ public class AddAppEdge extends JDialog {
 				if (selectedNode != null) {
 
 					List<Node> nodesToDisplay = new ArrayList<Node>();
-					Set<Node> allNodes = graph.getAdjacencyList().keySet();
+					Set<Node> allNodes = snapshot.nodes();
 
 					// get edged for selected node and throw out all target
 					// nodes where already an edge exists
-					List<Edge> edgesForSelectedNode = graph.getAdjacencyList().get(selectedNode);
+					List<Edge> edgesForSelectedNode = snapshot.edgesFrom(selectedNode);
 					Set<Node> nodesInEdges = new HashSet<Node>();
 					for (Edge edge : edgesForSelectedNode) {
 						nodesInEdges.add(edge.getNode());

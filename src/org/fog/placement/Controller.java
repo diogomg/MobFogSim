@@ -25,6 +25,7 @@ import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.MyStatistics;
+import org.fog.vmmobile.FogDeviceIndex;
 import org.fog.vmmobile.SimulationEventSink;
 
 public class Controller extends SimEntity {
@@ -32,6 +33,7 @@ public class Controller extends SimEntity {
 	public static boolean ONLY_CLOUD = false;
 
 	private List<FogDevice> fogDevices;
+	private FogDeviceIndex fogDeviceIndex = FogDeviceIndex.empty();
 	private List<Sensor> sensors;
 	private List<Actuator> actuators;
 
@@ -59,11 +61,7 @@ public class Controller extends SimEntity {
 	}
 
 	private FogDevice getFogDeviceById(int id) {
-		for (FogDevice fogDevice : getFogDevices()) {
-			if (id == fogDevice.getId())
-				return fogDevice;
-		}
-		return null;
+		return fogDeviceIndex.getById(id);
 	}
 
 	private void connectWithLatencies() {
@@ -279,7 +277,10 @@ public class Controller extends SimEntity {
 	}
 
 	public void setFogDevices(List<FogDevice> fogDevices) {
-		this.fogDevices = copyList(fogDevices, "Fog device list");
+		List<FogDevice> copy = copyList(fogDevices, "Fog device list");
+		FogDeviceIndex index = FogDeviceIndex.copyOf(copy);
+		this.fogDevices = copy;
+		this.fogDeviceIndex = index;
 	}
 
 	public Map<String, Integer> getAppLaunchDelays() {

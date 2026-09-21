@@ -29,6 +29,7 @@ import javax.swing.JTextField;
 
 import org.fog.gui.core.Edge;
 import org.fog.gui.core.Graph;
+import org.fog.gui.core.GraphSnapshot;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeCellRenderer;
 
@@ -62,6 +63,7 @@ public class AddPhysicalEdge extends JDialog {
 
 	@SuppressWarnings("unchecked")
 	private JPanel createInputPanel() {
+		final GraphSnapshot snapshot = graph.snapshot();
 
 		Component rigid = Box.createRigidArea(new Dimension(10, 0));
 
@@ -74,7 +76,7 @@ public class AddPhysicalEdge extends JDialog {
 		JPanel textAreaPanel = new JPanel();
 		textAreaPanel.setLayout(new BoxLayout(textAreaPanel, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(graph.getAdjacencyList().keySet()
+		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(snapshot.nodes()
 			.toArray());
 
 		sourceNodeModel.setSelectedItem(null);
@@ -105,11 +107,11 @@ public class AddPhysicalEdge extends JDialog {
 				if (selectedNode != null) {
 
 					List<Node> nodesToDisplay = new ArrayList<Node>();
-					Set<Node> allNodes = graph.getAdjacencyList().keySet();
+					Set<Node> allNodes = snapshot.nodes();
 
 					// get edged for selected node and throw out all target
 					// nodes where already an edge exists
-					List<Edge> edgesForSelectedNode = graph.getAdjacencyList().get(selectedNode);
+					List<Edge> edgesForSelectedNode = snapshot.edgesFrom(selectedNode);
 					Set<Node> nodesInEdges = new HashSet<Node>();
 					for (Edge edge : edgesForSelectedNode) {
 						nodesInEdges.add(edge.getNode());

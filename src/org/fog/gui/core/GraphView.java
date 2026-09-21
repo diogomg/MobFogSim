@@ -54,13 +54,13 @@ public class GraphView extends JPanel {
 		initComponents();
 	}
 
-	private Map<Node, List<Node>> createChildrenMap() {
+	private Map<Node, List<Node>> createChildrenMap(GraphSnapshot snapshot) {
 		Map<Node, List<Node>> childrenMap = new HashMap<Node, List<Node>>();
-		for (Node node : graph.getAdjacencyList().keySet()) {
+		for (Node node : snapshot.nodes()) {
 			if (node.getNodeType() == NodeType.FOG_DEVICE
 				&& !childrenMap.containsKey(node))
 				childrenMap.put(node, new ArrayList<Node>());
-			List<Edge> edgeList = graph.getAdjacencyList().get(node);
+			List<Edge> edgeList = snapshot.edgesFrom(node);
 
 			for (Edge edge : edgeList) {
 				Node neighbour = edge.getNode();
@@ -97,10 +97,7 @@ public class GraphView extends JPanel {
 		canvas = new JPanel() {
 			@Override
 			public void paint(Graphics g) {
-
-				if (graph.getAdjacencyList() == null) {
-					return;
-				}
+				GraphSnapshot graphSnapshot = graph.snapshot();
 
 				Map<Node, Coordinates> coordForNodes = new HashMap<Node, Coordinates>();
 
@@ -113,7 +110,7 @@ public class GraphView extends JPanel {
 				int maxLevel = -1, minLevel = FogUtils.MAX;
 				Map<Integer, List<Node>> levelMap = new HashMap<Integer, List<Node>>();
 				List<Node> endpoints = new ArrayList<Node>();
-				for (Node node : graph.getAdjacencyList().keySet()) {
+				for (Node node : graphSnapshot.nodes()) {
 					if (node.getNodeType() == NodeType.FOG_DEVICE) {
 						int level = ((FogDeviceGui) node).getLevel();
 						if (!levelMap.containsKey(level))
@@ -160,16 +157,8 @@ public class GraphView extends JPanel {
 					node.setCoordinate(new Coordinates(x, y));
 				}
 
-				for (Node node : graph.getAdjacencyList().keySet()) {
-					if (node.getNodeType() == NodeType.FOG_DEVICE
-						|| node.getNodeType() == NodeType.SENSOR
-						|| node.getNodeType() == NodeType.ACTUATOR)
-						continue;
-				}
-
 				coordForNodes = getCoordForNodes(levelToPlaceHolderMap, endpointPlaceHolders,
-					levelMap, endpoints, minLevel, maxLevel);
-				System.out.println("COORD MAP" + coordForNodes);
+					levelMap, endpoints, minLevel, maxLevel, graphSnapshot);
 
 				Map<Node, List<Node>> drawnList = new HashMap<Node, List<Node>>();
 
@@ -233,14 +222,12 @@ public class GraphView extends JPanel {
 				// have an undirected graph. But this
 				// shouldn`t matter because we have the same edge costs and no
 				// one will see in. Perhaps refactor later.
-				for (Entry<Node, List<Edge>> entry : graph.getAdjacencyList().entrySet()) {
+				for (Entry<Node, List<Edge>> entry : graphSnapshot.asMap().entrySet()) {
 
 					Coordinates startNode = coordForNodes.get(entry.getKey());
-					System.out.println("Start Node : " + entry.getKey().getName());
 
 					for (Edge edge : entry.getValue()) {
 						Coordinates targetNode = coordForNodes.get(edge.getNode());
-						System.out.println("Target Node : " + edge.getNode().getName());
 						g.setColor(Color.RED);
 						g.drawLine(startNode.getX(), startNode.getY(), targetNode.getX(),
 							targetNode.getY());
@@ -265,10 +252,19 @@ public class GraphView extends JPanel {
 		Map<Integer, List<PlaceHolder>> levelToPlaceHolderMap,
 		List<PlaceHolder> endpointPlaceHolders,
 		Map<Integer, List<Node>> levelMap, List<Node> endpoints, int minLevel, int maxLevel) {
-		Map<Node, Coordinates> coordForNodesMap = new HashMap<Node, Coordinates>();
-		Map<Node, List<Node>> childrenMap = createChildrenMap();
+		return getCoordForNodes(levelToPlaceHolderMap, endpointPlaceHolders,
+			levelMap, endpoints, minLevel, maxLevel, graph.snapshot());
+	}
 
-		for (Node node : graph.getAdjacencyList().keySet())
+	private Map<Node, Coordinates> getCoordForNodes(
+		Map<Integer, List<PlaceHolder>> levelToPlaceHolderMap,
+		List<PlaceHolder> endpointPlaceHolders,
+		Map<Integer, List<Node>> levelMap, List<Node> endpoints, int minLevel,
+		int maxLevel, GraphSnapshot snapshot) {
+		Map<Node, Coordinates> coordForNodesMap = new HashMap<Node, Coordinates>();
+		Map<Node, List<Node>> childrenMap = createChildrenMap(snapshot);
+
+		for (Node node : snapshot.nodes())
 			node.setPlaced(false);
 		for (Node node : endpoints)
 			node.setPlaced(false);

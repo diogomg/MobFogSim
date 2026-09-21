@@ -51,6 +51,7 @@ import org.fog.vmmigration.MigrationCoordinator;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
+import org.fog.vmmobile.FogDeviceIndex;
 import org.fog.vmmobile.MobileUserApplicationFactory;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.SimulationBuildException;
@@ -78,6 +79,7 @@ public class MobileController extends SimEntity {
 	private static int seed;
 
 	private static List<FogDevice> serverCloudlets;
+	private static FogDeviceIndex serverCloudletIndex = FogDeviceIndex.empty();
 	private static List<MobileDevice> smartThings;
 	private static List<MobileDevice> allSmartThings;
 	private static final Map<String, Integer> activeSensorApplications =
@@ -112,6 +114,7 @@ public class MobileController extends SimEntity {
 		migStrategyPolicy = MigrationStrategyPolicy.LOWEST_LATENCY;
 		seed = 0;
 		serverCloudlets = new ArrayList<FogDevice>();
+		serverCloudletIndex = FogDeviceIndex.empty();
 		smartThings = new ArrayList<MobileDevice>();
 		allSmartThings = new ArrayList<MobileDevice>();
 		activeSensorApplications.clear();
@@ -237,11 +240,7 @@ public class MobileController extends SimEntity {
 	}
 
 	private FogDevice getFogDeviceById(int id) {
-		for (FogDevice sc : getServerCloudlets()) {
-			if (id == sc.getId())
-				return sc;
-		}
-		return null;
+		return serverCloudletIndex.getById(id);
 	}
 
 	private void initializeCPULoads() {
@@ -1380,7 +1379,15 @@ public class MobileController extends SimEntity {
 	}
 
 	public static void setServerCloudlets(List<FogDevice> serverCloudlets) {
-		MobileController.serverCloudlets = serverCloudlets;
+		if (serverCloudlets == null) {
+			MobileController.serverCloudlets = null;
+			serverCloudletIndex = FogDeviceIndex.empty();
+			return;
+		}
+		List<FogDevice> copy = new ArrayList<FogDevice>(serverCloudlets);
+		FogDeviceIndex index = FogDeviceIndex.copyOf(copy);
+		MobileController.serverCloudlets = copy;
+		serverCloudletIndex = index;
 	}
 
 	public static List<MobileDevice> getSmartThings() {

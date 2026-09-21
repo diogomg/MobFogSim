@@ -3,6 +3,8 @@ package org.fog.gui.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -248,6 +250,27 @@ public class TopologyTypesTest {
 		catch (UnsupportedOperationException expected) {
 			// Expected.
 		}
+	}
+
+	@Test
+	public void graphSnapshotIsReusedUntilTheNextMutation() {
+		Graph graph = new Graph();
+		VmNode first = new VmNode("first", NodeType.VM, 10, 1, 100, 128);
+		VmNode second = new VmNode("second", NodeType.VM, 10, 1, 100, 128);
+		graph.addNode(first);
+
+		GraphSnapshot before = graph.snapshot();
+		assertSame(before, graph.snapshot());
+		assertSame(before.asMap(), graph.getAdjacencyList());
+		assertTrue(before.contains(first));
+		assertFalse(before.contains(second));
+
+		graph.addNode(second);
+		GraphSnapshot after = graph.snapshot();
+		assertNotSame(before, after);
+		assertFalse(before.contains(second));
+		assertTrue(after.contains(second));
+		assertSame(after, graph.snapshot());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
