@@ -1090,16 +1090,13 @@ public class MobileController extends SimEntity {
 				+ "\t" + st.getCoord().getCoordY() + "\t" + st.getDirection() + "\t"
 				+ st.getSpeed() + "\t" + st.getSourceAp() + "\t" + st.getDestinationAp());
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record handoff for " + st.getName(), e);
 		}
 	}
 
 	@Override
 	public void shutdownEntity() {
-	}
-
-	public void printResults(String a, String filename) {
-		resultsService.appendSummary(a, filename);
 	}
 
 	public void submitApplication(Application application, int delay) {

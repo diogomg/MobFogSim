@@ -71,7 +71,8 @@ public final class Migration {
 				+ coord_erro.getCoordY() + "\t" + dist_atual_prev + "\t" + dist_atual_erro + "\t"
 				+ dist_prev_erro + "\t" + velocidade);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record migration distance " + filename, e);
 		}
 	}
 

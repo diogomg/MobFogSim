@@ -3,6 +3,7 @@ package org.cloudbus.cloudsim.util;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +50,8 @@ public final class BufferedFileManager {
 				flushAll();
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException("Could not write detailed output " + file,
+				e);
 		}
 	}
 
@@ -64,7 +66,8 @@ public final class BufferedFileManager {
 		try {
 			getWriter(file);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException("Could not open detailed output " + file,
+				e);
 		}
 	}
 
@@ -91,25 +94,45 @@ public final class BufferedFileManager {
 	}
 
 	public static synchronized void flushAll() {
+		IOException failure = null;
 		for (BufferedWriter writer : WRITERS.values()) {
 			try {
 				writer.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				if (failure == null) {
+					failure = e;
+				}
+				else {
+					failure.addSuppressed(e);
+				}
 			}
 		}
 		recordsSinceFlush = 0;
+		if (failure != null) {
+			throw new UncheckedIOException(
+				"Could not flush detailed simulation output", failure);
+		}
 	}
 
 	public static synchronized void closeAll() {
+		IOException failure = null;
 		for (BufferedWriter writer : WRITERS.values()) {
 			try {
 				writer.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				if (failure == null) {
+					failure = e;
+				}
+				else {
+					failure.addSuppressed(e);
+				}
 			}
 		}
 		WRITERS.clear();
 		recordsSinceFlush = 0;
+		if (failure != null) {
+			throw new UncheckedIOException(
+				"Could not close detailed simulation output", failure);
+		}
 	}
 }

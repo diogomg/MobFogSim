@@ -228,9 +228,16 @@ directory. The selected mode determines which files are written:
 
 | Mode | Output behaviour |
 | --- | --- |
-| `summary` | Default. Writes bounded end-of-run averages, totals, network usage, migration statistics, and tuple-loss statistics. It omits per-event records and `out.txt`. |
-| `full` | Writes the summaries and all detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace records. |
+| `summary` | Default. Publishes `report/summary.csv` and `report/manifest.json`, containing the versioned configuration, units, end-of-run averages, totals, network usage, slice, queue, migration, and tuple-loss statistics. |
+| `full` | Publishes the same report after closing all detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace records. |
 | `none` | Disables every output file. The configured run root may still be created, but it remains empty. |
+
+The report is first written and verified in a temporary directory, then
+published with one same-filesystem rename. A successful manifest records the
+report schema version, status, complete configuration, seed, units, output
+mode, summary checksum, and detailed-output status. If a run fails, its report
+contains only a `manifest.json` with `status` set to `failed`; full-mode event
+output is explicitly marked `incomplete` and no success summary is published.
 
 ### Slice reconfiguration metrics
 
@@ -243,14 +250,12 @@ reported for each slice as the sum of its actual allocations at every
 reconfiguration, in bits per second; transport and wireless allocations are
 combined when end-to-end scope is selected.
 
-Summary and full output modes write these values to
-`sliceReconfigurations.txt`, `sliceOutage.txt`, and
-`sliceReceivedBandwidth.txt`, as well as the aggregate `results.txt` file.
+Summary and full output modes write these values as named columns in
+`report/summary.csv`, including the per-slice received-bandwidth map.
 Wireless queues are hard-limited to 10,000 waiting tuples per user and AP
-direction. These modes also write `wirelessQueue.txt`, whose tab-separated
-values are the fixed limit, final aggregate queue size, maximum aggregate queue
-size, maximum single-direction depth, and number of tuples dropped at the
-limit.
+direction. The summary also records the fixed limit, final aggregate queue
+size, maximum aggregate queue size, maximum single-direction depth, and number
+of tuples dropped at the limit.
 
 ## Input
 

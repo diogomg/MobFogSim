@@ -1,12 +1,16 @@
 package org.fog.vmmobile;
 
+import java.io.IOException;
 import java.util.Random;
 
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.util.BufferedFileManager;
 import org.cloudbus.cloudsim.util.RunOutputManager;
+import org.fog.placement.AtomicResultWriter;
 import org.fog.placement.MobileController;
+import org.fog.placement.ResultWriter;
+import org.fog.placement.RunReport;
 import org.fog.placement.SimulationMetricsSnapshot;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.NetworkUsageMonitor;
@@ -36,6 +40,7 @@ public final class SimulationContext implements AutoCloseable {
 	private final SimulationClock clock;
 	private final SimulationProgressBar progressBar;
 	private RunOutputManager outputManager;
+	private ResultWriter resultWriter;
 	private SimulationMetricsSnapshot metricsSnapshot;
 	private SimulationTopologySize topologySize;
 	private int cloudSimEntityCount;
@@ -78,6 +83,7 @@ public final class SimulationContext implements AutoCloseable {
 			VmDestinationPolicy.configure(configuration.getVmDestination());
 			context.outputManager = RunOutputManager.initialize(
 				configuration.getOutputDirectory(), configuration.getOutputMode());
+			context.resultWriter = new AtomicResultWriter(context.outputManager);
 			AppExample.useSimulationContext(context);
 			return context;
 		}
@@ -135,6 +141,10 @@ public final class SimulationContext implements AutoCloseable {
 		return outputManager;
 	}
 
+	public ResultWriter getResultWriter() {
+		return resultWriter;
+	}
+
 	public SimulationClock getClock() {
 		return clock;
 	}
@@ -170,6 +180,32 @@ public final class SimulationContext implements AutoCloseable {
 		cloudSimEntityCount = CloudSim.getNumEntities();
 	}
 
+	/** Closes streamed detail buffers, then atomically publishes the final report. */
+	public void publishResults() throws IOException {
+		if (metricsSnapshot == null) {
+			throw new IllegalStateException(
+				"Cannot publish results before metrics are recorded");
+		}
+		BufferedFileManager.closeAll();
+		resultWriter.write(RunReport.capture(configuration, metricsSnapshot));
+	}
+
+	/** Records a terminal failure without masking the original simulation error. */
+	public void recordFailure(Throwable failure) {
+		if (failure == null || resultWriter == null || resultWriter.isTerminal()) {
+			return;
+		}
+		try {
+			resultWriter.writeFailure(RunReport.metadata(configuration), failure);
+		}
+		catch (IOException manifestError) {
+			failure.addSuppressed(manifestError);
+		}
+		catch (RuntimeException manifestError) {
+			failure.addSuppressed(manifestError);
+		}
+	}
+
 	/** Freezes the initially constructed physical and logical topology sizes. */
 	void recordInitialTopologySize() {
 		if (topologySize != null) {
@@ -193,7 +229,7 @@ public final class SimulationContext implements AutoCloseable {
 
 	@Override
 	public void close() {
-			synchronized (SimulationContext.class) {
+		synchronized (SimulationContext.class) {
 			if (closed) {
 				return;
 			}
@@ -201,20 +237,43 @@ public final class SimulationContext implements AutoCloseable {
 				throw new IllegalStateException(
 					"Only the active SimulationContext can be closed");
 			}
-			progressBar.close();
-			BufferedFileManager.closeAll();
-			AppExample.releaseSimulationContext(this);
-			MobileController.resetRunState();
-			NetworkTopology.reset();
-			NetworkSlicing.useDefaultRuntimeState();
-			NetworkUsageMonitor.reset();
-			TimeKeeper.setInstance(null);
-			MyStatistics.setInstance(null);
-			RunOutputManager.resetToDefault();
-			VmDestinationPolicy.configure(
-				VmDestinationPolicy.Destination.HYBRID);
-			activeContext = null;
-			closed = true;
+			RuntimeException failure = null;
+			try {
+				progressBar.close();
+			}
+			catch (RuntimeException error) {
+				failure = error;
+			}
+			try {
+				BufferedFileManager.closeAll();
+			}
+			catch (RuntimeException error) {
+				if (failure == null) {
+					failure = error;
+				}
+				else {
+					failure.addSuppressed(error);
+				}
+			}
+			try {
+				AppExample.releaseSimulationContext(this);
+				MobileController.resetRunState();
+				NetworkTopology.reset();
+				NetworkSlicing.useDefaultRuntimeState();
+				NetworkUsageMonitor.reset();
+				TimeKeeper.setInstance(null);
+				MyStatistics.setInstance(null);
+				RunOutputManager.resetToDefault();
+				VmDestinationPolicy.configure(
+					VmDestinationPolicy.Destination.HYBRID);
+			}
+			finally {
+				activeContext = null;
+				closed = true;
+			}
+			if (failure != null) {
+				throw failure;
+			}
 		}
 	}
 }

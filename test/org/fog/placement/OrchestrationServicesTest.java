@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -104,7 +103,8 @@ public class OrchestrationServicesTest {
 	}
 
 	@Test
-	public void resultServiceWritesSliceMetricsInSummaryMode() throws IOException {
+	public void resultServiceDoesNotRecreateLegacyPositionalFiles()
+		throws IOException {
 		Path outputRoot = temporaryFolder.newFolder("slice-metrics").toPath();
 		RunOutputManager output = RunOutputManager.initialize(outputRoot,
 			RunOutputMode.SUMMARY);
@@ -114,13 +114,7 @@ public class OrchestrationServicesTest {
 
 		new SimulationResultsService(output).write(metrics, Collections.emptyMap());
 
-		assertEquals("0", read(outputRoot.resolve("sliceReconfigurations.txt")));
-		assertEquals("0.0", read(outputRoot.resolve("sliceOutage.txt")));
-		assertEquals("0=0.0",
-			read(outputRoot.resolve("sliceReceivedBandwidth.txt")));
-	}
-
-	private static String read(Path path) throws IOException {
-		return new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
+		assertFalse(Files.exists(outputRoot.resolve("results.txt")));
+		assertFalse(Files.exists(outputRoot.resolve("sliceReconfigurations.txt")));
 	}
 }

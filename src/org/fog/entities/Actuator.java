@@ -80,7 +80,8 @@ public class Actuator extends SimEntity {
 		{
 			out1.println(a);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record actuator loop result " + filename, e);
 		}
 	}
 

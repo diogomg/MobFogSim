@@ -20,6 +20,24 @@ import java.nio.file.StandardOpenOption;
  * before writers are opened.
  */
 public final class RunOutputManager {
+	private static final class CheckedPrintWriter extends PrintWriter {
+		private final String description;
+
+		private CheckedPrintWriter(Writer writer, String description) {
+			super(writer);
+			this.description = description;
+		}
+
+		@Override
+		public void close() {
+			super.close();
+			if (checkError()) {
+				throw new UncheckedIOException(new IOException(
+					"Could not complete output " + description));
+			}
+		}
+	}
+
 	private static final Writer DISCARDING_WRITER = new Writer() {
 		@Override
 		public void write(char[] buffer, int offset, int length) {}
@@ -178,7 +196,8 @@ public final class RunOutputManager {
 
 	public PrintWriter newPrintWriter(String relativePath, boolean append)
 		throws IOException {
-		return new PrintWriter(newBufferedWriter(relativePath, append));
+		return new CheckedPrintWriter(newBufferedWriter(relativePath, append),
+			relativePath);
 	}
 
 	public PrintWriter newSummaryPrintWriter(String relativePath, boolean append)

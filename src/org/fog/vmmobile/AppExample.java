@@ -135,8 +135,19 @@ public class AppExample {
 	public static SimulationRunResult run(SimulationConfig configuration)
 		throws Exception {
 		try (SimulationContext context = SimulationContext.open(configuration)) {
-			executeSimulation(configuration);
-			return context.result();
+			try {
+				executeSimulation(configuration);
+				context.publishResults();
+				return context.result();
+			}
+			catch (Exception error) {
+				context.recordFailure(error);
+				throw error;
+			}
+			catch (Error error) {
+				context.recordFailure(error);
+				throw error;
+			}
 		}
 	}
 
@@ -359,6 +370,11 @@ public class AppExample {
 			CloudSim.startSimulation();
 			context.completeProgress();
 			System.out.println("Simulation over");
+			simulationOutput.flush();
+			if (simulationOutput.checkError()) {
+				throw new IllegalStateException(
+					"Could not complete the streamed simulation output");
+			}
 		}
 		finally {
 			System.setOut(console);

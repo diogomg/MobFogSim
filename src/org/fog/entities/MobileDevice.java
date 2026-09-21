@@ -295,7 +295,8 @@ public class MobileDevice extends FogDevice {
 			.newDetailedPrintWriter(filename, true)) {
 			out1.println(a);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record lost tuple " + filename, e);
 		}
 	}
 

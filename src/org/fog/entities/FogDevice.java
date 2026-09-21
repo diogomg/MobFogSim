@@ -1393,7 +1393,8 @@ public class FogDevice extends PowerDatacenter {
 		{
 			out1.println(a);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record lost tuple " + filename, e);
 		}
 	}
 
@@ -1535,7 +1536,8 @@ public class FogDevice extends PowerDatacenter {
 		{
 			out1.println(a);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new IllegalStateException(
+				"Could not record loop result " + filename, e);
 		}
 	}
 
