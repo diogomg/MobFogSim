@@ -28,7 +28,7 @@ import org.cloudbus.cloudsim.core.SimulationEventCounters;
 
 /** Process-isolated entry point used by the reproducible performance baseline. */
 public final class SimulationBenchmark {
-	static final int BENCHMARK_SCHEMA_VERSION = 10;
+	static final int BENCHMARK_SCHEMA_VERSION = 11;
 
 	private SimulationBenchmark() {
 	}
@@ -120,8 +120,8 @@ public final class SimulationBenchmark {
 			Integer.toString(topology.getNetworkNodeCount()));
 		values.put("topology_network_links",
 			Integer.toString(topology.getNetworkLinkCount()));
-		values.put("topology_server_adjacency_entries",
-			Long.toString(topology.getServerAdjacencyEntryCount()));
+		values.put("topology_server_transport_routes",
+			Long.toString(topology.getServerTransportRouteCount()));
 		values.put("run_output_files", Long.toString(output.fileCount));
 		values.put("run_output_bytes", Long.toString(output.byteCount));
 		values.put("slice_reconfigurations",

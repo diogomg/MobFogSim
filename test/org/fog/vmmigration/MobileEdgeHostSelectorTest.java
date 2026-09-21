@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.cloudbus.cloudsim.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -41,6 +42,7 @@ public class MobileEdgeHostSelectorTest {
 	public void setUp() {
 		Log.disable();
 		CloudSim.init(1, Calendar.getInstance(), false);
+		NetworkTopology.reset();
 		VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
 
 		owner = mobile("owner", 0, 0, 4096, 10000, 10000);
@@ -57,6 +59,7 @@ public class MobileEdgeHostSelectorTest {
 	public void resetGlobalState() {
 		VmDestinationPolicy.configure(VmDestinationPolicy.HYBRID);
 		MobileController.setSmartThings(Collections.<MobileDevice>emptyList());
+		NetworkTopology.reset();
 	}
 
 	@Test
@@ -228,7 +231,7 @@ public class MobileEdgeHostSelectorTest {
 	}
 
 	private static void connect(FogDevice source, FogDevice destination) {
-		source.connectTransportPeer(destination, 1000.0);
+		NetworkTopology.addLink(source.getId(), destination.getId(), 1000.0, 1.0);
 	}
 
 	private static Vm vm(int id, int ram, long bandwidth, long size) {

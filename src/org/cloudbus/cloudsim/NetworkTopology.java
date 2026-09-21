@@ -8,9 +8,16 @@
 package org.cloudbus.cloudsim;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.cloudbus.cloudsim.network.DelayMatrix_Float;
 import org.cloudbus.cloudsim.network.GraphReaderBrite;
@@ -29,12 +36,17 @@ import org.cloudbus.cloudsim.network.TopologicalNode;
  * be mapped to one (and only one) BRITE node to allow proper work of the
  * network simulation. Each BRITE node can be mapped to only one entity at a
  * time.
+ *
+ * <p>This class is also the canonical owner of MobFogSim's logical transport
+ * closure. Direct-link membership is indexed separately from the lazily
+ * generated all-pairs delay matrix so connectivity checks remain inexpensive.</p>
  * 
  * @author Rodrigo N. Calheiros
  * @author Anton Beloglazov
  * @since CloudSim Toolkit 1.0
  */
 public class NetworkTopology {
+	private static final int MAX_ARRAY_INDEXED_ENTITY_ID = 1000000;
 
 	protected static int nextIdx = 0;
 
@@ -43,10 +55,12 @@ public class NetworkTopology {
 	protected static DelayMatrix_Float delayMatrix = null;
 
 	protected static double[][] bwMatrix = null;
+	private static List<BitSet> directLinks = new ArrayList<BitSet>();
 
 	protected static TopologicalGraph graph = null;
 
 	protected static Map<Integer, Integer> map = null;
+	private static int[] topologyNodeByEntityId = new int[0];
 
 	private static boolean matricesDirty = false;
 
@@ -56,8 +70,10 @@ public class NetworkTopology {
 		networkEnabled = false;
 		delayMatrix = null;
 		bwMatrix = null;
+		directLinks = new ArrayList<BitSet>();
 		graph = null;
 		map = null;
+		topologyNodeByEntityId = new int[0];
 		matricesDirty = false;
 	}
 
@@ -80,6 +96,9 @@ public class NetworkTopology {
 		try {
 			graph = reader.readGraphFile(fileName);
 			map = new HashMap<Integer, Integer>();
+			topologyNodeByEntityId = new int[0];
+			directLinks = createDirectLinkIndex(graph, false);
+			nextIdx = graph.getNumberOfNodes();
 			generateMatrices();
 		} catch (IOException e) {
 			// problem with the file. Does not simulate network
@@ -129,6 +148,7 @@ public class NetworkTopology {
 
 		if (graph == null) {
 			graph = new TopologicalGraph();
+			directLinks = new ArrayList<BitSet>();
 		}
 
 		if (map == null) {
@@ -138,22 +158,62 @@ public class NetworkTopology {
 		// maybe add the nodes
 		if (!map.containsKey(srcId)) {
 			graph.addNode(new TopologicalNode(nextIdx));
-			map.put(srcId, nextIdx);
+			registerMapping(srcId, nextIdx);
+			ensureDirectLinkNode(nextIdx);
 			nextIdx++;
 		}
 
 		if (!map.containsKey(destId)) {
 			graph.addNode(new TopologicalNode(nextIdx));
-			map.put(destId, nextIdx);
+			registerMapping(destId, nextIdx);
+			ensureDirectLinkNode(nextIdx);
 			nextIdx++;
 		}
 
 		// generate a new link
-		graph.addLink(new TopologicalLink(map.get(srcId), map.get(destId), (float) lat, (float) bw));
+		int sourceNode = map.get(srcId).intValue();
+		int destinationNode = map.get(destId).intValue();
+		graph.addLink(new TopologicalLink(sourceNode, destinationNode,
+			(float) lat, (float) bw));
+		directLinks.get(sourceNode).set(destinationNode);
+		directLinks.get(destinationNode).set(sourceNode);
 
 		matricesDirty = true;
 		networkEnabled = true;
 
+	}
+
+	private static void ensureDirectLinkNode(int topologyNodeId) {
+		while (directLinks.size() <= topologyNodeId) {
+			directLinks.add(new BitSet());
+		}
+	}
+
+	private static void registerMapping(int entityId, int topologyNodeId) {
+		map.put(entityId, topologyNodeId);
+		if (entityId < 0 || entityId > MAX_ARRAY_INDEXED_ENTITY_ID) {
+			return;
+		}
+		if (entityId >= topologyNodeByEntityId.length) {
+			int previousLength = topologyNodeByEntityId.length;
+			int expandedLength = Math.min(MAX_ARRAY_INDEXED_ENTITY_ID + 1,
+				Math.max(entityId + 1, Math.max(16, previousLength * 2)));
+			topologyNodeByEntityId = Arrays.copyOf(topologyNodeByEntityId,
+				expandedLength);
+			Arrays.fill(topologyNodeByEntityId, previousLength, expandedLength, -1);
+		}
+		topologyNodeByEntityId[entityId] = topologyNodeId;
+	}
+
+	private static int mappedTopologyNode(int entityId) {
+		if (entityId >= 0 && entityId < topologyNodeByEntityId.length) {
+			int topologyNode = topologyNodeByEntityId[entityId];
+			if (topologyNode >= 0) {
+				return topologyNode;
+			}
+		}
+		Integer topologyNode = map == null ? null : map.get(entityId);
+		return topologyNode == null ? -1 : topologyNode.intValue();
 	}
 
 	/**
@@ -191,6 +251,23 @@ public class NetworkTopology {
 		return mtx;
 	}
 
+	private static List<BitSet> createDirectLinkIndex(TopologicalGraph graph,
+		boolean directed) {
+		List<BitSet> links = new ArrayList<BitSet>(graph.getNumberOfNodes());
+		for (int node = 0; node < graph.getNumberOfNodes(); node++) {
+			links.add(new BitSet());
+		}
+		Iterator<TopologicalLink> iterator = graph.getLinkIterator();
+		while (iterator.hasNext()) {
+			TopologicalLink edge = iterator.next();
+			links.get(edge.getSrcNodeID()).set(edge.getDestNodeID());
+			if (!directed) {
+				links.get(edge.getDestNodeID()).set(edge.getSrcNodeID());
+			}
+		}
+		return links;
+	}
+
 	/**
 	 * Maps a CloudSim entity to a node in the network topology
 	 * 
@@ -209,7 +286,7 @@ public class NetworkTopology {
 				if (!map.containsKey(cloudSimEntityID)) {
 					if (!map.containsValue(briteID)) { // this BRITE node was
 														// already mapped?
-						map.put(cloudSimEntityID, briteID);
+						registerMapping(cloudSimEntityID, briteID);
 					} else {
 						Log.printLine("Error in network mapping. BRITE node " + briteID
 							+ " already in use.");
@@ -238,6 +315,10 @@ public class NetworkTopology {
 		if (networkEnabled) {
 			try {
 				map.remove(cloudSimEntityID);
+				if (cloudSimEntityID >= 0
+					&& cloudSimEntityID < topologyNodeByEntityId.length) {
+					topologyNodeByEntityId[cloudSimEntityID] = -1;
+				}
 			} catch (Exception e) {
 				Log.printLine("Error in network unmapping. CloudSim node: " + cloudSimEntityID);
 			}
@@ -261,7 +342,12 @@ public class NetworkTopology {
 		if (networkEnabled) {
 			try {
 				// add the network latency
-				double delay = delayMatrix.getDelay(map.get(srcID), map.get(destID));
+				int source = mappedTopologyNode(srcID);
+				int destination = mappedTopologyNode(destID);
+				if (source < 0 || destination < 0) {
+					return 0.0;
+				}
+				double delay = delayMatrix.getDelay(source, destination);
 
 				return delay;
 			} catch (Exception e) {
@@ -269,6 +355,51 @@ public class NetworkTopology {
 			}
 		}
 		return 0.0;
+	}
+
+	/** Returns whether the canonical topology contains this direct logical link. */
+	public static boolean hasDirectLink(int srcID, int destID) {
+		if (!networkEnabled || map == null) {
+			return false;
+		}
+		int source = mappedTopologyNode(srcID);
+		int destination = mappedTopologyNode(destID);
+		return source >= 0 && destination >= 0 && source < directLinks.size()
+			&& directLinks.get(source).get(destination);
+	}
+
+	/**
+	 * Counts directed logical links whose endpoints both belong to the supplied
+	 * entity set. Each registered undirected link contributes two routes.
+	 */
+	public static long getDirectedLinkCountAmong(Collection<Integer> entityIds) {
+		if (entityIds == null) {
+			throw new IllegalArgumentException("Entity ID collection cannot be null");
+		}
+		if (graph == null || map == null || entityIds.isEmpty()) {
+			return 0L;
+		}
+		Set<Integer> topologyNodeIds = new HashSet<Integer>();
+		for (Integer entityId : entityIds) {
+			if (entityId == null) {
+				throw new IllegalArgumentException(
+					"Entity ID collection cannot contain null entries");
+			}
+			Integer topologyNodeId = map.get(entityId);
+			if (topologyNodeId != null) {
+				topologyNodeIds.add(topologyNodeId);
+			}
+		}
+		long routes = 0L;
+		Iterator<TopologicalLink> links = graph.getLinkIterator();
+		while (links.hasNext()) {
+			TopologicalLink link = links.next();
+			if (topologyNodeIds.contains(link.getSrcNodeID())
+				&& topologyNodeIds.contains(link.getDestNodeID())) {
+				routes += 2L;
+			}
+		}
+		return routes;
 	}
 
 	/**
@@ -285,12 +416,12 @@ public class NetworkTopology {
 		return networkEnabled;
 	}
 
-	/** Returns the number of nodes in the currently registered physical graph. */
+	/** Returns the number of nodes in the currently registered topology. */
 	public static int getNumberOfNodes() {
 		return graph == null ? 0 : graph.getNumberOfNodes();
 	}
 
-	/** Returns the number of links in the currently registered physical graph. */
+	/** Returns the number of links in the currently registered topology. */
 	public static int getNumberOfLinks() {
 		return graph == null ? 0 : graph.getNumberOfLinks();
 	}

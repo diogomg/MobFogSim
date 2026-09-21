@@ -1,5 +1,8 @@
 package org.fog.vmmobile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.cloudbus.cloudsim.NetworkTopology;
 import org.fog.entities.FogDevice;
 
@@ -10,11 +13,11 @@ public final class SimulationTopologySize {
 	private final int accessPointCount;
 	private final int networkNodeCount;
 	private final int networkLinkCount;
-	private final long serverAdjacencyEntryCount;
+	private final long serverTransportRouteCount;
 
 	private SimulationTopologySize(int mobileDeviceCount,
 		int serverCloudletCount, int accessPointCount, int networkNodeCount,
-		int networkLinkCount, long serverAdjacencyEntryCount) {
+		int networkLinkCount, long serverTransportRouteCount) {
 		this.mobileDeviceCount = requireNonNegative(mobileDeviceCount,
 			"Mobile-device count");
 		this.serverCloudletCount = requireNonNegative(serverCloudletCount,
@@ -25,22 +28,23 @@ public final class SimulationTopologySize {
 			"Network-node count");
 		this.networkLinkCount = requireNonNegative(networkLinkCount,
 			"Network-link count");
-		this.serverAdjacencyEntryCount = requireNonNegative(
-			serverAdjacencyEntryCount, "Server-adjacency entry count");
+		this.serverTransportRouteCount = requireNonNegative(
+			serverTransportRouteCount, "Server transport-route count");
 	}
 
 	static SimulationTopologySize capture(SimulationTopology topology) {
 		if (topology == null) {
 			throw new IllegalArgumentException("Simulation topology cannot be null");
 		}
-		long adjacencyEntries = 0L;
+		List<Integer> serverEntityIds = new ArrayList<Integer>(
+			topology.getServerCloudlets().size());
 		for (FogDevice serverCloudlet : topology.getServerCloudlets()) {
-			adjacencyEntries += serverCloudlet.getNetServerCloudlets().size();
+			serverEntityIds.add(serverCloudlet.getId());
 		}
 		return new SimulationTopologySize(topology.getMobileDevices().size(),
 			topology.getServerCloudlets().size(), topology.getAccessPoints().size(),
 			NetworkTopology.getNumberOfNodes(), NetworkTopology.getNumberOfLinks(),
-			adjacencyEntries);
+			NetworkTopology.getDirectedLinkCountAmong(serverEntityIds));
 	}
 
 	private static int requireNonNegative(int value, String description) {
@@ -77,8 +81,8 @@ public final class SimulationTopologySize {
 		return networkLinkCount;
 	}
 
-	public long getServerAdjacencyEntryCount() {
-		return serverAdjacencyEntryCount;
+	public long getServerTransportRouteCount() {
+		return serverTransportRouteCount;
 	}
 
 	@Override
@@ -95,7 +99,7 @@ public final class SimulationTopologySize {
 			&& accessPointCount == other.accessPointCount
 			&& networkNodeCount == other.networkNodeCount
 			&& networkLinkCount == other.networkLinkCount
-			&& serverAdjacencyEntryCount == other.serverAdjacencyEntryCount;
+			&& serverTransportRouteCount == other.serverTransportRouteCount;
 	}
 
 	@Override
@@ -106,7 +110,7 @@ public final class SimulationTopologySize {
 		result = 31 * result + networkNodeCount;
 		result = 31 * result + networkLinkCount;
 		result = 31 * result
-			+ (int) (serverAdjacencyEntryCount ^ serverAdjacencyEntryCount >>> 32);
+			+ (int) (serverTransportRouteCount ^ serverTransportRouteCount >>> 32);
 		return result;
 	}
 }

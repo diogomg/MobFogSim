@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import java.util.Calendar;
 
 import org.cloudbus.cloudsim.Log;
+import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
@@ -22,9 +23,10 @@ public class ServiceAgreementTest {
 	public void setUp() {
 		Log.disable();
 		CloudSim.init(1, Calendar.getInstance(), false);
+		NetworkTopology.reset();
 		source = new FogDevice("source", 0, 0, 0);
 		destination = new FogDevice("destination", 0, 0, 1);
-		source.connectTransportPeer(destination, 1000.0);
+		NetworkTopology.addLink(source.getId(), destination.getId(), 1000.0, 1.0);
 		destination.setAvailable(true);
 		mobileDevice = new MobileDevice("mobile", 0, 0, 0, 0, 0);
 		mobileDevice.setVmLocalServerCloudlet(source);

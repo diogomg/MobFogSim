@@ -90,7 +90,7 @@ java_runtime=$(java -version 2>&1 | awk 'NR == 1 { print; exit }')
 } > "${benchmark_root}/environment.properties"
 
 results_file=${benchmark_root}/results.tsv
-printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_adjacency_entries\tcloudsim_entities\tgenerated_tuples\tslice_reconfigurations\tslice_outage_seconds\tslice_received_bandwidth_bits_per_second_sum\twireless_queue_limit\twireless_queue_final\twireless_queue_max_total\twireless_queue_max_per_direction\twireless_queue_dropped_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
+printf 'fixture\twall_seconds\tpeak_rss_kib\tevents_total\tevents_queued\tevents_periodic\tservers\taccess_points\tusers\tnetwork_nodes\tnetwork_links\tserver_transport_routes\tcloudsim_entities\tgenerated_tuples\tslice_reconfigurations\tslice_outage_seconds\tslice_received_bandwidth_bits_per_second_sum\twireless_queue_limit\twireless_queue_final\twireless_queue_max_total\twireless_queue_max_per_direction\twireless_queue_dropped_tuples\tstdout_bytes\tstderr_bytes\trun_output_bytes\ttotal_output_bytes\tcharacterisation_sha256\tinput_files_sha256\n' \
 	> "${results_file}"
 
 property_value() {
@@ -135,7 +135,7 @@ for fixture in "${fixtures[@]}"; do
 	users=$(property_value topology_mobile_devices "${metrics_file}")
 	network_nodes=$(property_value topology_network_nodes "${metrics_file}")
 	network_links=$(property_value topology_network_links "${metrics_file}")
-	adjacency_entries=$(property_value topology_server_adjacency_entries \
+	transport_routes=$(property_value topology_server_transport_routes \
 		"${metrics_file}")
 	cloudsim_entities=$(property_value cloudsim_entities "${metrics_file}")
 	generated_tuples=$(property_value generated_tuples "${metrics_file}")
@@ -164,7 +164,7 @@ for fixture in "${fixtures[@]}"; do
 		"${fixture}" "${wall_seconds}" "${peak_rss_kib}" \
 		"${events_total}" "${events_queued}" "${events_periodic}" \
 		"${servers}" "${access_points}" "${users}" "${network_nodes}" \
-		"${network_links}" "${adjacency_entries}" "${cloudsim_entities}" \
+		"${network_links}" "${transport_routes}" "${cloudsim_entities}" \
 		"${generated_tuples}" "${slice_reconfigurations}" \
 		"${slice_outage_seconds}" "${slice_received_bandwidth}" \
 		"${wireless_queue_limit}" "${wireless_queue_final}" \

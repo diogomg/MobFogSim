@@ -216,7 +216,7 @@ public final class SimulationContext implements AutoCloseable {
 		}
 	}
 
-	/** Freezes the initially constructed physical and logical topology sizes. */
+	/** Freezes the initially constructed topology and logical-route sizes. */
 	void recordInitialTopologySize() {
 		if (topologySize != null) {
 			throw new IllegalStateException("Simulation topology size was already recorded");

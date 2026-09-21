@@ -160,7 +160,7 @@ public class SimulationContextIntegrationTest {
 		assertEquals(144, topology.getAccessPointCount());
 		assertEquals(288, topology.getNetworkNodeCount());
 		assertEquals(10440, topology.getNetworkLinkCount());
-		assertEquals(20592L, topology.getServerAdjacencyEntryCount());
+		assertEquals(20592L, topology.getServerTransportRouteCount());
 	}
 
 	private static void assertEquivalent(SimulationRunResult first,

@@ -380,9 +380,6 @@ public class P0CorrectnessRegressionTest {
 			assertTrue(expected.getMessage().contains("transport link"));
 		}
 
-		for (FogDevice server : servers) {
-			assertTrue(server.getNetServerCloudlets().isEmpty());
-		}
 		assertFalse(NetworkTopology.isNetworkEnabled());
 	}
 

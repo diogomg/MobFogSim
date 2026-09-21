@@ -140,8 +140,6 @@ public class FogDevice extends PowerDatacenter {
 	protected Set<FogDevice> serverCloudlets = new HashSet<FogDevice>();
 	protected boolean available;
 	protected Service service;
-	private Map<FogDevice, Double> netServerCloudlets =
-		new HashMap<FogDevice, Double>();
 	protected DecisionMigration migrationStrategy;
 	protected MigrationTechniquePolicy policyReplicaVM =
 		MigrationTechniquePolicy.COMPLETE_VM;
@@ -160,35 +158,6 @@ public class FogDevice extends PowerDatacenter {
 
 	public void setMyId(int myId) {
 		this.myId = myId;
-	}
-
-	public Map<FogDevice, Double> getNetServerCloudlets() {
-		return Collections.unmodifiableMap(netServerCloudlets);
-	}
-
-	public void setNetServerCloudlets(Map<FogDevice, Double> netServerCloudlets) {
-		if (netServerCloudlets == null) {
-			throw new IllegalArgumentException(
-				"Server cloudlet adjacency map cannot be null");
-		}
-		this.netServerCloudlets =
-			new HashMap<FogDevice, Double>(netServerCloudlets);
-	}
-
-	public void connectTransportPeer(FogDevice peer, double bandwidth) {
-		if (peer == null || peer == this) {
-			throw new IllegalArgumentException(
-				"Transport peer must be a different device");
-		}
-		if (!Double.isFinite(bandwidth) || bandwidth < 0.0) {
-			throw new IllegalArgumentException(
-				"Transport bandwidth must be finite and non-negative");
-		}
-		netServerCloudlets.put(peer, bandwidth);
-	}
-
-	public boolean disconnectTransportPeer(FogDevice peer) {
-		return peer != null && netServerCloudlets.remove(peer) != null;
 	}
 
 	public Service getService() {
@@ -336,7 +305,6 @@ public class FogDevice extends PowerDatacenter {
 		this.setMyId(id);
 		smartThings = new HashSet<>();
 		apDevices = new HashSet<>();
-		netServerCloudlets = new HashMap<>();
 		serverCloudlets = new HashSet<>();
 		this.setAvailable(true);
 
@@ -374,7 +342,6 @@ public class FogDevice extends PowerDatacenter {
 		smartThings = new HashSet<>();
 		smartThingsWithVm = new HashSet<>();
 		apDevices = new HashSet<>();
-		netServerCloudlets = new HashMap<>();
 		setVolatilParentId(-1);
 		this.setAvailable(true);
 		this.setService(service);
@@ -451,7 +418,6 @@ public class FogDevice extends PowerDatacenter {
 		smartThingsWithVm = new HashSet<>();
 
 		apDevices = new HashSet<>();
-		netServerCloudlets = new HashMap<>();
 		setVolatilParentId(-1);
 
 		this.setAvailable(true);

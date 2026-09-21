@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import org.cloudbus.cloudsim.NetworkTopology;
@@ -16,7 +15,7 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
 
 /**
- * Loads mobility input and builds the physical topology used by a simulation.
+ * Loads mobility input and builds the topology used by a simulation.
  *
  * <p>The service owns topology I/O and graph construction so the application
  * entry point only decides which topology to create.</p>
@@ -39,12 +38,11 @@ public final class TopologyService {
 		}
 	}
 
-	/** Creates the complete transport graph and registers its physical links. */
+	/** Builds and registers the simulation's centralized logical transport mesh. */
 	public void createTransportNetwork(List<FogDevice> serverCloudlets,
 		double baseLatency, Random random) {
 		TopologyPlan plan = TopologyPlan.transport(serverCloudlets, baseLatency,
 			random);
-		commitAdjacency(plan);
 		for (TopologyPlan.Link link : plan.getLinks()) {
 			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
 				link.getBandwidth(), link.getLatency());
@@ -63,18 +61,6 @@ public final class TopologyService {
 			TopologyPlan.Link link = attachment.getLink();
 			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
 				link.getBandwidth(), link.getLatency());
-		}
-	}
-
-	/** Assigns an independent, complete directed adjacency map to each cloudlet. */
-	public void createServerCloudletAdjacency(List<FogDevice> serverCloudlets) {
-		commitAdjacency(TopologyPlan.adjacency(serverCloudlets));
-	}
-
-	private static void commitAdjacency(TopologyPlan plan) {
-		for (Map.Entry<FogDevice, Map<FogDevice, Double>> entry
-			: plan.getAdjacency().entrySet()) {
-			entry.getKey().setNetServerCloudlets(entry.getValue());
 		}
 	}
 

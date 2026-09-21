@@ -2,7 +2,6 @@ package org.fog.vmmobile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -10,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -53,77 +51,50 @@ public class ServerCloudletNetworkTest {
 	}
 
 	@Test
-	public void everyCloudletOwnsACompleteIndependentAdjacencyMap() {
+	public void logicalTransportClosureIsCentralizedInNetworkTopology() {
 		FogDevice first = cloudlet("first", 100.0, 700.0);
 		FogDevice second = cloudlet("second", 200.0, 50.0);
 		FogDevice third = cloudlet("third", 300.0, 250.0);
 		List<FogDevice> cloudlets = Arrays.asList(first, second, third);
 
-		topologyService.createServerCloudletAdjacency(cloudlets);
+		topologyService.createTransportNetwork(cloudlets, 4.0,
+			new ZeroRandom());
 
-		assertNotSame(first.getNetServerCloudlets(), second.getNetServerCloudlets());
-		assertNotSame(first.getNetServerCloudlets(), third.getNetServerCloudlets());
+		assertEquals(3, NetworkTopology.getNumberOfLinks());
+		assertEquals(6L, NetworkTopology.getDirectedLinkCountAmong(Arrays.asList(
+			first.getId(), second.getId(), third.getId())));
 		for (FogDevice source : cloudlets) {
-			assertEquals(2, source.getNetServerCloudlets().size());
-			assertFalse(source.getNetServerCloudlets().containsKey(source));
 			for (FogDevice destination : cloudlets) {
-				assertEquals(source != destination,
-					ServiceAgreement.checkLinkStatus(source, destination));
+				if (source == destination) {
+					assertFalse(NetworkTopology.hasDirectLink(source.getId(),
+						destination.getId()));
+				}
+				else {
+					assertTrue(NetworkTopology.hasDirectLink(source.getId(),
+						destination.getId()));
+					assertTrue(ServiceAgreement.checkLinkStatus(source, destination));
+				}
 			}
 		}
-
-		assertEquals(50.0, first.getNetServerCloudlets().get(second), DELTA);
-		assertEquals(200.0, second.getNetServerCloudlets().get(first), DELTA);
-		assertEquals(100.0, first.getNetServerCloudlets().get(third), DELTA);
-		assertEquals(300.0, third.getNetServerCloudlets().get(first), DELTA);
 	}
 
 	@Test
-	public void mutatingOneCloudletsMapDoesNotChangeAnotherCloudlet() {
-		FogDevice first = cloudlet("first", 100.0, 100.0);
-		FogDevice second = cloudlet("second", 100.0, 100.0);
-		FogDevice third = cloudlet("third", 100.0, 100.0);
-		topologyService.createServerCloudletAdjacency(
-			Arrays.asList(first, second, third));
-
-		first.disconnectTransportPeer(third);
-
-		assertFalse(first.getNetServerCloudlets().containsKey(third));
-		assertTrue(second.getNetServerCloudlets().containsKey(third));
-		assertTrue(third.getNetServerCloudlets().containsKey(first));
-	}
-
-	@Test
-	public void fogDeviceDefensivelyCopiesAnAssignedAdjacencyMap() {
-		FogDevice first = cloudlet("first", 100.0, 100.0);
-		FogDevice second = cloudlet("second", 100.0, 100.0);
-		FogDevice destination = cloudlet("destination", 100.0, 100.0);
-		HashMap<FogDevice, Double> shared = new HashMap<FogDevice, Double>();
-		shared.put(destination, 100.0);
-
-		first.setNetServerCloudlets(shared);
-		second.setNetServerCloudlets(shared);
-		shared.clear();
-
-		assertNotSame(first.getNetServerCloudlets(), second.getNetServerCloudlets());
-		assertTrue(first.getNetServerCloudlets().containsKey(destination));
-		assertTrue(second.getNetServerCloudlets().containsKey(destination));
-	}
-
-	@Test
-	public void oneCloudletHasAnEmptyAdjacencyMap() {
+	public void oneCloudletHasNoTransportRoutes() {
 		FogDevice only = cloudlet("only", 100.0, 100.0);
 
-		topologyService.createServerCloudletAdjacency(Arrays.asList(only));
+		topologyService.createTransportNetwork(Arrays.asList(only), 4.0,
+			new ZeroRandom());
 
-		assertTrue(only.getNetServerCloudlets().isEmpty());
+		assertEquals(0, NetworkTopology.getNumberOfLinks());
+		assertEquals(0L, NetworkTopology.getDirectedLinkCountAmong(
+			Collections.singletonList(only.getId())));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsDuplicateCloudlets() {
 		FogDevice duplicate = cloudlet("duplicate", 100.0, 100.0);
-		topologyService.createServerCloudletAdjacency(
-			Arrays.asList(duplicate, duplicate));
+		topologyService.createTransportNetwork(
+			Arrays.asList(duplicate, duplicate), 4.0, new ZeroRandom());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -132,12 +103,13 @@ public class ServerCloudletNetworkTest {
 		cloudlets.add(cloudlet("valid", 100.0, 100.0));
 		cloudlets.add(null);
 
-		topologyService.createServerCloudletAdjacency(cloudlets);
+		topologyService.createTransportNetwork(cloudlets, 4.0,
+			new ZeroRandom());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void rejectsNullCloudletLists() {
-		topologyService.createServerCloudletAdjacency(null);
+		topologyService.createTransportNetwork(null, 4.0, new ZeroRandom());
 	}
 
 	@Test
@@ -223,15 +195,11 @@ public class ServerCloudletNetworkTest {
 
 	private static Map<String, List<Double>> linkCharacteristics(
 		TopologyPlan plan) {
-		Map<Integer, String> names = new HashMap<Integer, String>();
-		for (FogDevice cloudlet : plan.getAdjacency().keySet()) {
-			names.put(cloudlet.getId(), cloudlet.getName());
-		}
 		Map<String, List<Double>> characteristics =
 			new java.util.TreeMap<String, List<Double>>();
 		for (TopologyPlan.Link link : plan.getLinks()) {
-			characteristics.put(pair(names.get(link.getSourceId()),
-				names.get(link.getDestinationId())), Arrays.asList(
+			characteristics.put(pair(CloudSim.getEntityName(link.getSourceId()),
+				CloudSim.getEntityName(link.getDestinationId())), Arrays.asList(
 					link.getBandwidth(), link.getLatency()));
 		}
 		return characteristics;

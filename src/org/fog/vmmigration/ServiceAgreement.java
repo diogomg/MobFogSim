@@ -1,5 +1,6 @@
 package org.fog.vmmigration;
 
+import org.cloudbus.cloudsim.NetworkTopology;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.vmmobile.SimulationEventSink;
@@ -50,15 +51,17 @@ public class ServiceAgreement {
 
 	public static boolean checkLinkStatus(FogDevice sourceServerCloudlet,
 		FogDevice destinationServerCloudlet) {
+		if (sourceServerCloudlet == null || destinationServerCloudlet == null) {
+			return false;
+		}
 		// Mobile devices use their existing wireless topology path rather than
-		// the cloudlet-to-cloudlet adjacency map.
+		// the logical cloudlet-to-cloudlet closure.
 		if (sourceServerCloudlet instanceof MobileDevice) {
 			return true;
 		}
 
-		return sourceServerCloudlet.getNetServerCloudlets() != null
-			&& sourceServerCloudlet.getNetServerCloudlets()
-				.containsKey(destinationServerCloudlet);
+		return NetworkTopology.hasDirectLink(sourceServerCloudlet.getId(),
+			destinationServerCloudlet.getId());
 	}
 
 	public static int getServiceType() {

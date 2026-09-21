@@ -17,7 +17,7 @@ import org.fog.localization.GridGenerator;
 import org.fog.localization.GridPosition;
 import org.fog.vmmobile.constants.MaxAndMin;
 
-/** Immutable, fully validated physical-topology mutations. */
+/** Immutable, fully validated logical-topology mutations. */
 public final class TopologyPlan {
 
 	/** One undirected CloudSim network link. */
@@ -88,13 +88,11 @@ public final class TopologyPlan {
 		}
 	}
 
-	private final Map<FogDevice, Map<FogDevice, Double>> adjacency;
 	private final List<Link> links;
 	private final List<AccessPointAttachment> accessPointAttachments;
 
-	private TopologyPlan(Map<FogDevice, Map<FogDevice, Double>> adjacency,
-		List<Link> links, List<AccessPointAttachment> accessPointAttachments) {
-		this.adjacency = immutableAdjacency(adjacency);
+	private TopologyPlan(List<Link> links,
+		List<AccessPointAttachment> accessPointAttachments) {
 		this.links = Collections.unmodifiableList(new ArrayList<Link>(links));
 		this.accessPointAttachments = Collections.unmodifiableList(
 			new ArrayList<AccessPointAttachment>(accessPointAttachments));
@@ -110,8 +108,6 @@ public final class TopologyPlan {
 		if (random == null) {
 			throw new IllegalArgumentException("Random generator cannot be null");
 		}
-		Map<FogDevice, Map<FogDevice, Double>> adjacency =
-			buildAdjacency(serverCloudlets);
 		final Map<FogDevice, GridPosition> positions =
 			new HashMap<FogDevice, GridPosition>();
 		for (FogDevice cloudlet : serverCloudlets) {
@@ -165,7 +161,7 @@ public final class TopologyPlan {
 					gridDistance * baseLatency + sampledLatency));
 			}
 		}
-		return new TopologyPlan(adjacency, links,
+		return new TopologyPlan(links,
 			Collections.<AccessPointAttachment>emptyList());
 	}
 
@@ -224,20 +220,7 @@ public final class TopologyPlan {
 			attachments.add(new AccessPointAttachment(accessPoint, closest,
 				latency));
 		}
-		return new TopologyPlan(
-			Collections.<FogDevice, Map<FogDevice, Double>>emptyMap(),
-			Collections.<Link>emptyList(), attachments);
-	}
-
-	public static TopologyPlan adjacency(List<FogDevice> serverCloudlets) {
-		validateServerCloudlets(serverCloudlets);
-		return new TopologyPlan(buildAdjacency(serverCloudlets),
-			Collections.<Link>emptyList(),
-			Collections.<AccessPointAttachment>emptyList());
-	}
-
-	public Map<FogDevice, Map<FogDevice, Double>> getAdjacency() {
-		return adjacency;
+		return new TopologyPlan(Collections.<Link>emptyList(), attachments);
 	}
 
 	public List<Link> getLinks() {
@@ -246,35 +229,6 @@ public final class TopologyPlan {
 
 	public List<AccessPointAttachment> getAccessPointAttachments() {
 		return accessPointAttachments;
-	}
-
-	private static Map<FogDevice, Map<FogDevice, Double>> buildAdjacency(
-		List<FogDevice> serverCloudlets) {
-		Map<FogDevice, Map<FogDevice, Double>> result =
-			new HashMap<FogDevice, Map<FogDevice, Double>>();
-		for (FogDevice source : serverCloudlets) {
-			Map<FogDevice, Double> peers = new HashMap<FogDevice, Double>();
-			for (FogDevice destination : serverCloudlets) {
-				if (source != destination) {
-					peers.put(destination, Math.min(source.getUplinkBandwidth(),
-						destination.getDownlinkBandwidth()));
-				}
-			}
-			result.put(source, peers);
-		}
-		return result;
-	}
-
-	private static Map<FogDevice, Map<FogDevice, Double>> immutableAdjacency(
-		Map<FogDevice, Map<FogDevice, Double>> source) {
-		Map<FogDevice, Map<FogDevice, Double>> result =
-			new HashMap<FogDevice, Map<FogDevice, Double>>();
-		for (Map.Entry<FogDevice, Map<FogDevice, Double>> entry
-			: source.entrySet()) {
-			result.put(entry.getKey(), Collections.unmodifiableMap(
-				new HashMap<FogDevice, Double>(entry.getValue())));
-		}
-		return Collections.unmodifiableMap(result);
 	}
 
 	private static void validateServerCloudlets(
