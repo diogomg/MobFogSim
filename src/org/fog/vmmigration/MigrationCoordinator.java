@@ -9,8 +9,11 @@ import java.util.Random;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
+import org.fog.utils.DataSize;
+import org.fog.utils.EntityId;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.MobileSession;
 import org.fog.vmmobile.SimulationClock;
@@ -333,13 +336,15 @@ public final class MigrationCoordinator {
 			MigrationTransferSpec transfer = new MigrationTransferSpec(
 				mobileDevice.getVmLocalServerCloudlet(),
 				mobileDevice.getDestinationServerCloudlet(), mobileDevice,
-				mobileDevice.getMigrationTechnique().getTransferSizeBytes(
-					mobileDevice.getVmMobileDevice().getSize()),
-				mobileDevice.getMigrationTechnique().getFixedDelayMillis(mobileDevice),
-				preparationDelay, mobileDevice.getVmLocalServerCloudlet().getId(),
+				DataSize.ofBytes(mobileDevice.getMigrationTechnique()
+					.getTransferSizeBytes(mobileDevice.getVmMobileDevice().getSize())),
+				SimulationDuration.ofMilliseconds(mobileDevice
+					.getMigrationTechnique().getFixedDelayMillis(mobileDevice)),
+				SimulationDuration.ofMilliseconds(preparationDelay), EntityId.of(
+					mobileDevice.getVmLocalServerCloudlet().getId()),
 				MobileEvents.START_MIGRATION);
 			events.send(transfer.getSource().getId(),
-				transfer.getPreparationDelayMillis(),
+				transfer.getPreparationDelay().toMilliseconds(),
 				MobileEvents.START_MIGRATION_TRANSFER, transfer);
 		}
 		mobileDevice.setLockedToMigration(true);

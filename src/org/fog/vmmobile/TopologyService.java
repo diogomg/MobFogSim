@@ -10,6 +10,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
+import org.fog.utils.PropagationDelay;
 import org.fog.vmmobile.adapter.CloudSimAdapter;
 import org.fog.vmmobile.adapter.RunOutputAdapter;
 import org.fog.vmmobile.port.CloudSimPort;
@@ -58,11 +59,17 @@ public final class TopologyService {
 	/** Builds and registers the simulation's centralized logical transport mesh. */
 	public void createTransportNetwork(List<FogDevice> serverCloudlets,
 		double baseLatency, Random random) {
-		TopologyPlan plan = TopologyPlan.transport(serverCloudlets, baseLatency,
-			random);
+		createTransportNetwork(serverCloudlets,
+			PropagationDelay.ofMilliseconds(baseLatency), random);
+	}
+
+	public void createTransportNetwork(List<FogDevice> serverCloudlets,
+		PropagationDelay baseLatency, Random random) {
+		TopologyPlan plan = TopologyPlan.transport(serverCloudlets, baseLatency, random);
 		for (TopologyPlan.Link link : plan.getLinks()) {
-			cloudSim.addNetworkLink(link.getSourceId(), link.getDestinationId(),
-				link.getBandwidth(), link.getLatency());
+			cloudSim.addNetworkLink(link.getSourceEntityId(),
+				link.getDestinationEntityId(), link.getDataRate(),
+				link.getPropagationDelay());
 		}
 	}
 
@@ -76,8 +83,9 @@ public final class TopologyService {
 			attachment.getServerCloudlet().attachAccessPoint(
 				attachment.getAccessPoint());
 			TopologyPlan.Link link = attachment.getLink();
-			cloudSim.addNetworkLink(link.getSourceId(), link.getDestinationId(),
-				link.getBandwidth(), link.getLatency());
+			cloudSim.addNetworkLink(link.getSourceEntityId(),
+				link.getDestinationEntityId(), link.getDataRate(),
+				link.getPropagationDelay());
 		}
 	}
 

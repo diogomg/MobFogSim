@@ -5,7 +5,10 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 import org.cloudbus.cloudsim.util.RunOutputMode;
+import org.fog.utils.DataRate;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MigrationStrategyPolicy;
@@ -18,10 +21,10 @@ public final class SimulationConfig {
 	private final MigrationPointPolicy migrationPointPolicy;
 	private final MigrationStrategyPolicy migrationStrategyPolicy;
 	private final int maximumUsers;
-	private final int maximumBandwidth;
+	private final DataRate maximumBandwidth;
 	private final MigrationTechniquePolicy vmMigrationPolicy;
-	private final double cloudletLatency;
-	private final int travelPredictionTime;
+	private final PropagationDelay cloudletLatency;
+	private final SimulationDuration travelPredictionTime;
 	private final int mobilityPredictionError;
 	private final NetworkSlicing.Configuration slicingConfiguration;
 	private final VmDestinationPolicy.Destination vmDestinationPolicy;
@@ -33,13 +36,22 @@ public final class SimulationConfig {
 	SimulationConfig(boolean migrationEnabled, int seed,
 		MigrationPointPolicy migrationPointPolicy,
 		MigrationStrategyPolicy migrationStrategyPolicy, int maximumUsers,
-		int maximumBandwidth, MigrationTechniquePolicy vmMigrationPolicy,
-		double cloudletLatency,
-		int travelPredictionTime, int mobilityPredictionError,
+		DataRate maximumBandwidth, MigrationTechniquePolicy vmMigrationPolicy,
+		PropagationDelay cloudletLatency,
+		SimulationDuration travelPredictionTime, int mobilityPredictionError,
 		NetworkSlicing.Configuration slicingConfiguration,
 		VmDestinationPolicy.Destination vmDestinationPolicy,
 		Path mobilityDirectory, Path mobilityOrderManifest, Path outputDirectory,
 		RunOutputMode outputMode) {
+		if (migrationPointPolicy == null || migrationStrategyPolicy == null
+			|| maximumBandwidth == null || vmMigrationPolicy == null
+			|| cloudletLatency == null || travelPredictionTime == null
+			|| slicingConfiguration == null || vmDestinationPolicy == null
+			|| mobilityDirectory == null || mobilityOrderManifest == null
+			|| outputDirectory == null || outputMode == null) {
+			throw new IllegalArgumentException(
+				"Simulation configuration values cannot be null");
+		}
 		this.migrationEnabled = migrationEnabled;
 		this.seed = seed;
 		this.migrationPointPolicy = migrationPointPolicy;
@@ -91,6 +103,11 @@ public final class SimulationConfig {
 	}
 
 	public int getMaximumBandwidth() {
+		return (int) maximumBandwidth.toMebibitsPerSecond();
+	}
+
+	/** Maximum configured link rate; the CLI expresses it in Mibit/s. */
+	public DataRate getMaximumBandwidthRate() {
 		return maximumBandwidth;
 	}
 
@@ -103,10 +120,18 @@ public final class SimulationConfig {
 	}
 
 	public double getCloudletLatency() {
+		return cloudletLatency.toMilliseconds();
+	}
+
+	public PropagationDelay getCloudletPropagationDelay() {
 		return cloudletLatency;
 	}
 
 	public int getTravelPredictionTime() {
+		return (int) travelPredictionTime.toSeconds();
+	}
+
+	public SimulationDuration getTravelPredictionDuration() {
 		return travelPredictionTime;
 	}
 
@@ -149,10 +174,11 @@ public final class SimulationConfig {
 			+ "; migrationPoint=" + migrationPointPolicy.legacyValue()
 			+ "; migrationStrategy=" + migrationStrategyPolicy.legacyValue()
 			+ "; users=" + maximumUsers
-			+ "; bandwidth=" + maximumBandwidth
+			+ "; bandwidth=" + getMaximumBandwidth()
 			+ "; migrationPolicy=" + vmMigrationPolicy.legacyValue()
-			+ "; cloudletLatency=" + plainNumber(cloudletLatency)
-			+ "; travelPrediction=" + travelPredictionTime
+			+ "; cloudletLatency=" + plainNumber(
+				cloudletLatency.toMilliseconds())
+			+ "; travelPrediction=" + getTravelPredictionTime()
 			+ "; predictionError=" + mobilityPredictionError
 			+ "; sliceScope=" + slicingConfiguration.getScope().legacyValue()
 			+ "; userAllocation=" + percentageList(

@@ -39,7 +39,7 @@ public final class ExampleTopologyPlan {
 			buildAccessPoints(accessPoints);
 			buildServerCloudlets(serverCloudlets);
 			context.getServices().getTopology().createTransportNetwork(
-				serverCloudlets, configuration.getCloudletLatency(),
+				serverCloudlets, configuration.getCloudletPropagationDelay(),
 				configuration.getRandom());
 			buildMobileDevices(mobileDevices);
 			context.getServices().getTopology().loadMobility(

@@ -31,12 +31,23 @@ public class MigrationTransferSpecTest {
 	@Test
 	public void preservesTransferAndNonTransferPhasesWithExplicitUnits() {
 		MigrationTransferSpec spec = new MigrationTransferSpec(source, destination,
-			mobileDevice, 4096.0, 12.5, 30.0, source.getId(), 42);
+			mobileDevice, DataSize.ofBytes(4096.0),
+			SimulationDuration.ofMilliseconds(12.5),
+			SimulationDuration.ofMilliseconds(30.0), EntityId.of(source.getId()),
+			42);
 
 		assertEquals(4096.0, spec.getTransferBytes(), DELTA);
 		assertEquals(12.5, spec.getFixedDelayMillis(), DELTA);
 		assertEquals(30.0, spec.getPreparationDelayMillis(), DELTA);
 		assertEquals(2, spec.getNetworkSliceId());
+		assertEquals(DataSize.ofBytes(4096.0), spec.getTransferSize());
+		assertEquals(SimulationDuration.ofMilliseconds(12.5),
+			spec.getFixedDelay());
+		assertEquals(SimulationDuration.ofMilliseconds(30.0),
+			spec.getPreparationDelay());
+		assertEquals(NetworkSliceId.of(2), spec.getNetworkSlice());
+		assertEquals(EntityId.of(source.getId()),
+			spec.getCompletionDestination());
 	}
 
 	@Test

@@ -38,6 +38,8 @@ import org.fog.localization.Coordinate;
 import org.fog.localization.MobilityTimeline;
 import org.fog.localization.Distances;
 import org.fog.utils.Config;
+import org.fog.utils.DataSize;
+import org.fog.utils.EntityId;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.GeoCoverage;
@@ -1067,13 +1069,15 @@ public class MobileController extends SimEntity {
 											new MigrationTransferSpec(
 												st.getVmLocalServerCloudlet(),
 												st.getDestinationServerCloudlet(), st,
-												remainingTransferBytes,
-												st.getMigrationTechnique().getFixedDelayMillis(st),
-												delayProcess,
-												st.getVmLocalServerCloudlet().getId(),
+												DataSize.ofBytes(remainingTransferBytes),
+												SimulationDuration.ofMilliseconds(st
+													.getMigrationTechnique()
+													.getFixedDelayMillis(st)),
+												SimulationDuration.ofMilliseconds(delayProcess),
+												EntityId.of(st.getVmLocalServerCloudlet().getId()),
 												MobileEvents.SET_MIG_STATUS_TRUE);
 										send(st.getVmLocalServerCloudlet().getId(),
-											transferSpec.getPreparationDelayMillis(),
+											transferSpec.getPreparationDelay().toMilliseconds(),
 											MobileEvents.START_MIGRATION_TRANSFER, transferSpec);
 									}
 								}

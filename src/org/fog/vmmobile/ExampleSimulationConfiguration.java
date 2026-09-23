@@ -7,7 +7,10 @@ import java.util.Random;
 import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
+import org.fog.utils.DataRate;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmobile.policy.LocationPolicy;
@@ -156,12 +159,24 @@ public final class ExampleSimulationConfiguration {
 		return simulation.getMaximumBandwidth();
 	}
 
+	public DataRate getMaximumBandwidthRate() {
+		return simulation.getMaximumBandwidthRate();
+	}
+
 	public double getCloudletLatency() {
 		return simulation.getCloudletLatency();
 	}
 
+	public PropagationDelay getCloudletPropagationDelay() {
+		return simulation.getCloudletPropagationDelay();
+	}
+
 	public int getTravelPredictionTime() {
 		return simulation.getTravelPredictionTime();
+	}
+
+	public SimulationDuration getTravelPredictionDuration() {
+		return simulation.getTravelPredictionDuration();
 	}
 
 	public int getMobilityPredictionError() {

@@ -13,6 +13,7 @@ import org.fog.localization.*;
 import org.fog.placement.MobileController;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.utils.Config;
+import org.fog.utils.EntityId;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
@@ -78,8 +79,9 @@ public class MobileDevice extends FogDevice {
 		if (getParentId() > 0 && getSourceAp() != null
 			&& getSourceAp().getSmartThings().contains(this)) {
 			NetworkSlicing.startWirelessTupleTransfer(getSourceAp(), this,
-				NetworkSlicing.WirelessDirection.UPLINK, tuple, getId(),
-				getParentId(), getWirelessPropagationDelayMillis());
+				NetworkSlicing.WirelessDirection.UPLINK, tuple, EntityId.of(getId()),
+				EntityId.of(getParentId()), PropagationDelay.ofMilliseconds(
+					getWirelessPropagationDelayMillis()));
 			return;
 		}
 		super.sendUp(tuple);

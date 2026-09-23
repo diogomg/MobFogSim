@@ -42,6 +42,7 @@ import org.fog.placement.MobileController;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
 import org.fog.utils.Config;
+import org.fog.utils.EntityId;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
@@ -1698,8 +1699,8 @@ public class FogDevice extends PowerDatacenter {
 					NetworkSlicing.startWirelessTupleTransfer(
 						mobileDevice.getSourceAp(), mobileDevice,
 						NetworkSlicing.WirelessDirection.DOWNLINK, tuple,
-						getId(), childId, association.getPropagationDelay()
-							.toMilliseconds());
+						EntityId.of(getId()), EntityId.of(childId),
+						association.getPropagationDelay());
 					return;
 				}
 			}
@@ -1720,8 +1721,8 @@ public class FogDevice extends PowerDatacenter {
 			NetworkSlicing.completeWirelessTransfer(
 				(NetworkSlicing.WirelessTransferCompletion) payload);
 		if (result != null) {
-			send(result.getDestinationEntityId(),
-				result.getPropagationDelayMillis(), FogEvents.TUPLE_ARRIVAL,
+			send(result.getDestination().intValue(),
+				result.getPropagationDelay().toMilliseconds(), FogEvents.TUPLE_ARRIVAL,
 				result.getTuple());
 		}
 	}

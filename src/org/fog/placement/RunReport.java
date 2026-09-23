@@ -129,13 +129,15 @@ public final class RunReport {
 		values.put("configured_users",
 			Integer.toString(configuration.getMaximumUsers()));
 		values.put("maximum_bandwidth",
-			Integer.toString(configuration.getMaximumBandwidth()));
+			number(configuration.getMaximumBandwidthRate()
+				.toMebibitsPerSecond()));
 		values.put("vm_migration_policy",
 			Integer.toString(configuration.getVmMigrationPolicy()));
 		values.put("cloudlet_latency_ms",
-			number(configuration.getCloudletLatency()));
+			number(configuration.getCloudletPropagationDelay()
+				.toMilliseconds()));
 		values.put("travel_prediction_s",
-			Integer.toString(configuration.getTravelPredictionTime()));
+			number(configuration.getTravelPredictionDuration().toSeconds()));
 		values.put("mobility_prediction_error_m",
 			Integer.toString(configuration.getMobilityPredictionError()));
 		NetworkSlicing.Configuration slicing =
@@ -148,7 +150,7 @@ public final class RunReport {
 		values.put("bandwidth_slice_percentages",
 			percentageList(slicing.getBandwidthPercentages()));
 		values.put("slice_reallocation_delay_s",
-			number(slicing.getReallocationDelaySeconds()));
+			number(slicing.getReallocationDelay().toSeconds()));
 		values.put("vm_destination_policy",
 			Integer.toString(configuration.getVmDestinationPolicy()));
 		values.put("mobility_directory",

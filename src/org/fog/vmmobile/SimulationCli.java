@@ -7,7 +7,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import org.cloudbus.cloudsim.util.RunOutputMode;
+import org.fog.utils.DataRate;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MigrationStrategyPolicy;
@@ -42,16 +45,18 @@ public final class SimulationCli {
 				parseInteger(args, 3, "Migration strategy policy"));
 		int maximumUsers = requirePositive(
 			parseInteger(args, 4, "Number of users"), "Number of users");
-		int maximumBandwidth = requirePositive(
-			parseInteger(args, 5, "Network bandwidth"), "Network bandwidth");
+		DataRate maximumBandwidth = DataRate.ofMebibitsPerSecond(requirePositive(
+			parseInteger(args, 5, "Network bandwidth"), "Network bandwidth"));
 		MigrationTechniquePolicy migrationTechnique =
 			MigrationTechniquePolicy.fromLegacy(
 				parseInteger(args, 6, "VM migration policy"));
-		double cloudletLatency = requirePositiveFinite(
-			parseDouble(args, 7, "Cloudlet latency"), "Cloudlet latency");
-		int travelPredictionTime = requireNonNegative(
+		PropagationDelay cloudletLatency = PropagationDelay.ofMilliseconds(
+			requirePositiveFinite(parseDouble(args, 7, "Cloudlet latency"),
+				"Cloudlet latency"));
+		SimulationDuration travelPredictionTime = SimulationDuration.ofSeconds(
+			requireNonNegative(
 			parseInteger(args, 8, "Travel prediction time"),
-			"Travel prediction time");
+			"Travel prediction time"));
 		int mobilityPredictionError = requireNonNegative(
 			parseInteger(args, 9, "Mobility prediction error"),
 			"Mobility prediction error");
@@ -65,14 +70,14 @@ public final class SimulationCli {
 		NetworkSlicing.Mode slicingMode = args.length <= 13
 			|| parseFlag(args, 13, "Dynamic slicing")
 			? NetworkSlicing.Mode.DYNAMIC : NetworkSlicing.Mode.FIXED;
-		double reallocationDelaySeconds = args.length > 14
-			? requireNonNegativeFinite(
+		SimulationDuration reallocationDelay = SimulationDuration.ofSeconds(
+			args.length > 14 ? requireNonNegativeFinite(
 				parseDouble(args, 14, "Network slice reallocation delay"),
 				"Network slice reallocation delay")
-			: NetworkSlicing.DEFAULT_REALLOCATION_DELAY_SECONDS;
+			: NetworkSlicing.DEFAULT_REALLOCATION_DELAY_SECONDS);
 		NetworkSlicing.Configuration slicingConfiguration =
 			NetworkSlicing.parseConfiguration(bandwidthAllocation, userAllocation,
-				scope, slicingMode, reallocationDelaySeconds);
+				scope, slicingMode, reallocationDelay);
 
 		VmDestinationPolicy.Destination vmDestination = args.length > 15
 			? VmDestinationPolicy.Destination.fromLegacy(

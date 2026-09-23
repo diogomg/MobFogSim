@@ -109,20 +109,20 @@ public final class NetworkSlicing {
 		private final double[] userPercentages;
 		private final Mode mode;
 		private final Scope scope;
-		private final double reallocationDelaySeconds;
+		private final SimulationDuration reallocationDelay;
 
 		private Configuration(double[] bandwidthPercentages,
 			double[] userPercentages, Scope scope, Mode mode,
-			double reallocationDelaySeconds) {
+			SimulationDuration reallocationDelay) {
 			this.bandwidthPercentages = bandwidthPercentages.clone();
 			this.userPercentages = userPercentages.clone();
-			if (scope == null || mode == null) {
-				throw new IllegalArgumentException("Slicing scope and mode cannot be null");
+			if (scope == null || mode == null || reallocationDelay == null) {
+				throw new IllegalArgumentException(
+					"Slicing scope, mode, and reallocation delay cannot be null");
 			}
-			validateReallocationDelay(reallocationDelaySeconds);
 			this.scope = scope;
 			this.mode = mode;
-			this.reallocationDelaySeconds = reallocationDelaySeconds;
+			this.reallocationDelay = reallocationDelay;
 		}
 
 		public Scope getScope() {
@@ -143,7 +143,11 @@ public final class NetworkSlicing {
 
 		/** Time required to apply a dynamic slice allocation, in seconds. */
 		public double getReallocationDelaySeconds() {
-			return reallocationDelaySeconds;
+			return reallocationDelay.toSeconds();
+		}
+
+		public SimulationDuration getReallocationDelay() {
+			return reallocationDelay;
 		}
 	}
 
@@ -176,8 +180,8 @@ public final class NetworkSlicing {
 			userAllocationPercentages = configuration.userPercentages.clone();
 			mode = configuration.mode;
 			scope = configuration.scope;
-			reallocationDelayMillis = toMilliseconds(
-				configuration.reallocationDelaySeconds);
+			reallocationDelayMillis = configuration.reallocationDelay
+				.toMilliseconds();
 			reconfigurationMetrics =
 				new SliceReconfigurationMetrics(percentages.length);
 			migrationScheduler = new MigrationTransferScheduler(percentages,
@@ -191,7 +195,8 @@ public final class NetworkSlicing {
 		private static RuntimeState defaults() {
 			return new RuntimeState(new Configuration(new double[] { 100.0 },
 				new double[] { 100.0 }, Scope.END_TO_END, Mode.DYNAMIC,
-				DEFAULT_REALLOCATION_DELAY_SECONDS));
+				SimulationDuration.ofSeconds(
+					DEFAULT_REALLOCATION_DELAY_SECONDS)));
 		}
 	}
 
@@ -220,18 +225,20 @@ public final class NetworkSlicing {
 	/** Tuple delivery released after an accepted AP byte-transfer completion. */
 	public static final class WirelessTransferResult {
 		private final Tuple tuple;
-		private final int destinationEntityId;
-		private final double propagationDelayMillis;
-		private final double queueDurationMillis;
-		private final double transferDurationMillis;
+		private final EntityId destinationEntityId;
+		private final PropagationDelay propagationDelay;
+		private final SimulationDuration queueDuration;
+		private final SimulationDuration transferDuration;
 
 		private WirelessTransferResult(WirelessTransferMetadata metadata,
 			AccessPointTransferScheduler.Completion completion) {
 			this.tuple = metadata.tuple;
 			this.destinationEntityId = metadata.destinationEntityId;
-			this.propagationDelayMillis = metadata.propagationDelayMillis;
-			this.queueDurationMillis = metadata.getQueueDurationMillis();
-			this.transferDurationMillis = completion.getDurationMillis();
+			this.propagationDelay = metadata.propagationDelay;
+			this.queueDuration = SimulationDuration.ofMilliseconds(
+				metadata.getQueueDurationMillis());
+			this.transferDuration = SimulationDuration.ofMilliseconds(
+				completion.getDurationMillis());
 		}
 
 		public Tuple getTuple() {
@@ -239,19 +246,35 @@ public final class NetworkSlicing {
 		}
 
 		public int getDestinationEntityId() {
+			return destinationEntityId.intValue();
+		}
+
+		public EntityId getDestination() {
 			return destinationEntityId;
 		}
 
 		public double getPropagationDelayMillis() {
-			return propagationDelayMillis;
+			return propagationDelay.toMilliseconds();
+		}
+
+		public PropagationDelay getPropagationDelay() {
+			return propagationDelay;
 		}
 
 		public double getQueueDurationMillis() {
-			return queueDurationMillis;
+			return queueDuration.toMilliseconds();
+		}
+
+		public SimulationDuration getQueueDuration() {
+			return queueDuration;
 		}
 
 		public double getTransferDurationMillis() {
-			return transferDurationMillis;
+			return transferDuration.toMilliseconds();
+		}
+
+		public SimulationDuration getTransferDuration() {
+			return transferDuration;
 		}
 	}
 
@@ -261,20 +284,22 @@ public final class NetworkSlicing {
 	 */
 	public static final class MigrationTransferResult {
 		private final MobileDevice mobileDevice;
-		private final double transferredBytes;
-		private final double transferDurationMillis;
-		private final double reallocationDelayMillis;
-		private final double fixedDelayMillis;
+		private final DataSize transferredData;
+		private final SimulationDuration transferDuration;
+		private final SimulationDuration reallocationDelay;
+		private final SimulationDuration fixedDelay;
 		private final long migrationGeneration;
 
 		private MigrationTransferResult(MigrationTransferMetadata metadata,
 			MigrationTransferScheduler.Completion completion) {
 			this.mobileDevice = metadata.spec.getMobileDevice();
-			this.transferredBytes = completion.getTransferredBytes();
-			this.transferDurationMillis = completion.getDuration();
-			this.reallocationDelayMillis =
-				completion.getReallocationDelayDuration();
-			this.fixedDelayMillis = metadata.spec.getFixedDelayMillis();
+			this.transferredData = DataSize.ofBytes(
+				completion.getTransferredBytes());
+			this.transferDuration = SimulationDuration.ofMilliseconds(
+				completion.getDuration());
+			this.reallocationDelay = SimulationDuration.ofMilliseconds(
+				completion.getReallocationDelayDuration());
+			this.fixedDelay = metadata.spec.getFixedDelay();
 			this.migrationGeneration = metadata.spec.getMigrationGeneration();
 		}
 
@@ -283,27 +308,49 @@ public final class NetworkSlicing {
 		}
 
 		public double getTransferredBytes() {
-			return transferredBytes;
+			return transferredData.toBytes();
+		}
+
+		public DataSize getTransferredData() {
+			return transferredData;
 		}
 
 		/** Wall-clock byte-transfer phase, including reallocation pauses. */
 		public double getTransferDurationMillis() {
-			return transferDurationMillis;
+			return transferDuration.toMilliseconds();
+		}
+
+		public SimulationDuration getTransferDuration() {
+			return transferDuration;
 		}
 
 		/** Portion of the transfer phase spent paused for slice reallocation. */
 		public double getReallocationDelayMillis() {
-			return reallocationDelayMillis;
+			return reallocationDelay.toMilliseconds();
+		}
+
+		public SimulationDuration getReallocationDelay() {
+			return reallocationDelay;
 		}
 
 		/** Time during which bytes actually traversed the transport link. */
 		public double getDataTransferDurationMillis() {
 			return Math.max(0.0,
-				transferDurationMillis - reallocationDelayMillis);
+				transferDuration.toMilliseconds()
+					- reallocationDelay.toMilliseconds());
+		}
+
+		public SimulationDuration getDataTransferDuration() {
+			return SimulationDuration.ofMilliseconds(
+				getDataTransferDurationMillis());
 		}
 
 		public double getFixedDelayMillis() {
-			return fixedDelayMillis;
+			return fixedDelay.toMilliseconds();
+		}
+
+		public SimulationDuration getFixedDelay() {
+			return fixedDelay;
 		}
 
 		public long getMigrationGeneration() {
@@ -311,20 +358,21 @@ public final class NetworkSlicing {
 		}
 
 		public double getTotalDurationMillis() {
-			return transferDurationMillis + fixedDelayMillis;
+			return transferDuration.toMilliseconds()
+				+ fixedDelay.toMilliseconds();
 		}
 	}
 
 	private static final class MigrationTransferMetadata {
 		private final MigrationTransferSpec spec;
-		private final int eventSourceId;
-		private final int completionDestinationId;
+		private final EntityId eventSourceId;
+		private final EntityId completionDestinationId;
 		private final int completionEventTag;
 
 		private MigrationTransferMetadata(MigrationTransferSpec spec) {
 			this.spec = spec;
-			this.eventSourceId = spec.getCompletionDestinationId();
-			this.completionDestinationId = spec.getCompletionDestinationId();
+			this.eventSourceId = spec.getCompletionDestination();
+			this.completionDestinationId = spec.getCompletionDestination();
 			this.completionEventTag = spec.getCompletionEventTag();
 		}
 	}
@@ -335,9 +383,9 @@ public final class NetworkSlicing {
 		private final MobileDevice mobileDevice;
 		private final WirelessDirection direction;
 		private final Tuple tuple;
-		private final int eventSourceId;
-		private final int destinationEntityId;
-		private final double propagationDelayMillis;
+		private final EntityId eventSourceId;
+		private final EntityId destinationEntityId;
+		private final PropagationDelay propagationDelay;
 		private final String mobileDirectionKey;
 		private final double enqueuedAtMillis;
 		private double activatedAtMillis = Double.NaN;
@@ -345,8 +393,8 @@ public final class NetworkSlicing {
 
 		private WirelessTransferMetadata(long transferId, ApDevice accessPoint,
 			MobileDevice mobileDevice, WirelessDirection direction, Tuple tuple,
-			int eventSourceId, int destinationEntityId,
-			double propagationDelayMillis) {
+			EntityId eventSourceId, EntityId destinationEntityId,
+			PropagationDelay propagationDelay) {
 			this.transferId = transferId;
 			this.accessPoint = accessPoint;
 			this.mobileDevice = mobileDevice;
@@ -354,7 +402,7 @@ public final class NetworkSlicing {
 			this.tuple = tuple;
 			this.eventSourceId = eventSourceId;
 			this.destinationEntityId = destinationEntityId;
-			this.propagationDelayMillis = propagationDelayMillis;
+			this.propagationDelay = propagationDelay;
 			this.mobileDirectionKey = mobileDirectionKey(mobileDevice, direction);
 			this.enqueuedAtMillis = CloudSim.clock();
 		}
@@ -434,7 +482,7 @@ public final class NetworkSlicing {
 	 */
 	public static void configure(String percentageList) {
 		applyConfiguration(parseConfiguration(percentageList, null, state().scope,
-			state().mode, getReallocationDelaySeconds()));
+			state().mode, getReallocationDelay()));
 	}
 
 	/**
@@ -455,24 +503,37 @@ public final class NetworkSlicing {
 		return parseConfiguration(bandwidthPercentageList, userPercentageList,
 			Scope.fromLegacy(selectedScope),
 			Mode.fromDynamicBorrowing(useDynamicBorrowing),
-			reallocationDelaySeconds);
+			SimulationDuration.ofSeconds(reallocationDelaySeconds));
 	}
 
 	/** Parses typed slicing options without changing global slicing state. */
 	public static Configuration parseConfiguration(String bandwidthPercentageList,
 		String userPercentageList, Scope selectedScope, Mode selectedMode) {
 		return parseConfiguration(bandwidthPercentageList, userPercentageList,
-			selectedScope, selectedMode, DEFAULT_REALLOCATION_DELAY_SECONDS);
+			selectedScope, selectedMode, SimulationDuration.ofSeconds(
+				DEFAULT_REALLOCATION_DELAY_SECONDS));
 	}
 
 	/** Parses typed slicing options, including reallocation delay in seconds. */
 	public static Configuration parseConfiguration(String bandwidthPercentageList,
 		String userPercentageList, Scope selectedScope, Mode selectedMode,
 		double reallocationDelaySeconds) {
+		return parseConfiguration(bandwidthPercentageList, userPercentageList,
+			selectedScope, selectedMode,
+			SimulationDuration.ofSeconds(reallocationDelaySeconds));
+	}
+
+	/** Parses typed slicing options with a unit-bearing reallocation delay. */
+	public static Configuration parseConfiguration(String bandwidthPercentageList,
+		String userPercentageList, Scope selectedScope, Mode selectedMode,
+		SimulationDuration reallocationDelay) {
 		if (selectedScope == null || selectedMode == null) {
 			throw new IllegalArgumentException("Slicing scope and mode cannot be null");
 		}
-		validateReallocationDelay(reallocationDelaySeconds);
+		if (reallocationDelay == null) {
+			throw new IllegalArgumentException(
+				"Slicing reallocation delay cannot be null");
+		}
 		double[] parsedBandwidthPercentages = parsePercentagesOrDefault(
 			bandwidthPercentageList, "Network slice");
 		double[] parsedUserPercentages;
@@ -488,7 +549,7 @@ public final class NetworkSlicing {
 			}
 		}
 		return new Configuration(parsedBandwidthPercentages, parsedUserPercentages,
-			selectedScope, selectedMode, reallocationDelaySeconds);
+			selectedScope, selectedMode, reallocationDelay);
 	}
 
 	/** Applies one already validated slicing configuration in a single update. */
@@ -500,8 +561,8 @@ public final class NetworkSlicing {
 		state().userAllocationPercentages = configuration.userPercentages.clone();
 		state().mode = configuration.mode;
 		state().scope = configuration.scope;
-		state().reallocationDelayMillis = toMilliseconds(
-			configuration.reallocationDelaySeconds);
+		state().reallocationDelayMillis = configuration.reallocationDelay
+			.toMilliseconds();
 		resetUsage();
 	}
 
@@ -575,14 +636,27 @@ public final class NetworkSlicing {
 
 	/** Sets the dynamic slice reallocation penalty, in seconds. */
 	public static void setReallocationDelaySeconds(double seconds) {
-		validateReallocationDelay(seconds);
-		state().reallocationDelayMillis = toMilliseconds(seconds);
+		setReallocationDelay(SimulationDuration.ofSeconds(seconds));
+	}
+
+	/** Sets the dynamic slice reallocation penalty with an explicit unit. */
+	public static void setReallocationDelay(SimulationDuration delay) {
+		if (delay == null) {
+			throw new IllegalArgumentException(
+				"Network slicing reallocation delay cannot be null");
+		}
+		state().reallocationDelayMillis = delay.toMilliseconds();
 		resetUsage();
 	}
 
 	/** Returns the dynamic slice reallocation penalty, in seconds. */
 	public static double getReallocationDelaySeconds() {
 		return state().reallocationDelayMillis / MILLISECONDS_PER_SECOND;
+	}
+
+	public static SimulationDuration getReallocationDelay() {
+		return SimulationDuration.ofMilliseconds(
+			state().reallocationDelayMillis);
 	}
 
 	/** Fixed maximum FIFO depth retained for one mobile and AP direction. */
@@ -762,12 +836,22 @@ public final class NetworkSlicing {
 		ApDevice accessPoint, MobileDevice mobileDevice,
 		WirelessDirection direction, Tuple tuple, int eventSourceId,
 		int destinationEntityId, double propagationDelayMillis) {
+		return startWirelessTupleTransfer(accessPoint, mobileDevice, direction,
+			tuple, EntityId.of(eventSourceId), EntityId.of(destinationEntityId),
+			PropagationDelay.ofMilliseconds(propagationDelayMillis));
+	}
+
+	/** Adds a wireless tuple transfer with typed routing and delay values. */
+	public static synchronized long startWirelessTupleTransfer(
+		ApDevice accessPoint, MobileDevice mobileDevice,
+		WirelessDirection direction, Tuple tuple, EntityId eventSourceId,
+		EntityId destinationEntityId, PropagationDelay propagationDelay) {
 		validateWirelessTransfer(accessPoint, mobileDevice, direction, tuple,
-			eventSourceId, destinationEntityId, propagationDelayMillis);
+			eventSourceId, destinationEntityId, propagationDelay);
 		long transferId = state().nextWirelessTransferId++;
 		WirelessTransferMetadata metadata = new WirelessTransferMetadata(
 			transferId, accessPoint, mobileDevice, direction, tuple, eventSourceId,
-			destinationEntityId, propagationDelayMillis);
+			destinationEntityId, propagationDelay);
 		state().wirelessTransfers.put(transferId, metadata);
 
 		if (!state().activeWirelessTransfers.containsKey(metadata.mobileDirectionKey)) {
@@ -829,10 +913,13 @@ public final class NetworkSlicing {
 		}
 		state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
 		NetworkUsageMonitor.recordCompletedTuple(new NetworkTransferUsage(
-			metadata.tuple.getCloudletFileSize(),
-			metadata.getQueueDurationMillis(),
-			schedulerCompletion.getDurationMillis(),
-			metadata.propagationDelayMillis));
+			DataSize.ofBytes(metadata.tuple.getCloudletFileSize()),
+			SimulationDuration.ofMilliseconds(
+				metadata.getQueueDurationMillis()),
+			SimulationDuration.ofMilliseconds(
+				schedulerCompletion.getDurationMillis()),
+			SimulationDuration.ofMilliseconds(
+				metadata.propagationDelay.toMilliseconds())));
 		WirelessTransferResult result = new WirelessTransferResult(metadata,
 			schedulerCompletion);
 
@@ -923,8 +1010,8 @@ public final class NetworkSlicing {
 		List<MigrationTransferScheduler.Schedule> schedules =
 			state().migrationScheduler.start(
 			transferId, linkKey(spec.getSource(), spec.getDestination()),
-			spec.getNetworkSliceId(), spec.getTransferBytes(), physicalBandwidth,
-			CloudSim.clock());
+			spec.getNetworkSlice().intValue(), spec.getTransferSize().toBytes(),
+			physicalBandwidth, CloudSim.clock());
 		state().migrationTransfers.put(transferId,
 			new MigrationTransferMetadata(spec));
 		applySchedules(schedules);
@@ -959,8 +1046,8 @@ public final class NetworkSlicing {
 		metadata.spec.getMobileDevice().setMigTime(
 			transferResult.getTotalDurationMillis());
 		NetworkUsageMonitor.recordCompletedMigration(
-			transferResult.getTransferredBytes(),
-			transferResult.getDataTransferDurationMillis());
+			transferResult.getTransferredData(),
+			transferResult.getDataTransferDuration());
 		applySchedules(result.getSchedules());
 		return transferResult;
 	}
@@ -1055,10 +1142,11 @@ public final class NetworkSlicing {
 
 	private static void validateWirelessTransfer(ApDevice accessPoint,
 		MobileDevice mobileDevice, WirelessDirection direction, Tuple tuple,
-		int eventSourceId, int destinationEntityId,
-		double propagationDelayMillis) {
+		EntityId eventSourceId, EntityId destinationEntityId,
+		PropagationDelay propagationDelay) {
 		if (accessPoint == null || mobileDevice == null || direction == null
-			|| tuple == null) {
+			|| tuple == null || eventSourceId == null || destinationEntityId == null
+			|| propagationDelay == null) {
 			throw new IllegalArgumentException(
 				"A wireless transfer requires an AP, mobile device, direction, and tuple");
 		}
@@ -1067,23 +1155,17 @@ public final class NetworkSlicing {
 			throw new IllegalStateException(
 				"A wireless transfer requires an active AP association");
 		}
-		if (eventSourceId < 0 || destinationEntityId < 0) {
-			throw new IllegalArgumentException(
-				"Wireless transfer endpoints must be valid entity IDs");
-		}
 		if (direction == WirelessDirection.UPLINK
-			&& eventSourceId != mobileDevice.getId()) {
+			&& eventSourceId.intValue() != mobileDevice.getId()) {
 			throw new IllegalArgumentException(
 				"A wireless uplink must originate at its mobile device");
 		}
 		if (direction == WirelessDirection.DOWNLINK
-			&& destinationEntityId != mobileDevice.getId()) {
+			&& destinationEntityId.intValue() != mobileDevice.getId()) {
 			throw new IllegalArgumentException(
 				"A wireless downlink must terminate at its mobile device");
 		}
 		validateSliceId(mobileDevice.getNetworkSliceId());
-		validateNonNegativeFinite(propagationDelayMillis,
-			"Wireless propagation delay");
 		if (tuple.getCloudletFileSize() < 0L) {
 			throw new IllegalArgumentException(
 				"Wireless tuple size cannot be negative");
@@ -1170,7 +1252,8 @@ public final class NetworkSlicing {
 			}
 			cancelWirelessCompletionEvent(metadata);
 			if (CloudSim.running()) {
-				CloudSim.send(metadata.eventSourceId, metadata.eventSourceId,
+				CloudSim.send(metadata.eventSourceId.intValue(),
+					metadata.eventSourceId.intValue(),
 					schedule.getDelayMillis(), FogEvents.WIRELESS_TRANSFER_COMPLETE,
 					new WirelessTransferCompletion(schedule.getTransferId(),
 						schedule.getGeneration()));
@@ -1181,7 +1264,7 @@ public final class NetworkSlicing {
 	private static void cancelWirelessCompletionEvent(
 		WirelessTransferMetadata metadata) {
 		if (metadata != null && metadata.active && CloudSim.running()) {
-			CloudSim.cancelAll(metadata.eventSourceId,
+			CloudSim.cancelAll(metadata.eventSourceId.intValue(),
 				new WirelessCompletionPredicate(metadata.transferId));
 		}
 	}
@@ -1203,18 +1286,6 @@ public final class NetworkSlicing {
 				description + " must be finite and non-negative");
 		}
 		return value;
-	}
-
-	private static void validateReallocationDelay(double seconds) {
-		validateNonNegativeFinite(seconds, "Network slice reallocation delay");
-		if (!Double.isFinite(seconds * MILLISECONDS_PER_SECOND)) {
-			throw new IllegalArgumentException(
-				"Network slice reallocation delay is too large");
-		}
-	}
-
-	private static double toMilliseconds(double seconds) {
-		return seconds * MILLISECONDS_PER_SECOND;
 	}
 
 	private static void resetUsage() {
@@ -1279,7 +1350,8 @@ public final class NetworkSlicing {
 				continue;
 			}
 			cancelCompletionEvent(schedule.getTransferId(), metadata);
-			CloudSim.send(metadata.eventSourceId, metadata.completionDestinationId,
+			CloudSim.send(metadata.eventSourceId.intValue(),
+				metadata.completionDestinationId.intValue(),
 				schedule.getDelay(), metadata.completionEventTag,
 				new MigrationTransferCompletion(schedule.getTransferId(),
 					schedule.getGeneration()));
@@ -1289,7 +1361,7 @@ public final class NetworkSlicing {
 	private static void cancelCompletionEvent(int transferId,
 		MigrationTransferMetadata metadata) {
 		if (metadata != null && CloudSim.running()) {
-			CloudSim.cancelAll(metadata.eventSourceId,
+			CloudSim.cancelAll(metadata.eventSourceId.intValue(),
 				new MigrationCompletionPredicate(transferId));
 		}
 	}
@@ -1300,9 +1372,9 @@ public final class NetworkSlicing {
 				"Migration transfer specification cannot be null");
 		}
 		linkKey(spec.getSource(), spec.getDestination());
-		validateSliceId(spec.getNetworkSliceId());
+		validateSliceId(spec.getNetworkSlice().intValue());
 		if (spec.getMobileDevice().getNetworkSliceId()
-			!= spec.getNetworkSliceId()) {
+			!= spec.getNetworkSlice().intValue()) {
 			throw new IllegalArgumentException(
 				"A migration cannot change slices after its transfer is prepared");
 		}

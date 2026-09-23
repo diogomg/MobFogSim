@@ -9,68 +9,87 @@ package org.fog.utils;
  */
 public final class NetworkTransferUsage {
 
-	private final double transferredBytes;
-	private final double queueDurationMillis;
-	private final double transferDurationMillis;
-	private final double propagationDurationMillis;
+	private final DataSize transferredData;
+	private final SimulationDuration queueDuration;
+	private final SimulationDuration transferDuration;
+	private final SimulationDuration propagationDuration;
 
+	/** Legacy primitive adapter. Prefer the unit-bearing constructor. */
 	public NetworkTransferUsage(double transferredBytes,
 		double queueDurationMillis, double transferDurationMillis,
 		double propagationDurationMillis) {
-		this.transferredBytes = requireNonNegativeFinite(transferredBytes,
-			"Transferred bytes");
-		this.queueDurationMillis = requireNonNegativeFinite(queueDurationMillis,
-			"Queue duration");
-		this.transferDurationMillis = requireNonNegativeFinite(
-			transferDurationMillis, "Transfer duration");
-		this.propagationDurationMillis = requireNonNegativeFinite(
-			propagationDurationMillis, "Propagation duration");
+		this(DataSize.ofBytes(transferredBytes),
+			SimulationDuration.ofMilliseconds(queueDurationMillis),
+			SimulationDuration.ofMilliseconds(transferDurationMillis),
+			SimulationDuration.ofMilliseconds(propagationDurationMillis));
+	}
+
+	public NetworkTransferUsage(DataSize transferredData,
+		SimulationDuration queueDuration, SimulationDuration transferDuration,
+		SimulationDuration propagationDuration) {
+		if (transferredData == null || queueDuration == null
+			|| transferDuration == null || propagationDuration == null) {
+			throw new IllegalArgumentException(
+				"Network transfer usage values cannot be null");
+		}
+		this.transferredData = transferredData;
+		this.queueDuration = queueDuration;
+		this.transferDuration = transferDuration;
+		this.propagationDuration = propagationDuration;
 		requireFinite(getTotalUsageByteMilliseconds(),
 			"Transfer byte-milliseconds");
 	}
 
 	public double getTransferredBytes() {
-		return transferredBytes;
+		return transferredData.toBytes();
+	}
+
+	public DataSize getTransferredData() {
+		return transferredData;
 	}
 
 	public double getQueueDurationMillis() {
-		return queueDurationMillis;
+		return queueDuration.toMilliseconds();
+	}
+
+	public SimulationDuration getQueueDuration() {
+		return queueDuration;
 	}
 
 	/** Elapsed serialization/contention time after the transfer became active. */
 	public double getTransferDurationMillis() {
-		return transferDurationMillis;
+		return transferDuration.toMilliseconds();
+	}
+
+	public SimulationDuration getTransferDuration() {
+		return transferDuration;
 	}
 
 	public double getPropagationDurationMillis() {
-		return propagationDurationMillis;
+		return propagationDuration.toMilliseconds();
+	}
+
+	public SimulationDuration getPropagationDuration() {
+		return propagationDuration;
 	}
 
 	public double getQueueUsageByteMilliseconds() {
-		return transferredBytes * queueDurationMillis;
+		return transferredData.toBytes() * queueDuration.toMilliseconds();
 	}
 
 	public double getTransferUsageByteMilliseconds() {
-		return transferredBytes * transferDurationMillis;
+		return transferredData.toBytes() * transferDuration.toMilliseconds();
 	}
 
 	public double getPropagationUsageByteMilliseconds() {
-		return transferredBytes * propagationDurationMillis;
+		return transferredData.toBytes()
+			* propagationDuration.toMilliseconds();
 	}
 
 	public double getTotalUsageByteMilliseconds() {
 		return getQueueUsageByteMilliseconds()
 			+ getTransferUsageByteMilliseconds()
 			+ getPropagationUsageByteMilliseconds();
-	}
-
-	private static double requireNonNegativeFinite(double value,
-		String description) {
-		if (!Double.isFinite(value) || value < 0.0) {
-			throw new IllegalArgumentException(
-				description + " must be finite and non-negative");
-		}
-		return value;
 	}
 
 	private static void requireFinite(double value, String description) {

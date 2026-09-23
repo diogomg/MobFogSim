@@ -2,6 +2,8 @@ package org.fog.entities;
 
 import java.util.Optional;
 
+import org.fog.utils.DataRate;
+import org.fog.utils.EntityId;
 import org.fog.utils.PropagationDelay;
 import org.fog.utils.SimulationDuration;
 import org.fog.vmmobile.LogMobile;
@@ -135,11 +137,13 @@ public final class HandoffCoordinator {
 		destination.associateMobileDevice(mobileDevice);
 		mobileDevice.establishWirelessAssociation(destination, propagationDelay,
 			associationEstablishmentDuration);
-		cloudSim.addNetworkLink(source.getId(), mobileDevice.getId(), 0.0, 0.0);
-		cloudSim.addNetworkLink(destination.getId(), mobileDevice.getId(),
-			mobileDevice.getWirelessAssociation().getBandwidthBitsPerSecond(
-				org.fog.utils.NetworkSlicing.WirelessDirection.UPLINK),
-			propagationDelay.toMilliseconds());
+		cloudSim.addNetworkLink(EntityId.of(source.getId()),
+			EntityId.of(mobileDevice.getId()), DataRate.ZERO, PropagationDelay.ZERO);
+		cloudSim.addNetworkLink(EntityId.of(destination.getId()),
+			EntityId.of(mobileDevice.getId()), DataRate.ofBitsPerSecond(
+				mobileDevice.getWirelessAssociation().getBandwidthBitsPerSecond(
+					org.fog.utils.NetworkSlicing.WirelessDirection.UPLINK)),
+			propagationDelay);
 		if (mobileDevice.getSourceServerCloudlet() != null) {
 			mobileDevice.getSourceServerCloudlet().attachChild(mobileDevice.getId(),
 				propagationDelay.toMilliseconds());

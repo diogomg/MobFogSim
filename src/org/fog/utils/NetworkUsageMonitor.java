@@ -111,8 +111,9 @@ public class NetworkUsageMonitor {
 	 * Records a legacy direct tuple hop for which only propagation is modelled.
 	 */
 	public static void sendingTuple(double latencyMillis, double tupleBytes) {
-		recordCompletedTuple(new NetworkTransferUsage(tupleBytes, 0.0, 0.0,
-			latencyMillis));
+		recordCompletedTuple(new NetworkTransferUsage(DataSize.ofBytes(tupleBytes),
+			SimulationDuration.ZERO, SimulationDuration.ZERO,
+			SimulationDuration.ofMilliseconds(latencyMillis)));
 	}
 
 	/** Records all distinct dimensions of one completed tuple transfer. */
@@ -142,8 +143,15 @@ public class NetworkUsageMonitor {
 	 */
 	public static void recordCompletedMigration(double transferredBytes,
 		double transferDurationMillis) {
-		NetworkTransferUsage usage = new NetworkTransferUsage(transferredBytes,
-			0.0, transferDurationMillis, 0.0);
+		recordCompletedMigration(DataSize.ofBytes(transferredBytes),
+			SimulationDuration.ofMilliseconds(transferDurationMillis));
+	}
+
+	/** Records migration transport usage with explicit byte and time units. */
+	public static void recordCompletedMigration(DataSize transferredData,
+		SimulationDuration transferDuration) {
+		NetworkTransferUsage usage = new NetworkTransferUsage(transferredData,
+			SimulationDuration.ZERO, transferDuration, SimulationDuration.ZERO);
 		metrics.migrationTransferredBytes += usage.getTransferredBytes();
 		metrics.migrationTransferDurationMilliseconds +=
 			usage.getTransferDurationMillis();

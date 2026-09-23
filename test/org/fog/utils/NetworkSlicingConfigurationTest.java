@@ -111,11 +111,32 @@ public class NetworkSlicingConfigurationTest {
 	public void reallocationDelayRoundTripsInSeconds() {
 		NetworkSlicing.Configuration configuration =
 			NetworkSlicing.parseConfiguration("70,30", "50,50",
-				NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC, 2.5);
+				NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC,
+				SimulationDuration.ofSeconds(2.5));
 
 		assertEquals(2.5, configuration.getReallocationDelaySeconds(), DELTA);
+		assertEquals(SimulationDuration.ofMilliseconds(2500.0),
+			configuration.getReallocationDelay());
 		NetworkSlicing.applyConfiguration(configuration);
 		assertEquals(2.5, NetworkSlicing.getReallocationDelaySeconds(), DELTA);
+		assertEquals(SimulationDuration.ofMilliseconds(2500.0),
+			NetworkSlicing.getReallocationDelay());
+	}
+
+	@Test
+	public void configurationDefensivelyCopiesPercentageArrays() {
+		NetworkSlicing.Configuration configuration =
+			NetworkSlicing.parseConfiguration("70,30", "60,40",
+				NetworkSlicing.Scope.END_TO_END, NetworkSlicing.Mode.DYNAMIC,
+				SimulationDuration.ZERO);
+		double[] bandwidth = configuration.getBandwidthPercentages();
+		double[] users = configuration.getUserPercentages();
+
+		bandwidth[0] = 1.0;
+		users[0] = 1.0;
+
+		assertEquals(70.0, configuration.getBandwidthPercentages()[0], DELTA);
+		assertEquals(60.0, configuration.getUserPercentages()[0], DELTA);
 	}
 
 	@Test

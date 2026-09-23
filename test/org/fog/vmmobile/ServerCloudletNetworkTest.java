@@ -21,6 +21,9 @@ import org.fog.entities.FogDevice;
 import org.fog.localization.GridGenerator;
 import org.fog.localization.GridPosition;
 import org.fog.localization.MapBounds;
+import org.fog.utils.DataRate;
+import org.fog.utils.EntityId;
+import org.fog.utils.PropagationDelay;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmigration.ServiceAgreement;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
@@ -140,9 +143,18 @@ public class ServerCloudletNetworkTest {
 
 		TopologyPlan plan = TopologyPlan.transport(cloudlets, 4.0,
 			new ZeroRandom());
+		TopologyPlan.Link firstLink = plan.getLinks().get(0);
 
 		assertEquals(8.0, latency(plan, "cloudlet-0", "cloudlet-4"), DELTA);
 		assertEquals(4.0, latency(plan, "cloudlet-0", "cloudlet-3"), DELTA);
+		assertEquals(EntityId.of(firstLink.getSourceId()),
+			firstLink.getSourceEntityId());
+		assertEquals(EntityId.of(firstLink.getDestinationId()),
+			firstLink.getDestinationEntityId());
+		assertEquals(DataRate.ofBitsPerSecond(firstLink.getBandwidth()),
+			firstLink.getDataRate());
+		assertEquals(PropagationDelay.ofMilliseconds(firstLink.getLatency()),
+			firstLink.getPropagationDelay());
 	}
 
 	@Test

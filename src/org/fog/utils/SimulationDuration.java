@@ -2,6 +2,7 @@ package org.fog.utils;
 
 /** Immutable duration expressed in the simulator's millisecond time unit. */
 public final class SimulationDuration {
+	private static final double MILLISECONDS_PER_SECOND = 1000.0;
 
 	public static final SimulationDuration ZERO = new SimulationDuration(0.0);
 
@@ -19,8 +20,20 @@ public final class SimulationDuration {
 		return milliseconds == 0.0 ? ZERO : new SimulationDuration(milliseconds);
 	}
 
+	public static SimulationDuration ofSeconds(double seconds) {
+		if (!Double.isFinite(seconds) || seconds < 0.0) {
+			throw new IllegalArgumentException(
+				"Simulation duration must be finite and non-negative");
+		}
+		return ofMilliseconds(seconds * MILLISECONDS_PER_SECOND);
+	}
+
 	public double toMilliseconds() {
 		return milliseconds;
+	}
+
+	public double toSeconds() {
+		return milliseconds / MILLISECONDS_PER_SECOND;
 	}
 
 	@Override

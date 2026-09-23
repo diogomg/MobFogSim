@@ -15,6 +15,9 @@ import org.fog.entities.FogDevice;
 import org.fog.localization.Distances;
 import org.fog.localization.GridGenerator;
 import org.fog.localization.GridPosition;
+import org.fog.utils.DataRate;
+import org.fog.utils.EntityId;
+import org.fog.utils.PropagationDelay;
 import org.fog.vmmobile.constants.MaxAndMin;
 
 /** Immutable, fully validated logical-topology mutations. */
@@ -22,21 +25,17 @@ public final class TopologyPlan {
 
 	/** One undirected CloudSim network link. */
 	public static final class Link {
-		private final int sourceId;
-		private final int destinationId;
-		private final double bandwidth;
-		private final double latency;
+		private final EntityId sourceId;
+		private final EntityId destinationId;
+		private final DataRate bandwidth;
+		private final PropagationDelay latency;
 
-		private Link(int sourceId, int destinationId, double bandwidth,
-			double latency) {
-			if (sourceId < 0 || destinationId < 0 || sourceId == destinationId) {
+		private Link(EntityId sourceId, EntityId destinationId,
+			DataRate bandwidth, PropagationDelay latency) {
+			if (sourceId == null || destinationId == null || bandwidth == null
+				|| latency == null || sourceId.equals(destinationId)) {
 				throw new SimulationBuildException(
 					"Topology links require two registered, distinct entities");
-			}
-			if (!Double.isFinite(bandwidth) || bandwidth < 0.0
-				|| !Double.isFinite(latency) || latency < 0.0) {
-				throw new SimulationBuildException(
-					"Topology link bandwidth and latency must be finite and non-negative");
 			}
 			this.sourceId = sourceId;
 			this.destinationId = destinationId;
@@ -45,18 +44,34 @@ public final class TopologyPlan {
 		}
 
 		public int getSourceId() {
+			return sourceId.intValue();
+		}
+
+		public EntityId getSourceEntityId() {
 			return sourceId;
 		}
 
 		public int getDestinationId() {
+			return destinationId.intValue();
+		}
+
+		public EntityId getDestinationEntityId() {
 			return destinationId;
 		}
 
 		public double getBandwidth() {
+			return bandwidth.toBitsPerSecond();
+		}
+
+		public DataRate getDataRate() {
 			return bandwidth;
 		}
 
 		public double getLatency() {
+			return latency.toMilliseconds();
+		}
+
+		public PropagationDelay getPropagationDelay() {
 			return latency;
 		}
 	}
@@ -68,11 +83,12 @@ public final class TopologyPlan {
 		private final Link link;
 
 		private AccessPointAttachment(ApDevice accessPoint,
-			FogDevice serverCloudlet, double latency) {
+			FogDevice serverCloudlet, PropagationDelay latency) {
 			this.accessPoint = accessPoint;
 			this.serverCloudlet = serverCloudlet;
-			this.link = new Link(serverCloudlet.getId(), accessPoint.getId(),
-				accessPoint.getDownlinkBandwidth(), latency);
+			this.link = new Link(EntityId.of(serverCloudlet.getId()),
+				EntityId.of(accessPoint.getId()), DataRate.ofBitsPerSecond(
+					accessPoint.getDownlinkBandwidth()), latency);
 		}
 
 		public ApDevice getAccessPoint() {
@@ -100,10 +116,16 @@ public final class TopologyPlan {
 
 	public static TopologyPlan transport(List<FogDevice> serverCloudlets,
 		double baseLatency, Random random) {
+		return transport(serverCloudlets,
+			PropagationDelay.ofMilliseconds(baseLatency), random);
+	}
+
+	public static TopologyPlan transport(List<FogDevice> serverCloudlets,
+		PropagationDelay baseLatency, Random random) {
 		validateServerCloudlets(serverCloudlets);
-		if (!Double.isFinite(baseLatency) || baseLatency < 0.0) {
+		if (baseLatency == null) {
 			throw new IllegalArgumentException(
-				"Cloudlet base latency must be finite and non-negative");
+				"Cloudlet base latency cannot be null");
 		}
 		if (random == null) {
 			throw new IllegalArgumentException("Random generator cannot be null");
@@ -155,10 +177,12 @@ public final class TopologyPlan {
 					throw new SimulationBuildException("Could not plan transport link "
 						+ source.getName() + " -> " + destination.getName(), error);
 				}
-				links.add(new Link(source.getId(), destination.getId(),
-					Math.min(source.getUplinkBandwidth(),
-						destination.getDownlinkBandwidth()),
-					gridDistance * baseLatency + sampledLatency));
+				links.add(new Link(EntityId.of(source.getId()),
+					EntityId.of(destination.getId()), DataRate.ofBitsPerSecond(
+						Math.min(source.getUplinkBandwidth(),
+							destination.getDownlinkBandwidth())),
+					PropagationDelay.ofMilliseconds(gridDistance
+						* baseLatency.toMilliseconds() + sampledLatency)));
 			}
 		}
 		return new TopologyPlan(links,
@@ -209,9 +233,9 @@ public final class TopologyPlan {
 					+ accessPoint.getName() + " is already attached to "
 					+ accessPoint.getServerCloudlet().getName());
 			}
-			double latency;
+			PropagationDelay latency;
 			try {
-				latency = random.nextDouble();
+				latency = PropagationDelay.ofMilliseconds(random.nextDouble());
 			}
 			catch (RuntimeException error) {
 				throw new SimulationBuildException("Could not plan access-point link "

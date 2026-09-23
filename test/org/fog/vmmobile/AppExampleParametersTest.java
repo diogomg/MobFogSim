@@ -8,7 +8,10 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.cloudbus.cloudsim.util.RunOutputMode;
+import org.fog.utils.DataRate;
 import org.fog.utils.NetworkSlicing;
+import org.fog.utils.PropagationDelay;
+import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.VmDestinationPolicy;
 import org.junit.After;
 import org.junit.Test;
@@ -121,6 +124,12 @@ public class AppExampleParametersTest {
 			+ "reallocationDelay=2.5; vmDestination=1; "
 			+ "outputMode=full",
 			configuration.toSummaryLine());
+		assertEquals(DataRate.ofMebibitsPerSecond(11.0),
+			configuration.getMaximumBandwidthRate());
+		assertEquals(PropagationDelay.ofMilliseconds(61.5),
+			configuration.getCloudletPropagationDelay());
+		assertEquals(SimulationDuration.ofSeconds(12.0),
+			configuration.getTravelPredictionDuration());
 	}
 
 	@Test
