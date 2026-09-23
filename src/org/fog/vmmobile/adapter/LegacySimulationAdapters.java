@@ -1,5 +1,8 @@
 package org.fog.vmmobile.adapter;
 
+import java.util.Random;
+
+import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.port.MobileStatisticsPort;
 import org.fog.vmmobile.port.SimulationEventLog;
@@ -23,5 +26,10 @@ public final class LegacySimulationAdapters {
 
 	public static SimulationOutput output() {
 		return RunOutputAdapter.current();
+	}
+
+	public static Random migrationRandom() {
+		Random random = AppExample.getRand();
+		return random == null ? new Random(0L) : random;
 	}
 }

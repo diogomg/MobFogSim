@@ -96,7 +96,8 @@ public final class SimulationContext implements AutoCloseable {
 				System.out, context.cloudSim);
 			SimulationEventSink.use(context.eventSink);
 			context.services = SimulationServices.forRun(context.cloudSim,
-				context.statistics, context.eventSink, context.outputManager);
+				context.statistics, context.eventSink, context.outputManager,
+				context.random("application"));
 			context.progressBar = new SimulationProgressBar(System.out,
 				context.eventSink.isEnabled(SimulationEventSink.Level.SUMMARY));
 			context.resultWriter = new AtomicResultWriter(context.outputManager);

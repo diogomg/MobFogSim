@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
@@ -35,19 +36,28 @@ public final class MigrationCoordinator {
 	private final MobileStatisticsPort statistics;
 	private final SimulationEventLog events;
 	private final SimulationOutput output;
+	private final Random decisionRandom;
 
 	/** Compatibility constructor; run code injects these ports via SimulationServices. */
 	public MigrationCoordinator() {
 		this(CloudSimAdapter.INSTANCE, NetworkSliceAdapter.INSTANCE,
 			LegacySimulationAdapters.statistics(), LegacySimulationAdapters.events(),
-			LegacySimulationAdapters.output());
+			LegacySimulationAdapters.output(),
+			LegacySimulationAdapters.migrationRandom());
 	}
 
 	public MigrationCoordinator(SimulationClock clock,
 		NetworkSlicePort networkSlices, MobileStatisticsPort statistics,
 		SimulationEventLog events, SimulationOutput output) {
+		this(clock, networkSlices, statistics, events, output, new Random(0L));
+	}
+
+	public MigrationCoordinator(SimulationClock clock,
+		NetworkSlicePort networkSlices, MobileStatisticsPort statistics,
+		SimulationEventLog events, SimulationOutput output,
+		Random decisionRandom) {
 		if (clock == null || networkSlices == null || statistics == null
-			|| events == null || output == null) {
+			|| events == null || output == null || decisionRandom == null) {
 			throw new IllegalArgumentException(
 				"Migration coordinator dependencies cannot be null");
 		}
@@ -56,6 +66,7 @@ public final class MigrationCoordinator {
 		this.statistics = statistics;
 		this.events = events;
 		this.output = output;
+		this.decisionRandom = decisionRandom;
 	}
 	/** Minimal event port implemented by the owning simulation entity. */
 	@FunctionalInterface
@@ -102,6 +113,12 @@ public final class MigrationCoordinator {
 		START,
 		ABORT,
 		IGNORE
+	}
+
+	public enum DecisionCommit {
+		MIGRATION,
+		STAY,
+		REJECTED
 	}
 
 	/** Guarded decision for the entity-side VM migration dispatch. */
@@ -337,18 +354,31 @@ public final class MigrationCoordinator {
 		}
 		for (MobileDevice mobileDevice : mobileDevices) {
 			FogDevice accessServer = mobileDevice.getSourceServerCloudlet();
+			DecisionMigration strategy = accessServer == null
+				? null : accessServer.getMigrationStrategy();
 			if (mobileDevice.getSourceAp() == null
 				|| accessServer == null
 				|| mobileDevice.isLockedToMigration()
 				|| mobileDevice.getVmLocalServerCloudlet() == null
-				|| accessServer.getMigrationStrategy() == null
-				|| !accessServer.getMigrationStrategy().shouldMigrate(mobileDevice)) {
+				|| strategy == null) {
 				events.sendNow(coordinatorEntityId, MobileEvents.NO_MIGRATION,
 					mobileDevice);
 				continue;
 			}
-			if (mobileDevice.getVmLocalServerCloudlet()
-				.equals(mobileDevice.getDestinationServerCloudlet())) {
+
+			MigrationDecision decision = strategy.evaluate(mobileDevice,
+				new MigrationDecisionContext(clock.simulationTimeMillis(),
+					decisionRandom, mobileDevices,
+					VmDestinationPolicy.getDestination()));
+			DecisionCommit commit = commitDecision(decision, mobileDevices);
+			if (commit != DecisionCommit.REJECTED) {
+				recordDecisionObservations(decision);
+			}
+			if (commit != DecisionCommit.MIGRATION) {
+				if (decision.getReason() != null) {
+					this.events.trace("MigrationCoordinator",
+						() -> decision.getReason());
+				}
 				events.sendNow(coordinatorEntityId, MobileEvents.NO_MIGRATION,
 					mobileDevice);
 				continue;
@@ -366,14 +396,73 @@ public final class MigrationCoordinator {
 				"Migration time " + mobileDevice.getMigTime());
 			LogMobile.debug("MigrationCoordinator.java", "Made the decisionMigration for "
 				+ mobileDevice.getName());
-			mobileDevice.getSession().decideMigration();
 			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
 				MobileEvents.TO_MIGRATION,
 				event(mobileDevice, MigrationEvent.Stage.PREPARE));
 			clearTimingStarts(mobileDevice);
-			mobileDevice.setLockedToMigration(true);
-			mobileDevice.setTimeFinishDeliveryVm(-1.0);
 			writeDecision(mobileDevice);
+		}
+	}
+
+	/**
+	 * Atomically applies an immutable policy result when its complete input
+	 * snapshot is still current. No external event or output is emitted here.
+	 */
+	public DecisionCommit commitDecision(MigrationDecision decision,
+		Collection<MobileDevice> activeMobileDevices) {
+		if (decision == null || activeMobileDevices == null) {
+			throw new IllegalArgumentException(
+				"Migration commit inputs cannot be null");
+		}
+		MobileDevice mobileDevice = decision.getMobileDevice();
+		if (!activeMobileDevices.contains(mobileDevice)
+			|| !decision.isCurrent()) {
+			return DecisionCommit.REJECTED;
+		}
+		boolean startsMigration = decision.shouldMigrate()
+			&& decision.getDestination()
+				!= mobileDevice.getVmLocalServerCloudlet();
+		if (startsMigration) {
+			if (mobileDevice.getSourceAp() == null
+				|| mobileDevice.getVmLocalServerCloudlet() == null
+				|| mobileDevice.getVmMobileDevice() == null
+				|| mobileDevice.isLockedToMigration()
+				|| !mobileDevice.getSession().decideMigration(
+					decision.getExpectedMigrationGeneration(),
+					decision.getExpectedMigrationState())) {
+				return DecisionCommit.REJECTED;
+			}
+		}
+
+		applyDecisionObservations(decision);
+		if (!startsMigration) {
+			return DecisionCommit.STAY;
+		}
+		mobileDevice.setDestinationServerCloudlet(decision.getDestination());
+		mobileDevice.setLockedToMigration(true);
+		mobileDevice.setTimeFinishDeliveryVm(-1.0);
+		return DecisionCommit.MIGRATION;
+	}
+
+	private static void applyDecisionObservations(MigrationDecision decision) {
+		MobileDevice mobileDevice = decision.getMobileDevice();
+		MigrationPointEvaluation pointEvaluation =
+			decision.getPointEvaluation();
+		if (pointEvaluation != null) {
+			mobileDevice.setMigPoint(pointEvaluation.isMigrationPoint());
+			mobileDevice.setMigZone(pointEvaluation.isMigrationZone());
+			mobileDevice.setMigTime(pointEvaluation.getMigrationTimeMillis());
+		}
+		List<MigrationPrediction> predictions = decision.getPredictions();
+		if (!predictions.isEmpty()) {
+			MigrationPrediction last = predictions.get(predictions.size() - 1);
+			mobileDevice.setFutureCoord(last.getAdjustedX(), last.getAdjustedY());
+		}
+	}
+
+	private static void recordDecisionObservations(MigrationDecision decision) {
+		for (MigrationPrediction prediction : decision.getPredictions()) {
+			Migration.recordPrediction(prediction);
 		}
 	}
 

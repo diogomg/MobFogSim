@@ -15,8 +15,8 @@ import org.fog.localization.DiscoverLocalization;
 import org.fog.localization.Distances;
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
-import org.fog.vmmobile.AppExample;
-import org.fog.vmmobile.SimulationEventSink;
+import org.fog.placement.MobileController;
+import org.fog.vmmobile.adapter.LegacySimulationAdapters;
 import org.fog.vmmobile.constants.*;
 import org.fog.vmmobile.policy.MovementDirection;
 
@@ -59,18 +59,20 @@ public final class Migration {
 			&& smartThingDirection.containsInMigrationCone(zoneDirection);
 	}
 
-	private static void saveDistance(int travelTimeId, Coordinate coord_atual,
-		Coordinate coord_prev, Coordinate coord_erro, Double dist_atual_prev,
-		Double dist_atual_erro, Double dist_prev_erro, int velocidade, String filename) {
+	private static void saveDistance(MigrationPrediction prediction,
+		String filename) {
 
 		try (PrintWriter out1 = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(filename, true))
 		{
-			out1.println(travelTimeId + "\t" + coord_atual.getCoordX() + "\t"
-				+ coord_atual.getCoordY() + "\t" + coord_prev.getCoordX() + "\t"
-				+ coord_prev.getCoordY() + "\t" + coord_erro.getCoordX() + "\t"
-				+ coord_erro.getCoordY() + "\t" + dist_atual_prev + "\t" + dist_atual_erro + "\t"
-				+ dist_prev_erro + "\t" + velocidade);
+			out1.println(prediction.getTravelTimeId() + "\t"
+				+ prediction.getActualX() + "\t" + prediction.getActualY() + "\t"
+				+ prediction.getPredictedX() + "\t" + prediction.getPredictedY() + "\t"
+				+ prediction.getAdjustedX() + "\t" + prediction.getAdjustedY() + "\t"
+				+ prediction.getActualToPredictedDistance() + "\t"
+				+ prediction.getActualToAdjustedDistance() + "\t"
+				+ prediction.getPredictedToAdjustedDistance() + "\t"
+				+ prediction.getSpeed());
 		} catch (IOException e) {
 			throw new IllegalStateException(
 				"Could not record migration distance " + filename, e);
@@ -79,12 +81,28 @@ public final class Migration {
 
 	public static List<FogDevice> serverClouletsAvailableList(List<FogDevice> oldServerCloudlets,
 		MobileDevice smartThing) {
+		ServerPrediction result = predictAvailableServers(oldServerCloudlets,
+			smartThing, CloudSim.clock(), MovementDirection.fromLegacy(
+				LegacySimulationAdapters.migrationRandom().nextInt(8) + 1));
+		applyPrediction(smartThing, result.getPrediction());
+		return result.getAvailableServers();
+	}
+
+	/** Pure candidate calculation used by migration policies. */
+	static ServerPrediction predictAvailableServers(
+		List<FogDevice> oldServerCloudlets, MobileDevice smartThing,
+		double simulationTimeMillis, MovementDirection predictionErrorDirection) {
+		if (oldServerCloudlets == null || smartThing == null
+			|| predictionErrorDirection == null) {
+			throw new IllegalArgumentException(
+				"Migration prediction inputs cannot be null");
+		}
 
 		Coordinate coord_real = smartThing.getCoord();
 
 		List<MobilitySample> path = smartThing.getMobilityPath();
 		// The prediction parameter is elapsed trace time, not a number of rows.
-		double targetTime = MobilityTimeline.toTraceTime(CloudSim.clock())
+		double targetTime = MobilityTimeline.toTraceTime(simulationTimeMillis)
 			+ smartThing.getTravelPredicTime();
 		MobilitySample predictedSample = MobilityTimeline.sampleAtOrBefore(path, targetTime);
 
@@ -94,20 +112,18 @@ public final class Migration {
 		coord_prev.setCoordX(x);
 		coord_prev.setCoordY(y);
 
-		MovementDirection directionMPError = MovementDirection.fromLegacy(
-			AppExample.getRand().nextInt(8) + 1);
-
 		// related to the ninth parameter: User Mobility prediction inaccuracy, in meters
 		Coordinate coord_inaccurated = Coordinate.newCoordinateWithError(coord_prev,
-			smartThing.getMobilityPrecitionError(), directionMPError);
+			smartThing.getMobilityPrecitionError(), predictionErrorDirection);
 
-		saveDistance(smartThing.getTravelTimeId(), coord_real, coord_prev, coord_inaccurated,
+		MigrationPrediction prediction = new MigrationPrediction(
+			smartThing.getTravelTimeId(), coord_real.getCoordX(), coord_real.getCoordY(),
+			coord_prev.getCoordX(), coord_prev.getCoordY(),
+			coord_inaccurated.getCoordX(), coord_inaccurated.getCoordY(),
 			Distances.checkDistance(coord_real, coord_prev),
 			Distances.checkDistance(coord_real, coord_inaccurated),
-			Distances.checkDistance(coord_prev, coord_inaccurated), smartThing.getSpeed(),
-			"distance_between_user_cloudlet.txt");
-
-		smartThing.setFutureCoord(coord_inaccurated.getCoordX(), coord_inaccurated.getCoordY());
+			Distances.checkDistance(coord_prev, coord_inaccurated),
+			smartThing.getSpeed());
 
 		List<FogDevice> newServerCloudlets = new ArrayList<>();
 
@@ -117,19 +133,27 @@ public final class Migration {
 			// return the relative position between Server Cloudlet and smart
 			// thing -> set this value
 			localServerCloudlet = DiscoverLocalization.discoverDirection(
-				smartThing.getFutureCoord(), sc.getCoord());
-			cone = insideCone(localServerCloudlet, directionMPError);
+				coord_inaccurated, sc.getCoord());
+			cone = insideCone(localServerCloudlet, predictionErrorDirection);
 			if (cone && sc != smartThing.getSourceServerCloudlet()) {
 				newServerCloudlets.add(sc);
 			}
 		}
-		return newServerCloudlets;
+		return new ServerPrediction(newServerCloudlets, prediction);
 	}
 
 	public static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,
 		MobileDevice smartThing) {
 		return Distances.findClosestServerCloudlet(
 			serverClouletsAvailableList(serverCloudlets, smartThing), smartThing);
+	}
+
+	static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,
+		MobileDevice smartThing, MigrationDecisionContext context) {
+		ServerPrediction prediction = context.predictServers(serverCloudlets,
+			smartThing);
+		return Distances.findClosestServerCloudlet(
+			prediction.getAvailableServers(), prediction.adjustedCoordinate());
 	}
 
 	public static boolean isEdgeAp(ApDevice apDevice, MobileDevice smartThing) {
@@ -139,6 +163,21 @@ public final class Migration {
 	public static Optional<FogDevice> lowestLatencyCostServerCloudlet(
 		List<FogDevice> oldServerCloudlets,
 		List<ApDevice> oldApDevices, MobileDevice smartThing) {
+		MigrationDecisionContext context = new MigrationDecisionContext(
+			CloudSim.clock(), LegacySimulationAdapters.migrationRandom(),
+			MobileController.getSmartThings(),
+			VmDestinationPolicy.getDestination());
+		Optional<FogDevice> result = lowestLatencyCostServerCloudlet(
+			oldServerCloudlets, oldApDevices, smartThing, context);
+		for (MigrationPrediction prediction : context.getPredictions()) {
+			applyPrediction(smartThing, prediction);
+		}
+		return result;
+	}
+
+	static Optional<FogDevice> lowestLatencyCostServerCloudlet(
+		List<FogDevice> oldServerCloudlets, List<ApDevice> oldApDevices,
+		MobileDevice smartThing, MigrationDecisionContext context) {
 		List<FogDevice> newServerCloudlets = new ArrayList<>();
 		List<FogDevice> numServerCloudlets = new ArrayList<>();
 
@@ -148,7 +187,7 @@ public final class Migration {
 
 		for (int i = 0; i < 9; i++) {
 			Optional<FogDevice> destinationServerCloudlet =
-				nextServerCloudlet(newServerCloudlets, smartThing);
+				nextServerCloudlet(newServerCloudlets, smartThing, context);
 			if (!destinationServerCloudlet.isPresent()) {
 				break;
 			}
@@ -166,18 +205,10 @@ public final class Migration {
 			return Optional.empty();
 		}
 
-		for (FogDevice sc : oldServerCloudlets) {
-			SimulationEventSink.current().trace("Migration", () ->
-				"Candidate " + sc.getName() + " cost "
-					+ sumCostFunction(sc, nextAp.get(), smartThing));
-		}
-
 		FogDevice selectedServerCloudlet = null;
 		double minimumCost = Double.POSITIVE_INFINITY;
 		for (FogDevice sc : numServerCloudlets) {
 			double sumCost = sumCostFunction(sc, nextAp.get(), smartThing);
-			SimulationEventSink.current().trace("Migration", () ->
-				"Eligible candidate " + sc.getName() + " cost " + sumCost);
 			if (sumCost < 0) {
 				continue;
 			}
@@ -187,6 +218,44 @@ public final class Migration {
 			}
 		}
 		return Optional.ofNullable(selectedServerCloudlet);
+	}
+
+	static void applyPrediction(MobileDevice mobileDevice,
+		MigrationPrediction prediction) {
+		mobileDevice.setFutureCoord(prediction.getAdjustedX(),
+			prediction.getAdjustedY());
+		recordPrediction(prediction);
+	}
+
+	static void recordPrediction(MigrationPrediction prediction) {
+		saveDistance(prediction, "distance_between_user_cloudlet.txt");
+	}
+
+	/** Pure candidate result paired with the observation used to derive it. */
+	static final class ServerPrediction {
+		private final List<FogDevice> availableServers;
+		private final MigrationPrediction prediction;
+
+		private ServerPrediction(List<FogDevice> availableServers,
+			MigrationPrediction prediction) {
+			this.availableServers = new ArrayList<FogDevice>(availableServers);
+			this.prediction = prediction;
+		}
+
+		List<FogDevice> getAvailableServers() {
+			return new ArrayList<FogDevice>(availableServers);
+		}
+
+		MigrationPrediction getPrediction() {
+			return prediction;
+		}
+
+		Coordinate adjustedCoordinate() {
+			Coordinate coordinate = new Coordinate();
+			coordinate.setCoordX(prediction.getAdjustedX());
+			coordinate.setCoordY(prediction.getAdjustedY());
+			return coordinate;
+		}
 	}
 
 	public static double sumCostFunction(FogDevice serverCloudlet, ApDevice nextAp,

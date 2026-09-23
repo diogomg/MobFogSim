@@ -30,8 +30,15 @@ public final class Distances {
 	public static Optional<FogDevice> findClosestServerCloudlet(
 		List<FogDevice> serverCloudlets, MobileDevice smartThing) {
 		Objects.requireNonNull(smartThing, "smartThing cannot be null");
+		return findClosestServerCloudlet(serverCloudlets,
+			smartThing.getFutureCoord());
+	}
+
+	/** Pure overload for a separately calculated mobility prediction. */
+	public static Optional<FogDevice> findClosestServerCloudlet(
+		List<FogDevice> serverCloudlets, Coordinate predictedCoordinate) {
 		return Optional.ofNullable(findClosestFogDevice(serverCloudlets,
-			smartThing.getFutureCoord()));
+			predictedCoordinate));
 	}
 
 	public static Optional<FogDevice> findClosestServerCloudletToAp(

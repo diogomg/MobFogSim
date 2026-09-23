@@ -1,10 +1,7 @@
 package org.fog.vmmigration;
 
 import org.fog.entities.MobileDevice;
-import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
-import org.fog.utils.NetworkSlicing;
-import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MovementDirection;
@@ -22,17 +19,6 @@ public class CompleteVM implements VmMigrationTechnique {
 	}
 
 	@Override
-	public void verifyPoints(MobileDevice smartThing,
-		MovementDirection relativePosition) {
-
-		// either (0 or 1) -> policies
-		smartThing.setMigPoint(migPointPolicyFunction(getMigrationPointPolicy()
-			, smartThing));// 0 -> fixed or 1 -> with speed
-		smartThing.setMigZone(migrationZoneFunction(
-			smartThing.getMovementDirection(), relativePosition));
-	}
-
-	@Override
 	public double migrationTimeFunction(double vmSize, double bandwidth) {
 		return MigrationTransferSpec.transferTimeMillis(
 			getTransferSizeBytes(vmSize), bandwidth);
@@ -46,38 +32,6 @@ public class CompleteVM implements VmMigrationTechnique {
 	@Override
 	public double getFixedDelayMillis(MobileDevice smartThing) {
 		return MigrationFixedDelay.calculateMillis(smartThing);
-	}
-
-	@Override
-	public boolean migPointPolicyFunction(MigrationPointPolicy policy,
-		MobileDevice smartThing) {
-		if (policy == null) {
-			throw new IllegalArgumentException("Migration point policy cannot be null");
-		}
-
-		double distance = Distances.checkDistance(smartThing.getSourceAp().getCoord(),
-			smartThing.getCoord());
-		double bandwidth = NetworkSlicing.getSliceBandwidth(
-			smartThing.getVmLocalServerCloudlet(), smartThing.getDestinationServerCloudlet(),
-			smartThing.getNetworkSliceId());
-
-		double transferTimeMillis = migrationTimeFunction(
-			smartThing.getVmMobileDevice().getSize(), bandwidth);
-		double fixedDelayMillis = getFixedDelayMillis(smartThing);
-		smartThing.setMigTime(transferTimeMillis + fixedDelayMillis);
-		SimulationEventSink.current().trace("CompleteVM", () -> "Complete VM "
-				+ smartThing.getMigTime() + " size: "
-				+ smartThing.getVmMobileDevice().getSize() + " bandwidth: " + bandwidth
-				+ " tempo " + transferTimeMillis
-				+ " cloudlet uplink latency " + smartThing.getVmLocalServerCloudlet().getUplinkLatency()
-				+ " fixed migration delay " + fixedDelayMillis);
-		if (policy == MigrationPointPolicy.FIXED) {
-			return migrationPointFunction(distance);
-		}
-		else {
-			// relative according smartThing's speed
-			return migrationPointFunction(distance, smartThing.getMigTime(), smartThing.getSpeed());
-		}
 	}
 
 	@Override

@@ -44,41 +44,61 @@ public class LowestLatency implements DecisionMigration {
 	}
 
 	@Override
-	public boolean shouldMigrate(MobileDevice smartThing) {
-		if (smartThing.getSpeed() == 0) {// smartThing is mobile
-			return false;// no migration
+	public MigrationDecision evaluate(MobileDevice smartThing,
+		MigrationDecisionContext context) {
+		if (smartThing == null || context == null) {
+			throw new IllegalArgumentException(
+				"Migration evaluation inputs cannot be null");
 		}
-		setCorrentAP(smartThing.getSourceAp());
+		if (smartThing.getSpeed() == 0) {// smartThing is mobile
+			return MigrationDecision.stay(smartThing, null,
+				context.getPredictions(), "mobile device is stationary");
+		}
+		ApDevice currentAp = smartThing.getSourceAp();
+		if (currentAp == null) {
+			return MigrationDecision.stay(smartThing, null,
+				context.getPredictions(), "mobile device has no access point");
+		}
 		// return the relative position between access point and smart thing -> set this value
-		setSmartThingDirection(DiscoverLocalization.discoverDirection(
-			getCorrentAP().getCoord(), smartThing.getCoord()));
+		MovementDirection relativeDirection = DiscoverLocalization.discoverDirection(
+			currentAp.getCoord(), smartThing.getCoord());
 
-		smartThing.getMigrationTechnique().verifyPoints(smartThing,
-			getSmartThingDirection());
+		MigrationPointEvaluation points = smartThing.getMigrationTechnique()
+			.evaluatePoints(smartThing, relativeDirection);
 
-		if (!(smartThing.isMigPoint() && smartThing.isMigZone())) {
-			return false;// no migration
+		if (!points.allowsMigration()) {
+			return MigrationDecision.stay(smartThing, points,
+				context.getPredictions(), "outside migration point or direction cone");
 		}
 		else {
 			Optional<FogDevice> selectedServerCloudlet =
 				Migration.lowestLatencyCostServerCloudlet(
-					serverCloudlets, apDevices, smartThing);
+					serverCloudlets, apDevices, smartThing, context);
 			if (!selectedServerCloudlet.isPresent()) {
-				return false;
+				return MigrationDecision.stay(smartThing, points,
+					context.getPredictions(), "no latency candidate is available");
 			}
-			setNextServerCloudlet(selectedServerCloudlet.get());
+			FogDevice nextServer = selectedServerCloudlet.get();
 			Optional<ApDevice> selectedAp = Migration.nextAp(apDevices, smartThing);
 			if (!selectedAp.isPresent()) {
-				return false;
+				return MigrationDecision.stay(smartThing, points,
+					context.getPredictions(), "no access-point candidate is available");
 			}
-			setNextAp(selectedAp.get());
+			ApDevice nextAccessPoint = selectedAp.get();
 			// verify if the next Ap is edge (return false if the ServerCloudlet destination is the same ServerCloud source)
-			if (!Migration.isEdgeAp(getNextAp(), smartThing)) {
-				return false;// no migration
+			if (!Migration.isEdgeAp(nextAccessPoint, smartThing)) {
+				return MigrationDecision.stay(smartThing, points,
+					context.getPredictions(), "next access point uses the current server");
 			}
+			Optional<FogDevice> destination = MobileEdgeHostSelector.chooseDestination(
+				smartThing, nextServer, context.getActiveMobileDevices(),
+				context.getDestinationPolicy());
+			return destination.isPresent()
+				? MigrationDecision.migrate(smartThing, destination.get(), points,
+					context.getPredictions())
+				: MigrationDecision.stay(smartThing, points,
+					context.getPredictions(), "no eligible VM destination");
 		}
-		return MobileEdgeHostSelector.selectDestination(smartThing,
-			getNextServerCloudlet());
 	}
 
 	public ApDevice getCorrentAP() {

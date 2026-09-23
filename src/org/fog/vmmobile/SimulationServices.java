@@ -1,5 +1,7 @@
 package org.fog.vmmobile;
 
+import java.util.Random;
+
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.entities.TupleRoutingService;
 import org.fog.entities.HandoffCoordinator;
@@ -44,8 +46,17 @@ public final class SimulationServices {
 		MobileLifecyclePort lifecycle, NetworkSlicePort networkSlices,
 		MobileStatisticsPort statistics, SimulationEventLog events,
 		SimulationOutput output) {
+		this(cloudSim, lifecycle, networkSlices, statistics, events, output,
+			new Random(0L));
+	}
+
+	public SimulationServices(CloudSimPort cloudSim,
+		MobileLifecyclePort lifecycle, NetworkSlicePort networkSlices,
+		MobileStatisticsPort statistics, SimulationEventLog events,
+		SimulationOutput output, Random migrationRandom) {
 		if (cloudSim == null || lifecycle == null || networkSlices == null
-			|| statistics == null || events == null || output == null) {
+			|| statistics == null || events == null || output == null
+			|| migrationRandom == null) {
 			throw new IllegalArgumentException(
 				"Simulation service dependencies cannot be null");
 		}
@@ -57,7 +68,7 @@ public final class SimulationServices {
 		this.accessPointAssociation = new AccessPointAssociationService(cloudSim);
 		this.handoff = new HandoffCoordinator(cloudSim, networkSlices, events);
 		this.migration = new MigrationCoordinator(cloudSim, networkSlices,
-			statistics, events, output);
+			statistics, events, output, migrationRandom);
 		this.tupleRouting = new TupleRoutingService(cloudSim);
 		this.results = new SimulationResultsService(events);
 	}
@@ -65,10 +76,10 @@ public final class SimulationServices {
 	/** Builds the production graph around objects owned by a run context. */
 	static SimulationServices forRun(CloudSimPort cloudSim,
 		MyStatistics statistics, SimulationEventSink events,
-		RunOutputManager output) {
+		RunOutputManager output, Random migrationRandom) {
 		return new SimulationServices(cloudSim, MobileLifecycleAdapter.INSTANCE,
 			NetworkSliceAdapter.INSTANCE, new MyStatisticsAdapter(statistics), events,
-			new RunOutputAdapter(output));
+			new RunOutputAdapter(output), migrationRandom);
 	}
 
 	/** Temporary bridge for tests and legacy constructors outside a run context. */
@@ -76,7 +87,8 @@ public final class SimulationServices {
 		return new SimulationServices(CloudSimAdapter.INSTANCE,
 			MobileLifecycleAdapter.INSTANCE, NetworkSliceAdapter.INSTANCE,
 			LegacySimulationAdapters.statistics(), LegacySimulationAdapters.events(),
-			LegacySimulationAdapters.output());
+			LegacySimulationAdapters.output(),
+			LegacySimulationAdapters.migrationRandom());
 	}
 
 	public CloudSimPort getCloudSim() {

@@ -180,6 +180,26 @@ public final class MobileSession {
 		return migrationGeneration;
 	}
 
+	/**
+	 * Commits a decision only when the session still matches the snapshot used
+	 * by its policy evaluation.
+	 */
+	public boolean decideMigration(long expectedGeneration,
+		MigrationState expectedState) {
+		if (expectedState == null
+			|| lifecycle != MobileDeviceLifecycle.ACTIVE
+			|| migrationGeneration != expectedGeneration
+			|| migration != expectedState
+			|| (migration != MigrationState.IDLE
+				&& migration != MigrationState.INSTALLED
+				&& migration != MigrationState.ABORTED)) {
+			return false;
+		}
+		migrationGeneration = nextGeneration(migrationGeneration, "migration");
+		migration = MigrationState.DECIDED;
+		return true;
+	}
+
 	public long beginMigrationPreparation() {
 		if (migration == MigrationState.IDLE
 			|| migration == MigrationState.INSTALLED
