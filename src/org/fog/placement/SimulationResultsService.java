@@ -1,31 +1,52 @@
 package org.fog.placement;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
+import org.fog.entities.ApDevice;
+import org.fog.entities.FogDevice;
+import org.fog.entities.MobileDevice;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
 import org.fog.vmmobile.adapter.LegacySimulationAdapters;
 import org.fog.vmmobile.port.SimulationEventLog;
 
 /** Formats the console view of one immutable simulation-metrics snapshot. */
 public final class SimulationResultsService {
 	private final SimulationEventLog events;
+	private final SimulationMetricsService metricsService;
 
 	/** Retains the historical constructor while persistence is context-owned. */
 	public SimulationResultsService(RunOutputManager output) {
-		if (output == null) {
-			throw new IllegalArgumentException("Run output manager cannot be null");
-		}
-		this.events = LegacySimulationAdapters.events();
+		this(legacyEvents(output));
 	}
 
 	public SimulationResultsService(SimulationEventLog events) {
-		if (events == null) {
+		this(events, new SimulationMetricsService(CloudSimAdapter.INSTANCE,
+			LegacySimulationAdapters.metrics()));
+	}
+
+	public SimulationResultsService(SimulationEventLog events,
+		SimulationMetricsService metricsService) {
+		if (events == null || metricsService == null) {
 			throw new IllegalArgumentException("Simulation event log cannot be null");
 		}
 		this.events = events;
+		this.metricsService = metricsService;
+	}
+
+	/** Captures and renders the single terminal snapshot for either controller. */
+	public SimulationMetricsSnapshot captureAndWrite(
+		List<FogDevice> serverCloudlets, List<ApDevice> accessPoints,
+		List<MobileDevice> mobileDevices,
+		Map<String, Application> applications) {
+		SimulationMetricsSnapshot metrics = metricsService.capture(serverCloudlets,
+			accessPoints, mobileDevices);
+		write(metrics, applications);
+		return metrics;
 	}
 
 	/** Writes the console view; the run context publishes the atomic report. */
@@ -53,6 +74,8 @@ public final class SimulationResultsService {
 			line(cloudlet.getName() + ": Energy Consumed = "
 				+ cloudlet.getEnergy());
 		}
+		line("Cost of execution in cloud = "
+			+ metrics.getCloudExecutionCost());
 		line("Total cloudlet energy: " + metrics.getTotalCloudletEnergy()
 			+ " Mean: " + metrics.getAverageCloudletEnergy());
 		line("=========================================");
@@ -156,6 +179,9 @@ public final class SimulationResultsService {
 			+ metrics.getMeanMigrationUsageByteMilliseconds());
 		line("Total network usage (byte-ms) = "
 			+ metrics.getTotalUsageByteMilliseconds());
+		line("Mean bytes in flight over simulation horizon (bytes) = "
+			+ metrics.perSimulationMillisecond(
+				metrics.getTotalUsageByteMilliseconds()));
 	}
 
 	private void writeSliceReconfiguration(SimulationMetricsSnapshot metrics) {
@@ -218,5 +244,12 @@ public final class SimulationResultsService {
 
 	private void line(String value) {
 		events.detailLine(() -> value);
+	}
+
+	private static SimulationEventLog legacyEvents(RunOutputManager output) {
+		if (output == null) {
+			throw new IllegalArgumentException("Run output manager cannot be null");
+		}
+		return LegacySimulationAdapters.events();
 	}
 }

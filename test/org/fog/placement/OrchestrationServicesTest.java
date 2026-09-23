@@ -20,9 +20,11 @@ import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
+import org.fog.entities.FogDevice;
 import org.fog.localization.Coordinate;
 import org.fog.localization.MobilitySample;
 import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.TopologyService;
 import org.fog.utils.NetworkSlicing;
 import org.fog.utils.NetworkUsageMonitor;
 import org.fog.utils.TimeKeeper;
@@ -88,6 +90,21 @@ public class OrchestrationServicesTest {
 	public void resultServiceHasASafeLabelForAnUnknownLoop() {
 		assertEquals("Loop 42", SimulationResultsService.loopLabel(42,
 			Collections.emptyMap()));
+	}
+
+	@Test
+	public void topologyServiceConnectsAConfiguredParentChildHierarchy() {
+		FogDevice parent = new FogDevice("parent", 0, 0, 1);
+		FogDevice child = new FogDevice("child", 0, 0, 2);
+		child.setParentId(parent.getId());
+		child.setUplinkLatency(4.5);
+
+		new TopologyService().connectHierarchy(
+			Collections.singletonList(parent), Collections.singletonList(child));
+
+		assertTrue(parent.getChildrenIds().contains(child.getId()));
+		assertEquals(4.5,
+			parent.getChildToLatencyMap().get(child.getId()), 0.0);
 	}
 
 	@Test

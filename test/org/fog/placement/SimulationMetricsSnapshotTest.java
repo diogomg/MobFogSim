@@ -102,6 +102,22 @@ public class SimulationMetricsSnapshotTest {
 	}
 
 	@Test
+	public void cloudExecutionCostIsCapturedWithoutRequiringACloudDevice() {
+		FogDevice cloud = new FogDevice("cloud", 0, 0, 7);
+		cloud.setTotalCost(12.5);
+
+		SimulationMetricsSnapshot withCloud = capture(
+			Collections.singletonList(cloud), Collections.<ApDevice>emptyList(),
+			1.0, 1L);
+		SimulationMetricsSnapshot withoutCloud = capture(
+			Collections.<FogDevice>emptyList(),
+			Collections.<ApDevice>emptyList(), 1.0, 1L);
+
+		assertEquals(12.5, withCloud.getCloudExecutionCost(), DELTA);
+		assertEquals(0.0, withoutCloud.getCloudExecutionCost(), DELTA);
+	}
+
+	@Test
 	public void networkAccountingIsCapturedWithExplicitDimensions() {
 		NetworkUsageMonitor.recordCompletedTuple(new NetworkTransferUsage(
 			10.0, 2.0, 3.0, 5.0));

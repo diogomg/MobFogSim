@@ -223,6 +223,7 @@ public final class SimulationMetricsSnapshot {
 	private final List<DeviceEnergy> mobileDevices;
 	private final double averageCloudletEnergy;
 	private final double averageAccessPointEnergy;
+	private final double cloudExecutionCost;
 	private final Map<Integer, Double> mobilePowerHistory;
 	private final Map<Integer, Double> mobileEnergyHistory;
 	private final Map<Integer, LoopTiming> loopTimings;
@@ -252,6 +253,7 @@ public final class SimulationMetricsSnapshot {
 		this.mobileDevices = deviceEnergy(mobileDevices);
 		this.averageCloudletEnergy = averageEnergy(this.cloudlets);
 		this.averageAccessPointEnergy = averageEnergy(this.accessPoints);
+		this.cloudExecutionCost = cloudExecutionCost(serverCloudlets);
 		this.mobilePowerHistory = immutableDoubleMap(statistics.getPowerHistory());
 		this.mobileEnergyHistory = immutableDoubleMap(statistics.getEnergyHistory());
 		this.loopTimings = loopTimings(timeKeeper);
@@ -325,6 +327,11 @@ public final class SimulationMetricsSnapshot {
 
 	public double getAverageAccessPointEnergy() {
 		return averageAccessPointEnergy;
+	}
+
+	/** Historical cloud-controller cost metric, now shared by both controllers. */
+	public double getCloudExecutionCost() {
+		return cloudExecutionCost;
 	}
 
 	public double getTotalAccessPointEnergy() {
@@ -491,6 +498,15 @@ public final class SimulationMetricsSnapshot {
 
 	private static double averageEnergy(List<DeviceEnergy> devices) {
 		return devices.isEmpty() ? 0.0 : totalEnergy(devices) / devices.size();
+	}
+
+	private static double cloudExecutionCost(List<FogDevice> devices) {
+		for (FogDevice device : devices) {
+			if (device != null && "cloud".equals(device.getName())) {
+				return finiteOrZero(device.getTotalCost());
+			}
+		}
+		return 0.0;
 	}
 
 	private static Map<Integer, LoopTiming> loopTimings(TimeKeeper timeKeeper) {

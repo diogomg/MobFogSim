@@ -6,6 +6,7 @@ import org.fog.vmmobile.AppExample;
 import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.port.MobileStatisticsPort;
 import org.fog.vmmobile.port.SimulationEventLog;
+import org.fog.vmmobile.port.SimulationMetricsPort;
 import org.fog.vmmobile.port.SimulationOutput;
 
 /**
@@ -22,6 +23,10 @@ public final class LegacySimulationAdapters {
 
 	public static SimulationEventLog events() {
 		return SimulationEventSink.current();
+	}
+
+	public static SimulationMetricsPort metrics() {
+		return SimulationMetricsAdapter.current();
 	}
 
 	public static SimulationOutput output() {

@@ -3,7 +3,6 @@ package org.fog.placement;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,7 +45,6 @@ import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.SimulationDuration;
 import org.fog.utils.NetworkSlicing;
-import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
 import org.fog.vmmigration.MigrationCoordinator;
 import org.fog.vmmigration.MigrationEvent;
@@ -82,7 +80,6 @@ public class MobileController extends SimEntity {
 	private static int seed;
 
 	private static List<FogDevice> serverCloudlets;
-	private static FogDeviceIndex serverCloudletIndex = FogDeviceIndex.empty();
 	private static List<MobileDevice> smartThings;
 	private static List<MobileDevice> allSmartThings;
 	private static final Map<String, Integer> activeSensorApplications =
@@ -117,7 +114,6 @@ public class MobileController extends SimEntity {
 		migStrategyPolicy = MigrationStrategyPolicy.LOWEST_LATENCY;
 		seed = 0;
 		serverCloudlets = new ArrayList<FogDevice>();
-		serverCloudletIndex = FogDeviceIndex.empty();
 		smartThings = new ArrayList<MobileDevice>();
 		allSmartThings = new ArrayList<MobileDevice>();
 		activeSensorApplications.clear();
@@ -128,7 +124,7 @@ public class MobileController extends SimEntity {
 	}
 
 	public MobileController() {
-		SimulationServices services = SimulationServices.legacy();
+		SimulationServices services = SimulationServices.currentOrLegacy();
 		this.resultsService = services.getResults();
 		this.mobilityService = services.getMobility();
 		this.associationService = services.getAssociation();
@@ -154,7 +150,7 @@ public class MobileController extends SimEntity {
 		Coordinate coordDevices, int seed, boolean migrationAble) {
 		this(name, serverCloudlets, apDevices, smartThings, brokers, moduleMapping,
 			migPointPolicy, migStrategyPolicy, stepPolicy, coordDevices, seed,
-			migrationAble, SimulationServices.legacy());
+			migrationAble, SimulationServices.currentOrLegacy());
 	}
 
 	public MobileController(String name, List<FogDevice> serverCloudlets,
@@ -190,7 +186,8 @@ public class MobileController extends SimEntity {
 		setMigrationStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
-		connectWithLatencies();
+		services.getTopology().connectHierarchy(getServerCloudlets(),
+			getSmartThings());
 		initializeCPULoads();
 		SimulationContext context = SimulationContext.currentOrNull();
 		setRand(context == null ? new Random(getSeed() * Long.MAX_VALUE)
@@ -214,7 +211,7 @@ public class MobileController extends SimEntity {
 		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
 		Coordinate coordDevices, int seed) {
 		super(name);
-		SimulationServices services = SimulationServices.legacy();
+		SimulationServices services = SimulationServices.currentOrLegacy();
 		this.resultsService = services.getResults();
 		this.mobilityService = services.getMobility();
 		this.associationService = services.getAssociation();
@@ -237,27 +234,13 @@ public class MobileController extends SimEntity {
 		setMigrationStrategyPolicy(migStrategyPolicy);
 		setStepPolicy(stepPolicy);
 		setCoordDevices(coordDevices == null ? new Coordinate() : coordDevices);
-		connectWithLatencies();
+		services.getTopology().connectHierarchy(getServerCloudlets(),
+			getSmartThings());
 		initializeCPULoads();
 		SimulationContext context = SimulationContext.currentOrNull();
 		setRand(context == null ? new Random(getSeed() * Long.MAX_VALUE)
 			: context.random("mobile-controller"));
 
-	}
-
-	private void connectWithLatencies() {
-		for (FogDevice st : getSmartThings()) {
-			FogDevice parent = getFogDeviceById(st.getParentId());
-			if (parent == null) {
-				continue;
-			}
-			double latency = st.getUplinkLatency();
-			parent.attachChild(st.getId(), latency);
-		}
-	}
-
-	private FogDevice getFogDeviceById(int id) {
-		return serverCloudletIndex.getById(id);
 	}
 
 	private void initializeCPULoads() {
@@ -474,21 +457,15 @@ public class MobileController extends SimEntity {
 			"Stopping simulation with " + getSmartThings().size()
 				+ " active mobile devices");
 		SimulationContext context = SimulationContext.currentOrNull();
-		long wallTime = context == null
-			? Calendar.getInstance().getTimeInMillis()
-			: context.getClock().wallTimeMillis();
 		for (MobileDevice mobileDevice : getAllSmartThings()) {
 			recordTerminalPowerAndEnergy(mobileDevice);
 		}
-		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+		SimulationMetricsSnapshot metrics = resultsService.captureAndWrite(
 			getServerCloudlets(), getApDevices(), getAllSmartThings(),
-			MyStatistics.getInstance(), TimeKeeper.getInstance(), CloudSim.clock(),
-			wallTime
-				- TimeKeeper.getInstance().getSimulationStartTime());
+			getApplications());
 		if (context != null) {
 			context.recordMetrics(metrics);
 		}
-		resultsService.write(metrics, getApplications());
 		CloudSim.terminateSimulation();
 	}
 
@@ -1402,13 +1379,11 @@ public class MobileController extends SimEntity {
 	public static void setServerCloudlets(List<FogDevice> serverCloudlets) {
 		if (serverCloudlets == null) {
 			MobileController.serverCloudlets = null;
-			serverCloudletIndex = FogDeviceIndex.empty();
 			return;
 		}
 		List<FogDevice> copy = new ArrayList<FogDevice>(serverCloudlets);
-		FogDeviceIndex index = FogDeviceIndex.copyOf(copy);
+		FogDeviceIndex.copyOf(copy);
 		MobileController.serverCloudlets = copy;
-		serverCloudletIndex = index;
 	}
 
 	public static List<MobileDevice> getSmartThings() {

@@ -81,6 +81,25 @@ public final class TopologyService {
 		}
 	}
 
+	/** Connects each child to its configured parent using its uplink latency. */
+	public void connectHierarchy(List<? extends FogDevice> possibleParents,
+		List<? extends FogDevice> children) {
+		if (possibleParents == null || children == null) {
+			throw new IllegalArgumentException(
+				"Topology parent and child lists cannot be null");
+		}
+		FogDeviceIndex parents = FogDeviceIndex.copyOf(possibleParents);
+		for (FogDevice child : children) {
+			if (child == null) {
+				throw new IllegalArgumentException("Topology child cannot be null");
+			}
+			FogDevice parent = parents.getById(child.getParentId());
+			if (parent != null) {
+				parent.attachChild(child.getId(), child.getUplinkLatency());
+			}
+		}
+	}
+
 	private void writeInitialMobility(MobileDevice mobileDevice) {
 		try (PrintWriter details = output.newDetailedPrintWriter(
 			mobileDevice.getMyId() + "out.txt", true)) {

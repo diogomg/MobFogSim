@@ -1,7 +1,6 @@
 package org.fog.placement;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +10,6 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.fog.application.AppEdge;
-import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.Actuator;
@@ -23,17 +21,16 @@ import org.fog.utils.Config;
 import org.fog.utils.FogEvents;
 import org.fog.utils.FogUtils;
 import org.fog.utils.ModuleLaunchConfig;
-import org.fog.utils.TimeKeeper;
-import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmobile.FogDeviceIndex;
-import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.SimulationContext;
+import org.fog.vmmobile.SimulationServices;
+import org.fog.vmmobile.port.SimulationEventLog;
 
 public class Controller extends SimEntity {
 
 	public static boolean ONLY_CLOUD = false;
 
 	private List<FogDevice> fogDevices;
-	private FogDeviceIndex fogDeviceIndex = FogDeviceIndex.empty();
 	private List<Sensor> sensors;
 	private List<Actuator> actuators;
 
@@ -42,12 +39,24 @@ public class Controller extends SimEntity {
 	private ModuleMapping moduleMapping;
 	private Map<Integer, Double> globalCurrentCpuLoad;
 	private boolean shutdownRequested;
-	private final SimulationEventSink events;
+	private final SimulationEventLog events;
+	private final SimulationResultsService resultsService;
 
 	public Controller(String name, List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, ModuleMapping moduleMapping) {
+		this(name, fogDevices, sensors, actuators, moduleMapping,
+			SimulationServices.currentOrLegacy());
+	}
+
+	public Controller(String name, List<FogDevice> fogDevices, List<Sensor> sensors,
+		List<Actuator> actuators, ModuleMapping moduleMapping,
+		SimulationServices services) {
 		super(name);
-		this.events = SimulationEventSink.current();
+		if (services == null) {
+			throw new IllegalArgumentException("Simulation services cannot be null");
+		}
+		this.events = services.getEvents();
+		this.resultsService = services.getResults();
 		this.applications = new HashMap<String, Application>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
 		setModuleMapping(moduleMapping);
@@ -57,21 +66,7 @@ public class Controller extends SimEntity {
 		setFogDevices(fogDevices);
 		setActuators(actuators);
 		setSensors(sensors);
-		connectWithLatencies();
-	}
-
-	private FogDevice getFogDeviceById(int id) {
-		return fogDeviceIndex.getById(id);
-	}
-
-	private void connectWithLatencies() {
-		for (FogDevice fogDevice : getFogDevices()) {
-			FogDevice parent = getFogDeviceById(fogDevice.getParentId());
-			if (parent == null)
-				continue;
-			double latency = fogDevice.getUplinkLatency();
-			parent.attachChild(fogDevice.getId(), latency);
-		}
+		services.getTopology().connectHierarchy(getFogDevices(), getFogDevices());
 	}
 
 	@Override
@@ -119,81 +114,14 @@ public class Controller extends SimEntity {
 			return;
 		}
 		shutdownRequested = true;
-		printTimeDetails();
-		printPowerDetails();
-		printCostDetails();
-		printNetworkUsageDetails();
-		CloudSim.terminateSimulation();
-	}
-
-	private void printNetworkUsageDetails() {
-		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+		SimulationMetricsSnapshot metrics = resultsService.captureAndWrite(
 			getFogDevices(), Collections.<ApDevice>emptyList(),
-			Collections.<MobileDevice>emptyList(), MyStatistics.getInstance(),
-			TimeKeeper.getInstance(), CloudSim.clock(), 0L);
-		line("Total network usage (byte-ms) = "
-			+ metrics.getTotalUsageByteMilliseconds());
-		line("Mean bytes in flight over simulation horizon (bytes) = "
-			+ metrics.perSimulationMillisecond(
-				metrics.getTotalUsageByteMilliseconds()));
-
-	}
-
-	private FogDevice getCloud() {
-		for (FogDevice dev : getFogDevices())
-			if (dev.getName().equals("cloud"))
-				return dev;
-		return null;
-	}
-
-	private void printCostDetails() {
-		line("Cost of execution in cloud = " + getCloud().getTotalCost());
-	}
-
-	private void printPowerDetails() {
-		// TODO Auto-generated method stub
-		for (FogDevice fogDevice : getFogDevices()) {
-			line(fogDevice.getName() + " : Energy Consumed = "
-				+ fogDevice.getEnergyConsumption());
+			Collections.<MobileDevice>emptyList(), getApplications());
+		SimulationContext context = SimulationContext.currentOrNull();
+		if (context != null) {
+			context.recordMetrics(metrics);
 		}
-	}
-
-	private String getStringForLoopId(int loopId) {
-		for (String appId : getApplications().keySet()) {
-			Application app = getApplications().get(appId);
-			for (AppLoop loop : app.getLoops()) {
-				if (loop.getLoopId() == loopId)
-					return loop.getModules().toString();
-			}
-		}
-		return null;
-	}
-
-	private void printTimeDetails() {
-		line("=========================================");
-		line("============== RESULTS ==================");
-		line("=========================================");
-		line("EXECUTION TIME : "
-			+ (Calendar.getInstance().getTimeInMillis() - TimeKeeper.getInstance()
-				.getSimulationStartTime()));
-		line("=========================================");
-		line("APPLICATION LOOP DELAYS");
-		line("=========================================");
-		for (Integer loopId : TimeKeeper.getInstance().getLoopIdToTupleIds().keySet()) {
-
-			line(getStringForLoopId(loopId) + " ---> "
-				+ TimeKeeper.getInstance().getLoopIdToCurrentAverage().get(loopId));
-		}
-		line("=========================================");
-		line("TUPLE CPU EXECUTION DELAY");
-		line("=========================================");
-
-		for (String tupleType : TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().keySet()) {
-			line(tupleType + " ---> "
-				+ TimeKeeper.getInstance().getTupleTypeToAverageCpuTime().get(tupleType));
-		}
-
-		line("=========================================");
+		CloudSim.terminateSimulation();
 	}
 
 	protected void manageResources() {
@@ -278,9 +206,8 @@ public class Controller extends SimEntity {
 
 	public void setFogDevices(List<FogDevice> fogDevices) {
 		List<FogDevice> copy = copyList(fogDevices, "Fog device list");
-		FogDeviceIndex index = FogDeviceIndex.copyOf(copy);
+		FogDeviceIndex.copyOf(copy);
 		this.fogDevices = copy;
-		this.fogDeviceIndex = index;
 	}
 
 	public Map<String, Integer> getAppLaunchDelays() {

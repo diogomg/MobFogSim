@@ -8,9 +8,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import java.util.function.Supplier;
 
 import org.cloudbus.cloudsim.core.SimulationEventCounters;
+import org.fog.entities.ApDevice;
+import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.placement.SimulationMetricsSnapshot;
 import org.fog.utils.MigrationTransferSpec;
@@ -22,6 +26,7 @@ import org.fog.vmmobile.port.MobileLifecyclePort;
 import org.fog.vmmobile.port.MobileStatisticsPort;
 import org.fog.vmmobile.port.NetworkSlicePort;
 import org.fog.vmmobile.port.SimulationEventLog;
+import org.fog.vmmobile.port.SimulationMetricsPort;
 import org.fog.vmmobile.port.SimulationOutput;
 import org.junit.Test;
 
@@ -32,9 +37,10 @@ public class SimulationServicesTest {
 	public void injectedServiceGraphRunsAgainstFakePortsWithoutCloudSim() {
 		FakeCloudSim cloudSim = new FakeCloudSim();
 		RecordingEvents events = new RecordingEvents();
+		RecordingMetrics metrics = new RecordingMetrics();
 		SimulationServices services = new SimulationServices(cloudSim,
 			new NoOpLifecycle(), new NoOpNetworkSlices(), new NoOpStatistics(),
-			events, new InMemoryOutput());
+			events, new InMemoryOutput(), metrics, new Random(0L));
 
 		assertSame(cloudSim, services.getCloudSim());
 		assertNotNull(services.getTopology());
@@ -52,11 +58,13 @@ public class SimulationServicesTest {
 		assertEquals(-1, services.getTupleRouting().childRoute(
 			Collections.<Integer>emptyList(), 99));
 
-		SimulationMetricsSnapshot metrics = SimulationMetricsSnapshot.capture(
+		SimulationMetricsSnapshot snapshot = services.getResults().captureAndWrite(
 			Collections.emptyList(), Collections.emptyList(),
-			Collections.emptyList(), new MyStatistics(), new TimeKeeper(), 0.0, 0L);
-		services.getResults().write(metrics, Collections.emptyMap());
+			Collections.emptyList(), Collections.emptyMap());
 		assertTrue(events.detailLines > 0);
+		assertNotNull(snapshot);
+		assertEquals(123.0, metrics.simulationTimeMillis, 0.0);
+		assertEquals(456L, metrics.wallTimeMillis);
 	}
 
 	private static final class FakeCloudSim implements CloudSimPort {
@@ -140,5 +148,21 @@ public class SimulationServicesTest {
 		@Override public void finishWithoutConnection(int id, double time) { }
 		@Override public void startWithoutVm(int id, double time) { }
 		@Override public void discardOpenIntervals(int id) { }
+	}
+
+	private static final class RecordingMetrics implements SimulationMetricsPort {
+		private double simulationTimeMillis;
+		private long wallTimeMillis;
+
+		@Override
+		public SimulationMetricsSnapshot capture(List<FogDevice> serverCloudlets,
+			List<ApDevice> accessPoints, List<MobileDevice> mobileDevices,
+			double simulationTimeMillis, long wallTimeMillis) {
+			this.simulationTimeMillis = simulationTimeMillis;
+			this.wallTimeMillis = wallTimeMillis;
+			return SimulationMetricsSnapshot.capture(serverCloudlets, accessPoints,
+				mobileDevices, new MyStatistics(), new TimeKeeper(),
+				simulationTimeMillis, 0L);
+		}
 	}
 }
