@@ -6,13 +6,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Random;
 
-import org.cloudbus.cloudsim.NetworkTopology;
-import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
+import org.fog.vmmobile.adapter.RunOutputAdapter;
+import org.fog.vmmobile.port.CloudSimPort;
+import org.fog.vmmobile.port.SimulationOutput;
 
 /**
  * Loads mobility input and builds the topology used by a simulation.
@@ -21,6 +22,22 @@ import org.fog.localization.Coordinate;
  * entry point only decides which topology to create.</p>
  */
 public final class TopologyService {
+	private final CloudSimPort cloudSim;
+	private final SimulationOutput output;
+
+	/** Compatibility constructor; run code injects these ports via SimulationServices. */
+	public TopologyService() {
+		this(CloudSimAdapter.INSTANCE, RunOutputAdapter.current());
+	}
+
+	public TopologyService(CloudSimPort cloudSim, SimulationOutput output) {
+		if (cloudSim == null || output == null) {
+			throw new IllegalArgumentException(
+				"Topology service dependencies cannot be null");
+		}
+		this.cloudSim = cloudSim;
+		this.output = output;
+	}
 
 	/** Loads, assigns, and records the initial position of every mobile user. */
 	public void loadMobility(Path mobilityDirectory, Path orderManifest,
@@ -44,7 +61,7 @@ public final class TopologyService {
 		TopologyPlan plan = TopologyPlan.transport(serverCloudlets, baseLatency,
 			random);
 		for (TopologyPlan.Link link : plan.getLinks()) {
-			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
+			cloudSim.addNetworkLink(link.getSourceId(), link.getDestinationId(),
 				link.getBandwidth(), link.getLatency());
 		}
 	}
@@ -59,13 +76,12 @@ public final class TopologyService {
 			attachment.getServerCloudlet().attachAccessPoint(
 				attachment.getAccessPoint());
 			TopologyPlan.Link link = attachment.getLink();
-			NetworkTopology.addLink(link.getSourceId(), link.getDestinationId(),
+			cloudSim.addNetworkLink(link.getSourceId(), link.getDestinationId(),
 				link.getBandwidth(), link.getLatency());
 		}
 	}
 
 	private void writeInitialMobility(MobileDevice mobileDevice) {
-		RunOutputManager output = RunOutputManager.getInstance();
 		try (PrintWriter details = output.newDetailedPrintWriter(
 			mobileDevice.getMyId() + "out.txt", true)) {
 			details.println(mobileDevice.getMyId() + " Position: "
@@ -96,7 +112,7 @@ public final class TopologyService {
 				+ mobileDevice.getCoord().getCoordX() + "\t"
 				+ mobileDevice.getCoord().getCoordY() + "\t"
 				+ mobileDevice.getDirection() + "\t" + mobileDevice.getSpeed()
-				+ "\t" + CloudSim.clock());
+				+ "\t" + cloudSim.simulationTimeMillis());
 		} catch (IOException error) {
 			throw new IllegalStateException("Could not record initial route for "
 				+ mobileDevice.getName(), error);

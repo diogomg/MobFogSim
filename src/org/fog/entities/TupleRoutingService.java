@@ -5,11 +5,25 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.math3.util.Pair;
-import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.application.AppModule;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
+import org.fog.vmmobile.port.CloudSimPort;
 
 /** Resolves tuple destinations without sending simulation events. */
 public final class TupleRoutingService {
+	private final CloudSimPort cloudSim;
+
+	/** Compatibility constructor; run code injects this port via SimulationServices. */
+	public TupleRoutingService() {
+		this(CloudSimAdapter.INSTANCE);
+	}
+
+	public TupleRoutingService(CloudSimPort cloudSim) {
+		if (cloudSim == null) {
+			throw new IllegalArgumentException("CloudSim port cannot be null");
+		}
+		this.cloudSim = cloudSim;
+	}
 
 	/** One actuator route selected for a tuple. */
 	public static final class ActuatorRoute {
@@ -130,12 +144,7 @@ public final class TupleRoutingService {
 		return Collections.unmodifiableList(matches);
 	}
 
-	private static Object entityOrNull(int entityId) {
-		try {
-			return CloudSim.getEntity(entityId);
-		} catch (IndexOutOfBoundsException error) {
-			// Stale child/association IDs are not routes.
-			return null;
-		}
+	private Object entityOrNull(int entityId) {
+		return cloudSim.entityOrNull(entityId);
 	}
 }

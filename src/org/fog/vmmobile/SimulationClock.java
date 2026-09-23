@@ -1,6 +1,6 @@
 package org.fog.vmmobile;
 
-import org.cloudbus.cloudsim.core.CloudSim;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
 
 /** Clock boundary used by a simulation context. */
 public interface SimulationClock {
@@ -8,15 +8,5 @@ public interface SimulationClock {
 
 	long wallTimeMillis();
 
-	SimulationClock SYSTEM = new SimulationClock() {
-		@Override
-		public double simulationTimeMillis() {
-			return CloudSim.clock();
-		}
-
-		@Override
-		public long wallTimeMillis() {
-			return System.currentTimeMillis();
-		}
-	};
+	SimulationClock SYSTEM = CloudSimAdapter.INSTANCE;
 }

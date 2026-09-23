@@ -6,18 +6,26 @@ import java.util.Map.Entry;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.application.AppLoop;
 import org.fog.application.Application;
-import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.adapter.LegacySimulationAdapters;
+import org.fog.vmmobile.port.SimulationEventLog;
 
 /** Formats the console view of one immutable simulation-metrics snapshot. */
 public final class SimulationResultsService {
-	private final SimulationEventSink events;
+	private final SimulationEventLog events;
 
 	/** Retains the historical constructor while persistence is context-owned. */
 	public SimulationResultsService(RunOutputManager output) {
 		if (output == null) {
 			throw new IllegalArgumentException("Run output manager cannot be null");
 		}
-		this.events = SimulationEventSink.current();
+		this.events = LegacySimulationAdapters.events();
+	}
+
+	public SimulationResultsService(SimulationEventLog events) {
+		if (events == null) {
+			throw new IllegalArgumentException("Simulation event log cannot be null");
+		}
+		this.events = events;
 	}
 
 	/** Writes the console view; the run context publishes the atomic report. */

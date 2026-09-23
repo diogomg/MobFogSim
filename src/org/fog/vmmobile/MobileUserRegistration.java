@@ -32,7 +32,7 @@ public final class MobileUserRegistration {
 			throw new IllegalStateException("Finished mobile user " + user.getName()
 				+ " cannot be scheduled again");
 		}
-		user.setLifecycleState(MobileDeviceLifecycle.SCHEDULED);
+		user.getSession().schedule();
 		user.setStatus(false);
 		deactivatePeripherals(user);
 	}
@@ -43,7 +43,7 @@ public final class MobileUserRegistration {
 			throw new IllegalStateException("Mobile user " + user.getName()
 				+ " cannot enter from lifecycle state " + user.getLifecycleState());
 		}
-		user.setLifecycleState(MobileDeviceLifecycle.SEARCHING_FOR_AP);
+		user.getSession().beginEntry();
 		user.setStatus(false);
 	}
 
@@ -53,10 +53,7 @@ public final class MobileUserRegistration {
 		if (user.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
 			return;
 		}
-		MobileDeviceLifecycle waitingState = user.getVmMobileDevice() == null
-			? MobileDeviceLifecycle.SEARCHING_FOR_AP
-			: MobileDeviceLifecycle.DISCONNECTED;
-		user.setLifecycleState(waitingState);
+		user.getSession().awaitAssociation(user.getVmMobileDevice() != null);
 		user.setStatus(false);
 	}
 
@@ -115,7 +112,7 @@ public final class MobileUserRegistration {
 			throw new IllegalStateException("Cannot activate user " + user.getName()
 				+ " without a VM");
 		}
-		user.setLifecycleState(MobileDeviceLifecycle.ACTIVE);
+		user.getSession().activate();
 		user.setStatus(true);
 		for (MobileSensor sensor : user.getSensors()) {
 			sensor.activate();
@@ -148,7 +145,7 @@ public final class MobileUserRegistration {
 
 	public static void finishUser(MobileDevice user) {
 		validateUserAndPeripherals(user);
-		user.setLifecycleState(MobileDeviceLifecycle.FINISHED);
+		user.getSession().finish();
 		user.setStatus(false);
 		deactivatePeripherals(user);
 	}

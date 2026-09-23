@@ -23,6 +23,7 @@ import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.MobileSession;
 import org.fog.vmmobile.policy.MovementDirection;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -51,8 +52,6 @@ public class MobileDevice extends FogDevice {
 	private float maxServiceValue;
 	private boolean migStatus;
 	private boolean postCopyStatus;
-	private boolean handoffStatus;
-	private boolean lockedToHandoff;
 	private boolean lockedToMigration;
 	private boolean abortMigration;
 	private double vmSize;
@@ -64,8 +63,7 @@ public class MobileDevice extends FogDevice {
 	private boolean migStatusLive;
 	protected VmMigrationTechnique migrationTechnique;
 	private int networkSliceId;
-	private long networkAssociationGeneration;
-	private MobileDeviceLifecycle lifecycleState = MobileDeviceLifecycle.ACTIVE;
+	private final MobileSession session = new MobileSession();
 
 	@Override
 	protected double getUplinkBandwidthForTuple(Tuple tuple) {
@@ -621,11 +619,18 @@ public class MobileDevice extends FogDevice {
 	}
 
 	public boolean isHandoffStatus() {
-		return handoffStatus;
+		return session.isHandoffInProgress();
 	}
 
 	public void setHandoffStatus(boolean handoffStatus) {
-		this.handoffStatus = handoffStatus;
+		if (handoffStatus) {
+			if (!session.isHandoffInProgress()) {
+				session.reserveHandoff();
+			}
+		}
+		else if (session.isHandoffInProgress()) {
+			session.completeHandoff(session.getAssociationGeneration());
+		}
 	}
 
 	public double getTimeFinishHandoff() {
@@ -661,40 +666,60 @@ public class MobileDevice extends FogDevice {
 	}
 
 	public MobileDeviceLifecycle getLifecycleState() {
-		return lifecycleState;
+		return session.getLifecycle();
 	}
 
 	public void setLifecycleState(MobileDeviceLifecycle lifecycleState) {
 		if (lifecycleState == null) {
 			throw new IllegalArgumentException("Mobile-device lifecycle state cannot be null");
 		}
-		if (this.lifecycleState == MobileDeviceLifecycle.FINISHED
-			&& lifecycleState != MobileDeviceLifecycle.FINISHED) {
-			throw new IllegalStateException("Finished mobile device " + getName()
-				+ " cannot return to " + lifecycleState);
-		}
-		this.lifecycleState = lifecycleState;
+		session.setLifecycle(lifecycleState);
 	}
 
 	public boolean isLockedToHandoff() {
-		return lockedToHandoff;
+		return session.isHandoffLocked();
 	}
 
 	public void setLockedToHandoff(boolean LockedToHandoff) {
-		this.lockedToHandoff = LockedToHandoff;
+		if (LockedToHandoff) {
+			if (!session.isHandoffLocked()) {
+				session.reserveHandoff();
+			}
+			return;
+		}
+		if (session.isHandoffInProgress()) {
+			session.cancelHandoff(session.getAssociationGeneration());
+		}
+		session.unlockHandoff();
 	}
 
 	/** Invalidates older delayed events and returns the new association generation. */
 	public long advanceNetworkAssociationGeneration() {
-		if (networkAssociationGeneration == Long.MAX_VALUE) {
-			throw new IllegalStateException(
-				"Network-association generation is exhausted for " + getName());
-		}
-		return ++networkAssociationGeneration;
+		return session.invalidateAssociation();
 	}
 
 	public long getNetworkAssociationGeneration() {
-		return networkAssociationGeneration;
+		return session.getAssociationGeneration();
+	}
+
+	public MobileSession getSession() {
+		return session;
+	}
+
+	public long beginHandoffReservation() {
+		return session.reserveHandoff();
+	}
+
+	public boolean beginHandoffTransfer(long generation) {
+		return session.beginHandoff(generation);
+	}
+
+	public boolean completeHandoff(long generation) {
+		return session.completeHandoff(generation);
+	}
+
+	public boolean cancelHandoff(long generation) {
+		return session.cancelHandoff(generation);
 	}
 
 	public boolean isLockedToMigration() {

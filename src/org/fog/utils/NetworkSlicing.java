@@ -265,6 +265,7 @@ public final class NetworkSlicing {
 		private final double transferDurationMillis;
 		private final double reallocationDelayMillis;
 		private final double fixedDelayMillis;
+		private final long migrationGeneration;
 
 		private MigrationTransferResult(MigrationTransferMetadata metadata,
 			MigrationTransferScheduler.Completion completion) {
@@ -274,6 +275,7 @@ public final class NetworkSlicing {
 			this.reallocationDelayMillis =
 				completion.getReallocationDelayDuration();
 			this.fixedDelayMillis = metadata.spec.getFixedDelayMillis();
+			this.migrationGeneration = metadata.spec.getMigrationGeneration();
 		}
 
 		public MobileDevice getMobileDevice() {
@@ -302,6 +304,10 @@ public final class NetworkSlicing {
 
 		public double getFixedDelayMillis() {
 			return fixedDelayMillis;
+		}
+
+		public long getMigrationGeneration() {
+			return migrationGeneration;
 		}
 
 		public double getTotalDurationMillis() {

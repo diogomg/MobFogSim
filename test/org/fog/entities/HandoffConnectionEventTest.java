@@ -2,6 +2,7 @@ package org.fog.entities;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Calendar;
 
@@ -11,6 +12,7 @@ import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.placement.HandoffConnectionRequest;
 import org.fog.vmmigration.MyStatistics;
+import org.fog.vmmigration.MigrationEvent;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.junit.Before;
@@ -86,6 +88,24 @@ public class HandoffConnectionEventTest {
 		runPendingEvents();
 
 		assertFalse(user.isLockedToMigration());
+	}
+
+	@Test
+	public void staleMigrationUnlockCannotUnlockANewerAttempt() {
+		MobileDevice peerVmHost = mobile("peer-vm-host", 1);
+		MobileDevice user = mobile("user", 2);
+		long first = user.getSession().decideMigration();
+		MigrationEvent stale = new MigrationEvent(user, first);
+		user.getSession().abortMigration();
+		user.getSession().unlockMigration();
+		user.getSession().decideMigration();
+		user.setLockedToMigration(true);
+
+		CloudSim.send(user.getId(), peerVmHost.getId(), 0.0,
+			MobileEvents.UNLOCKED_MIGRATION, stale);
+		runPendingEvents();
+
+		assertTrue(user.isLockedToMigration());
 	}
 
 	private static HandoffConnectionRequest request(MobileDevice user,

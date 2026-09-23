@@ -22,6 +22,7 @@ public final class MigrationTransferSpec {
 	private final FogDevice destination;
 	private final MobileDevice mobileDevice;
 	private final int networkSliceId;
+	private final long migrationGeneration;
 	private final double transferBytes;
 	private final double fixedDelayMillis;
 	private final double preparationDelayMillis;
@@ -44,6 +45,8 @@ public final class MigrationTransferSpec {
 		this.destination = destination;
 		this.mobileDevice = mobileDevice;
 		this.networkSliceId = mobileDevice.getNetworkSliceId();
+		this.migrationGeneration = mobileDevice.getSession()
+			.getMigrationGeneration();
 		this.transferBytes = requireNonNegativeFinite(transferBytes,
 			"Migration transfer bytes");
 		this.fixedDelayMillis = requireNonNegativeFinite(fixedDelayMillis,
@@ -72,6 +75,11 @@ public final class MigrationTransferSpec {
 
 	public int getNetworkSliceId() {
 		return networkSliceId;
+	}
+
+	/** Aggregate generation that owned this transfer when it was prepared. */
+	public long getMigrationGeneration() {
+		return migrationGeneration;
 	}
 
 	public double getTransferBytes() {

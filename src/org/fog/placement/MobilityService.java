@@ -4,10 +4,24 @@ import org.fog.entities.MobileDevice;
 import org.fog.localization.Coordinate;
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
-import org.fog.vmmobile.MobileUserRegistration;
+import org.fog.vmmobile.adapter.MobileLifecycleAdapter;
+import org.fog.vmmobile.port.MobileLifecyclePort;
 
 /** Applies timestamped mobility traces independently of CloudSim event dispatch. */
 public final class MobilityService {
+	private final MobileLifecyclePort lifecycle;
+
+	/** Compatibility constructor; run code injects this port via SimulationServices. */
+	public MobilityService() {
+		this(MobileLifecycleAdapter.INSTANCE);
+	}
+
+	public MobilityService(MobileLifecyclePort lifecycle) {
+		if (lifecycle == null) {
+			throw new IllegalArgumentException("Mobile lifecycle port cannot be null");
+		}
+		this.lifecycle = lifecycle;
+	}
 	public enum EntryOutcome {
 		READY,
 		NO_TRACE,
@@ -17,7 +31,7 @@ public final class MobilityService {
 	/** Starts a scheduled user and consumes all rows due at its entry time. */
 	public EntryOutcome enter(MobileDevice mobileDevice, Coordinate coordinate) {
 		validate(mobileDevice, coordinate);
-		MobileUserRegistration.beginEntry(mobileDevice);
+		lifecycle.beginEntry(mobileDevice);
 		if (mobileDevice.getMobilityPath().isEmpty()) {
 			mobileDevice.setTravelTimeId(0);
 			return EntryOutcome.NO_TRACE;

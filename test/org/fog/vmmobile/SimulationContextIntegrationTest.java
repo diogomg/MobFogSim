@@ -2,6 +2,7 @@ package org.fog.vmmobile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -137,6 +138,31 @@ public class SimulationContextIntegrationTest {
 			assertEquals(firstSelectivityValue, selectivity.nextLong());
 			assertEquals(firstTopologyValue, topology.nextLong());
 		}
+	}
+
+	@Test
+	public void failedContextConstructionDoesNotLeakIntoTheNextRun()
+		throws IOException {
+		Path blockingFile = temporaryDirectory.resolve("not-a-directory");
+		Files.write(blockingFile, new byte[] { 1 });
+		SimulationConfig configuration = referenceConfiguration()
+			.withOutputMode(RunOutputMode.SUMMARY);
+		try {
+			SimulationContext.open(configuration.withOutputDirectory(
+				blockingFile.resolve("run")));
+			fail("An output path below a regular file must fail");
+		}
+		catch (RuntimeException expected) {
+			// Expected.
+		}
+		assertContextWasReleased();
+
+		try (SimulationContext context = SimulationContext.open(
+			configuration.withOutputDirectory(
+				temporaryDirectory.resolve("after-failure")))) {
+			assertNotNull(context.getServices());
+		}
+		assertContextWasReleased();
 	}
 
 	private static SimulationConfig referenceConfiguration() {

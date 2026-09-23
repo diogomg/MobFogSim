@@ -15,6 +15,8 @@ import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.entities.ApDevice;
 import org.fog.entities.HandoffReservation;
+import org.fog.entities.HandoffCoordinator;
+import org.fog.entities.HandoffUnlockRequest;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.utils.SimulationDuration;
@@ -129,6 +131,22 @@ public class AccessPointAssociationServiceTest {
 		assertSame(secondReservation.get(),
 			second.getPendingHandoffReservation());
 		assertEquals(1, destination.getHandoffReservationCount());
+	}
+
+	@Test
+	public void staleUnlockCannotUnlockANewerReservation() {
+		ApDevice source = accessPoint("source", 1);
+		ApDevice destination = accessPoint("destination", 1);
+		MobileDevice mobileDevice = activeAt(source, "mobile", 1);
+		HandoffReservation first = reserve(mobileDevice, source, destination).get();
+		HandoffUnlockRequest staleUnlock = new HandoffUnlockRequest(mobileDevice,
+			first.getAssociationGeneration());
+		assertTrue(mobileDevice.cancelPendingHandoffReservation());
+		HandoffReservation second = reserve(mobileDevice, source, destination).get();
+
+		assertFalse(new HandoffCoordinator().unlock(staleUnlock));
+		assertTrue(mobileDevice.isLockedToHandoff());
+		assertSame(second, mobileDevice.getPendingHandoffReservation());
 	}
 
 	private Optional<HandoffReservation> reserve(MobileDevice mobileDevice,

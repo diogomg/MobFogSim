@@ -5,18 +5,24 @@ import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
 
-import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
 import org.fog.utils.MigrationTransferSpec;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.LogMobile;
-import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.MobileSession;
+import org.fog.vmmobile.SimulationClock;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
+import org.fog.vmmobile.adapter.LegacySimulationAdapters;
+import org.fog.vmmobile.adapter.NetworkSliceAdapter;
 import org.fog.vmmobile.constants.MobileEvents;
-import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.MigrationTechniquePolicy;
+import org.fog.vmmobile.port.MobileStatisticsPort;
+import org.fog.vmmobile.port.NetworkSlicePort;
+import org.fog.vmmobile.port.SimulationEventLog;
+import org.fog.vmmobile.port.SimulationOutput;
+import org.fog.vmmobile.policy.MembershipAction;
 
 /**
  * Coordinates migration transfer lifecycle independently of a FogDevice's
@@ -24,6 +30,33 @@ import org.fog.vmmobile.policy.MigrationTechniquePolicy;
  * post-transfer delay returned here.
  */
 public final class MigrationCoordinator {
+	private final SimulationClock clock;
+	private final NetworkSlicePort networkSlices;
+	private final MobileStatisticsPort statistics;
+	private final SimulationEventLog events;
+	private final SimulationOutput output;
+
+	/** Compatibility constructor; run code injects these ports via SimulationServices. */
+	public MigrationCoordinator() {
+		this(CloudSimAdapter.INSTANCE, NetworkSliceAdapter.INSTANCE,
+			LegacySimulationAdapters.statistics(), LegacySimulationAdapters.events(),
+			LegacySimulationAdapters.output());
+	}
+
+	public MigrationCoordinator(SimulationClock clock,
+		NetworkSlicePort networkSlices, MobileStatisticsPort statistics,
+		SimulationEventLog events, SimulationOutput output) {
+		if (clock == null || networkSlices == null || statistics == null
+			|| events == null || output == null) {
+			throw new IllegalArgumentException(
+				"Migration coordinator dependencies cannot be null");
+		}
+		this.clock = clock;
+		this.networkSlices = networkSlices;
+		this.statistics = statistics;
+		this.events = events;
+		this.output = output;
+	}
 	/** Minimal event port implemented by the owning simulation entity. */
 	@FunctionalInterface
 	public interface EventDispatcher {
@@ -37,11 +70,13 @@ public final class MigrationCoordinator {
 	/** Immutable result of accepting a migration-completion event. */
 	public static final class Completion {
 		private final MobileDevice mobileDevice;
+		private final long migrationGeneration;
 		private final double remainingFixedDelayMillis;
 
 		private Completion(MobileDevice mobileDevice,
-			double remainingFixedDelayMillis) {
+			long migrationGeneration, double remainingFixedDelayMillis) {
 			this.mobileDevice = mobileDevice;
+			this.migrationGeneration = migrationGeneration;
 			this.remainingFixedDelayMillis = remainingFixedDelayMillis;
 		}
 
@@ -53,8 +88,45 @@ public final class MigrationCoordinator {
 			return remainingFixedDelayMillis;
 		}
 
+		public MigrationEvent event() {
+			return new MigrationEvent(mobileDevice, migrationGeneration,
+				MigrationEvent.Stage.FIXED_DELAY_COMPLETE);
+		}
+
 		public boolean requiresFixedDelay() {
 			return remainingFixedDelayMillis > 0.0;
+		}
+	}
+
+	public enum StartDisposition {
+		START,
+		ABORT,
+		IGNORE
+	}
+
+	/** Guarded decision for the entity-side VM migration dispatch. */
+	public static final class StartPlan {
+		private final StartDisposition disposition;
+		private final MobileDevice mobileDevice;
+		private final String reason;
+
+		private StartPlan(StartDisposition disposition, MobileDevice mobileDevice,
+			String reason) {
+			this.disposition = disposition;
+			this.mobileDevice = mobileDevice;
+			this.reason = reason;
+		}
+
+		public StartDisposition getDisposition() {
+			return disposition;
+		}
+
+		public MobileDevice getMobileDevice() {
+			return mobileDevice;
+		}
+
+		public String getReason() {
+			return reason;
 		}
 	}
 
@@ -68,13 +140,25 @@ public final class MigrationCoordinator {
 			throw new IllegalArgumentException("Active mobile-device list cannot be null");
 		}
 		MobileDevice mobileDevice = transferSpec.getMobileDevice();
+		if (transferSpec.getMigrationGeneration() > 0L
+			&& !mobileDevice.getSession().isCurrentMigration(
+				transferSpec.getMigrationGeneration())) {
+			return false;
+		}
 		if (!activeMobileDevices.contains(mobileDevice)
 			|| mobileDevice.isAbortMigration()
 			|| (!mobileDevice.isMigStatus() && !mobileDevice.isMigStatusLive())) {
-			NetworkSlicing.releaseBandwidth(mobileDevice);
+			networkSlices.releaseBandwidth(mobileDevice);
 			return false;
 		}
-		NetworkSlicing.startMigrationTransfer(transferSpec);
+		long generation = ensureMigrationPreparation(mobileDevice);
+		if (mobileDevice.getSession().getMigration()
+			!= MobileSession.MigrationState.TRANSFERRING
+			&& !mobileDevice.getSession().beginMigrationTransfer(generation)) {
+			networkSlices.releaseBandwidth(mobileDevice);
+			return false;
+		}
+		networkSlices.startMigrationTransfer(transferSpec);
 		return true;
 	}
 
@@ -85,21 +169,54 @@ public final class MigrationCoordinator {
 	public Completion completeTransfer(Object payload) {
 		if (payload instanceof NetworkSlicing.MigrationTransferCompletion) {
 			NetworkSlicing.MigrationTransferResult result =
-				NetworkSlicing.completeMigrationTransfer(
+				networkSlices.completeMigrationTransfer(
 					(NetworkSlicing.MigrationTransferCompletion) payload);
 			if (result == null) {
 				return null;
 			}
-			return new Completion(result.getMobileDevice(),
+			MobileDevice completedMobile = result.getMobileDevice();
+			long generation = result.getMigrationGeneration();
+			if (generation <= 0L) {
+				generation = completedMobile.getSession().getMigrationGeneration();
+			}
+			if (generation > 0L
+				&& !completedMobile.getSession().isCurrentMigration(generation)) {
+				return null;
+			}
+			if (result.getFixedDelayMillis() > 0.0) {
+				completedMobile.getSession().awaitMigrationFixedDelay(
+					generation);
+			}
+			return new Completion(completedMobile, generation,
 				result.getFixedDelayMillis());
 		}
-		if (!(payload instanceof MobileDevice)) {
+		if (payload instanceof MigrationEvent) {
+			MigrationEvent event = (MigrationEvent) payload;
+			if (!event.isCurrent()) {
+				return null;
+			}
+			if (event.getStage() == MigrationEvent.Stage.FIXED_DELAY_COMPLETE
+				&& !event.getMobileDevice().getSession()
+					.finishMigrationFixedDelay(event.getMigrationGeneration())) {
+				return null;
+			}
+			if (event.getStage() != MigrationEvent.Stage.FIXED_DELAY_COMPLETE
+				&& event.getStage() != MigrationEvent.Stage.START_DELIVERY
+				&& event.getStage() != MigrationEvent.Stage.GENERIC) {
+				return null;
+			}
+		}
+		MobileDevice mobileDevice = currentMobile(payload);
+		if (mobileDevice == null) {
+			if (payload instanceof MigrationEvent) {
+				return null;
+			}
 			throw new IllegalArgumentException(
 				"Migration completion payload has an unsupported type");
 		}
-		MobileDevice mobileDevice = (MobileDevice) payload;
-		NetworkSlicing.releaseBandwidth(mobileDevice);
-		return new Completion(mobileDevice, 0.0);
+		networkSlices.releaseBandwidth(mobileDevice);
+		return new Completion(mobileDevice,
+			mobileDevice.getSession().getMigrationGeneration(), 0.0);
 	}
 
 	/** Clears reservation and transient state for an aborted migration. */
@@ -108,8 +225,7 @@ public final class MigrationCoordinator {
 			throw new IllegalArgumentException("Mobile device cannot be null");
 		}
 		mobileDevice.cancelPendingHandoffReservation();
-		NetworkSlicing.releaseBandwidth(mobileDevice);
-		MyStatistics statistics = MyStatistics.getInstance();
+		networkSlices.releaseBandwidth(mobileDevice);
 		statistics.discardOpenIntervals(mobileDevice.getMyId());
 		mobileDevice.setMigStatus(false);
 		mobileDevice.setPostCopyStatus(false);
@@ -117,6 +233,7 @@ public final class MigrationCoordinator {
 		mobileDevice.setLockedToMigration(false);
 		mobileDevice.setTimeFinishDeliveryVm(-1.0);
 		mobileDevice.setAbortMigration(true);
+		mobileDevice.getSession().abortMigration();
 		mobileDevice.setDestinationServerCloudlet(
 			mobileDevice.getVmLocalServerCloudlet());
 	}
@@ -127,6 +244,10 @@ public final class MigrationCoordinator {
 			return;
 		}
 		mobileDevice.setLockedToMigration(false);
+		if (mobileDevice.getSession().getMigration()
+			!= MobileSession.MigrationState.IDLE) {
+			mobileDevice.getSession().unlockMigration();
+		}
 		mobileDevice.setTimeFinishDeliveryVm(-1);
 		LogMobile.debug("MigrationCoordinator.java", mobileDevice.getName()
 			+ " had the migration unlocked");
@@ -142,6 +263,10 @@ public final class MigrationCoordinator {
 			: " is not in Migrate";
 		LogMobile.debug("MigrationCoordinator.java", "NO MIGRATE: "
 			+ mobileDevice.getName() + state);
+		if (mobileDevice.getSession().getMigration()
+			== MobileSession.MigrationState.DECIDED) {
+			mobileDevice.getSession().unlockMigration();
+		}
 	}
 
 	/** Prepares and, for non-live policies, schedules migration byte transfer. */
@@ -162,29 +287,31 @@ public final class MigrationCoordinator {
 		}
 		if (!activeMobileDevices.contains(mobileDevice)) {
 			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
-				MobileEvents.ABORT_MIGRATION, mobileDevice);
+				MobileEvents.ABORT_MIGRATION,
+				event(mobileDevice, MigrationEvent.Stage.ABORT));
 			return;
 		}
 		if (mobileDevice.getSourceAp() == null || mobileDevice.isMigStatus()) {
-			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
-				MobileEvents.NO_MIGRATION, mobileDevice);
 			clearRejectedPreparation(mobileDevice);
+			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
+				MobileEvents.NO_MIGRATION, event(mobileDevice));
 			return;
 		}
 
 		double preparationDelay = preparation.dataprepare(mobileDevice);
-		SimulationEventSink.current().trace("MigrationCoordinator", () ->
+		this.events.trace("MigrationCoordinator", () ->
 			"Migration preparation delay " + preparationDelay);
 		if (preparationDelay < 0.0) {
 			return;
 		}
+		mobileDevice.getSession().beginMigrationPreparation();
 		if (migrationPolicy == MigrationTechniquePolicy.LIVE_MIGRATION) {
 			mobileDevice.setPostCopyStatus(true);
-			mobileDevice.setTimeStartLiveMigration(CloudSim.clock());
+			mobileDevice.setTimeStartLiveMigration(clock.simulationTimeMillis());
 		} else {
 			mobileDevice.setMigStatus(true);
-			MyStatistics.getInstance().startWithoutVmTime(
-				mobileDevice.getMyId(), CloudSim.clock());
+			statistics.startWithoutVm(mobileDevice.getMyId(),
+				clock.simulationTimeMillis());
 			mobileDevice.setTimeFinishDeliveryVm(-1.0);
 			MigrationTransferSpec transfer = new MigrationTransferSpec(
 				mobileDevice.getVmLocalServerCloudlet(),
@@ -227,7 +354,7 @@ public final class MigrationCoordinator {
 				continue;
 			}
 
-			SimulationEventSink.current().detail("MigrationCoordinator", () ->
+			this.events.detail("MigrationCoordinator", () ->
 				"Migration selected for " + mobileDevice.getName() + " (entity "
 					+ mobileDevice.getId() + ")");
 			LogMobile.debug("MigrationCoordinator.java", "Distance between "
@@ -235,17 +362,140 @@ public final class MigrationCoordinator {
 				+ mobileDevice.getSourceAp().getName() + ": "
 				+ Distances.checkDistance(mobileDevice.getCoord(),
 					mobileDevice.getSourceAp().getCoord()));
-			SimulationEventSink.current().trace("MigrationCoordinator", () ->
+			this.events.trace("MigrationCoordinator", () ->
 				"Migration time " + mobileDevice.getMigTime());
 			LogMobile.debug("MigrationCoordinator.java", "Made the decisionMigration for "
 				+ mobileDevice.getName());
+			mobileDevice.getSession().decideMigration();
 			events.sendNow(mobileDevice.getVmLocalServerCloudlet().getId(),
-				MobileEvents.TO_MIGRATION, mobileDevice);
+				MobileEvents.TO_MIGRATION,
+				event(mobileDevice, MigrationEvent.Stage.PREPARE));
 			clearTimingStarts(mobileDevice);
 			mobileDevice.setLockedToMigration(true);
 			mobileDevice.setTimeFinishDeliveryVm(-1.0);
 			writeDecision(mobileDevice);
 		}
+	}
+
+	/** Starts the live-transfer substate after pre-copy reaches its handoff point. */
+	public boolean beginLiveTransfer(MobileDevice mobileDevice) {
+		if (mobileDevice == null) {
+			return false;
+		}
+		long generation = ensureMigrationPreparation(mobileDevice);
+		if (!mobileDevice.getSession().beginMigrationTransfer(generation)) {
+			return false;
+		}
+		mobileDevice.setMigStatusLive(true);
+		return true;
+	}
+
+	/** Decides whether a completed transfer may dispatch VM delivery. */
+	public StartPlan planStart(MobileDevice mobileDevice,
+		Collection<MobileDevice> activeMobileDevices) {
+		if (mobileDevice == null || activeMobileDevices == null) {
+			throw new IllegalArgumentException(
+				"Migration start dependencies cannot be null");
+		}
+		if (!activeMobileDevices.contains(mobileDevice)) {
+			return new StartPlan(StartDisposition.IGNORE, mobileDevice,
+				"mobile device is no longer active");
+		}
+		if (mobileDevice.isAbortMigration()) {
+			mobileDevice.setAbortMigration(false);
+			return new StartPlan(StartDisposition.IGNORE, mobileDevice,
+				"migration was already aborted");
+		}
+		if (mobileDevice.getSourceAp() == null) {
+			return new StartPlan(StartDisposition.ABORT, mobileDevice,
+				"mobile device has no access-point association");
+		}
+		if (mobileDevice.getVmLocalServerCloudlet() == null
+			|| mobileDevice.getDestinationServerCloudlet() == null
+			|| mobileDevice.getVmMobileDevice() == null
+			|| mobileDevice.getDestinationServerCloudlet().getHost() == null) {
+			return new StartPlan(StartDisposition.ABORT, mobileDevice,
+				"migration requires current and destination hosts plus a VM");
+		}
+		if (!mobileDevice.getSession().scheduleMigrationInstallation(
+			mobileDevice.getSession().getMigrationGeneration())) {
+			return new StartPlan(StartDisposition.IGNORE, mobileDevice,
+				"migration installation is already scheduled or obsolete");
+		}
+		return new StartPlan(StartDisposition.START, mobileDevice, null);
+	}
+
+	/** Commits VM-host membership and aggregate state as one coordinator step. */
+	public boolean installVm(MobileDevice mobileDevice,
+		Collection<MobileDevice> activeMobileDevices) {
+		if (mobileDevice == null || activeMobileDevices == null
+			|| !activeMobileDevices.contains(mobileDevice)) {
+			return false;
+		}
+		FogDevice source = mobileDevice.getVmLocalServerCloudlet();
+		FogDevice destination = mobileDevice.getDestinationServerCloudlet();
+		long generation = mobileDevice.getSession().getMigrationGeneration();
+		MobileSession.MigrationState state =
+			mobileDevice.getSession().getMigration();
+		if (source == null || destination == null
+			|| (state != MobileSession.MigrationState.PREPARING
+				&& state != MobileSession.MigrationState.TRANSFERRING
+				&& state != MobileSession.MigrationState.FIXED_DELAY
+				&& state != MobileSession.MigrationState.READY_TO_INSTALL
+				&& state != MobileSession.MigrationState.INSTALLING)) {
+			return false;
+		}
+		source.setSmartThingsWithVm(mobileDevice, MembershipAction.REMOVE);
+		mobileDevice.setVmLocalServerCloudlet(destination);
+		mobileDevice.setDestinationServerCloudlet(null);
+		destination.setSmartThingsWithVm(mobileDevice, MembershipAction.ADD);
+		if (!mobileDevice.getSession().installMigration(generation)) {
+			throw new IllegalStateException(
+				"Validated migration installation was rejected");
+		}
+		return true;
+	}
+
+	public boolean isInstallationScheduled(MobileDevice mobileDevice) {
+		return mobileDevice != null
+			&& mobileDevice.getSession().getMigration()
+				== MobileSession.MigrationState.INSTALLING
+			&& mobileDevice.getVmLocalServerCloudlet() != null
+			&& mobileDevice.getDestinationServerCloudlet() != null
+			&& mobileDevice.getVmMobileDevice() != null;
+	}
+
+	/** Resolves a current generation-bearing payload, retaining raw compatibility. */
+	public MobileDevice currentMobile(Object payload) {
+		if (payload instanceof MigrationEvent) {
+			MigrationEvent event = (MigrationEvent) payload;
+			return event.isCurrent() ? event.getMobileDevice() : null;
+		}
+		return payload instanceof MobileDevice ? (MobileDevice) payload : null;
+	}
+
+	public MobileDevice currentMobile(Object payload,
+		MigrationEvent.Stage expectedStage) {
+		if (payload instanceof MigrationEvent) {
+			MigrationEvent event = (MigrationEvent) payload;
+			if (event.getStage() != MigrationEvent.Stage.GENERIC
+				&& event.getStage() != expectedStage) {
+				return null;
+			}
+		}
+		return currentMobile(payload);
+	}
+
+	public Object event(MobileDevice mobileDevice) {
+		return event(mobileDevice, MigrationEvent.Stage.GENERIC);
+	}
+
+	public Object event(MobileDevice mobileDevice, MigrationEvent.Stage stage) {
+		if (mobileDevice == null) {
+			throw new IllegalArgumentException("Mobile device cannot be null");
+		}
+		return mobileDevice.getSession().getMigrationGeneration() > 0L
+			? MigrationEvent.current(mobileDevice, stage) : mobileDevice;
 	}
 
 	/** Calculates the live-migration bytes not copied during pre-copy. */
@@ -271,7 +521,7 @@ public final class MigrationCoordinator {
 		return Math.max(0.0, totalBytes - copiedBytes);
 	}
 
-	private static void clearRejectedPreparation(MobileDevice mobileDevice) {
+	private void clearRejectedPreparation(MobileDevice mobileDevice) {
 		clearTimingStarts(mobileDevice);
 		mobileDevice.setMigStatus(false);
 		mobileDevice.setPostCopyStatus(false);
@@ -279,28 +529,43 @@ public final class MigrationCoordinator {
 		mobileDevice.setLockedToMigration(false);
 		mobileDevice.setTimeFinishDeliveryVm(-1.0);
 		mobileDevice.setAbortMigration(true);
+		mobileDevice.getSession().abortMigration();
 	}
 
-	private static void clearTimingStarts(MobileDevice mobileDevice) {
-		MyStatistics.getInstance().discardOpenIntervals(mobileDevice.getMyId());
+	private long ensureMigrationPreparation(MobileDevice mobileDevice) {
+		MobileSession.MigrationState state = mobileDevice.getSession().getMigration();
+		if (state == MobileSession.MigrationState.PREPARING) {
+			return mobileDevice.getSession().getMigrationGeneration();
+		}
+		if (state == MobileSession.MigrationState.DECIDED
+			|| state == MobileSession.MigrationState.IDLE
+			|| state == MobileSession.MigrationState.INSTALLED
+			|| state == MobileSession.MigrationState.ABORTED) {
+			return mobileDevice.getSession().beginMigrationPreparation();
+		}
+		return mobileDevice.getSession().getMigrationGeneration();
 	}
 
-	private static void writeDecision(MobileDevice mobileDevice) {
-		SimulationEventSink.current().detail("MigrationCoordinator", () ->
+	private void clearTimingStarts(MobileDevice mobileDevice) {
+		statistics.discardOpenIntervals(mobileDevice.getMyId());
+	}
+
+	private void writeDecision(MobileDevice mobileDevice) {
+		events.detail("MigrationCoordinator", () ->
 			"MIGRATION " + mobileDevice.getMyId() + " Position: "
 				+ mobileDevice.getCoord().getCoordX() + ", "
 				+ mobileDevice.getCoord().getCoordY() + " Direction: "
 				+ mobileDevice.getDirection() + " Speed: " + mobileDevice.getSpeed());
-		try (PrintWriter writer = RunOutputManager.getInstance()
-			.newDetailedPrintWriter(mobileDevice.getMyId() + "migration.txt", true)) {
+		try (PrintWriter writer = output.newDetailedPrintWriter(
+			mobileDevice.getMyId() + "migration.txt", true)) {
 			writer.println(mobileDevice.getMyId() + "\t"
 				+ mobileDevice.getCoord().getCoordX() + "\t"
 				+ mobileDevice.getCoord().getCoordY() + "\t"
 				+ mobileDevice.getDirection() + "\t" + mobileDevice.getSpeed() + "\t"
 				+ mobileDevice.getVmLocalServerCloudlet().getName() + "\t"
 				+ mobileDevice.getDestinationServerCloudlet().getName() + "\t"
-				+ CloudSim.clock() + "\t" + mobileDevice.getMigTime() + "\t"
-				+ (CloudSim.clock() + mobileDevice.getMigTime()));
+				+ clock.simulationTimeMillis() + "\t" + mobileDevice.getMigTime() + "\t"
+				+ (clock.simulationTimeMillis() + mobileDevice.getMigTime()));
 		} catch (IOException error) {
 			throw new IllegalStateException("Could not record migration decision for "
 				+ mobileDevice.getName(), error);

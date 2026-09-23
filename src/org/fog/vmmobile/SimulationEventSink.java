@@ -5,9 +5,9 @@ import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.util.function.Supplier;
 
-import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.cloudbus.cloudsim.util.RunOutputMode;
+import org.fog.vmmobile.port.SimulationEventLog;
 
 /**
  * Run-scoped boundary for human-readable simulation events.
@@ -16,7 +16,7 @@ import org.cloudbus.cloudsim.util.RunOutputMode;
  * trace messages are written only for full-output runs. Suppliers are evaluated
  * only when their level is enabled.</p>
  */
-public final class SimulationEventSink implements AutoCloseable {
+public final class SimulationEventSink implements AutoCloseable, SimulationEventLog {
 
 	public enum Level {
 		OFF,
@@ -26,27 +26,47 @@ public final class SimulationEventSink implements AutoCloseable {
 	}
 
 	private static final SimulationEventSink OFF =
-		new SimulationEventSink(Level.OFF, null, null, false);
+		new SimulationEventSink(Level.OFF, null, null, false,
+			new SimulationClock() {
+				@Override
+				public double simulationTimeMillis() {
+					return 0.0;
+				}
+
+				@Override
+				public long wallTimeMillis() {
+					return 0L;
+				}
+			});
 	private static volatile SimulationEventSink current = OFF;
 
 	private final Level level;
 	private final PrintStream summaryOutput;
 	private final PrintStream detailedOutput;
 	private final boolean ownsDetailedOutput;
+	private final SimulationClock clock;
 	private boolean closed;
 
 	private SimulationEventSink(Level level, PrintStream summaryOutput,
-		PrintStream detailedOutput, boolean ownsDetailedOutput) {
+		PrintStream detailedOutput, boolean ownsDetailedOutput,
+		SimulationClock clock) {
 		this.level = level;
 		this.summaryOutput = summaryOutput;
 		this.detailedOutput = detailedOutput;
 		this.ownsDetailedOutput = ownsDetailedOutput;
+		this.clock = clock;
 	}
 
 	/** Opens a sink whose enabled levels follow the configured output mode. */
 	public static SimulationEventSink open(RunOutputManager outputManager,
 		PrintStream summaryOutput) {
-		if (outputManager == null || summaryOutput == null) {
+		return open(outputManager, summaryOutput, SimulationClock.SYSTEM);
+	}
+
+	/** Opens a sink using the run's injected clock. */
+	public static SimulationEventSink open(RunOutputManager outputManager,
+		PrintStream summaryOutput, SimulationClock clock) {
+		if (outputManager == null || summaryOutput == null || clock == null) {
 			throw new IllegalArgumentException(
 				"Output manager and summary stream cannot be null");
 		}
@@ -55,11 +75,12 @@ public final class SimulationEventSink implements AutoCloseable {
 			return OFF;
 		}
 		if (mode == RunOutputMode.SUMMARY) {
-			return new SimulationEventSink(Level.SUMMARY, summaryOutput, null, false);
+			return new SimulationEventSink(Level.SUMMARY, summaryOutput, null, false,
+				clock);
 		}
 		try {
 			return new SimulationEventSink(Level.TRACE, summaryOutput,
-				outputManager.newFullPrintStream("out.txt"), true);
+				outputManager.newFullPrintStream("out.txt"), true, clock);
 		}
 		catch (IOException error) {
 			throw new UncheckedIOException(
@@ -117,7 +138,7 @@ public final class SimulationEventSink implements AutoCloseable {
 			throw new IllegalArgumentException(
 				"Simulation event source and message cannot be empty");
 		}
-		write(requestedLevel, "Clock: " + CloudSim.clock() + " - " + source
+		write(requestedLevel, "Clock: " + clock.simulationTimeMillis() + " - " + source
 			+ ": " + message.get());
 	}
 

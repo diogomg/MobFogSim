@@ -4,15 +4,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.cloudbus.cloudsim.core.CloudSim;
 import org.fog.entities.ApDevice;
 import org.fog.entities.HandoffReservation;
 import org.fog.entities.MobileDevice;
 import org.fog.localization.Distances;
 import org.fog.utils.SimulationDuration;
+import org.fog.vmmobile.adapter.CloudSimAdapter;
+import org.fog.vmmobile.SimulationClock;
 
 /** Selects an AP and reserves its capacity as one handoff-acceptance step. */
 public final class AccessPointAssociationService {
+	private final SimulationClock clock;
+
+	/** Compatibility constructor; run code injects this port via SimulationServices. */
+	public AccessPointAssociationService() {
+		this(CloudSimAdapter.INSTANCE);
+	}
+
+	public AccessPointAssociationService(SimulationClock clock) {
+		if (clock == null) {
+			throw new IllegalArgumentException("Simulation clock cannot be null");
+		}
+		this.clock = clock;
+	}
 
 	public Optional<HandoffReservation> reserveClosestHandoff(
 		List<ApDevice> accessPoints, MobileDevice mobileDevice,
@@ -43,7 +57,7 @@ public final class AccessPointAssociationService {
 			}
 		}
 
-		double expiresAtMillis = CloudSim.clock()
+		double expiresAtMillis = clock.simulationTimeMillis()
 			+ reservationLifetime.toMilliseconds();
 		while (!candidates.isEmpty()) {
 			Optional<ApDevice> closest =
@@ -58,8 +72,6 @@ public final class AccessPointAssociationService {
 					handoffSetupDuration);
 			if (reservation.isPresent()) {
 				mobileDevice.setDestinationAp(destination);
-				mobileDevice.setHandoffStatus(true);
-				mobileDevice.setLockedToHandoff(true);
 				return reservation;
 			}
 			candidates.remove(destination);

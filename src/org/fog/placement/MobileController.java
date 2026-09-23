@@ -29,6 +29,7 @@ import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.HandoffReservation;
+import org.fog.entities.HandoffUnlockRequest;
 import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
@@ -48,6 +49,7 @@ import org.fog.utils.NetworkSlicing;
 import org.fog.utils.TimeKeeper;
 import org.fog.vmmigration.Migration;
 import org.fog.vmmigration.MigrationCoordinator;
+import org.fog.vmmigration.MigrationEvent;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
@@ -57,6 +59,7 @@ import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.SimulationBuildException;
 import org.fog.vmmobile.SimulationContext;
 import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.SimulationServices;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
@@ -125,12 +128,12 @@ public class MobileController extends SimEntity {
 	}
 
 	public MobileController() {
-		this.resultsService = new SimulationResultsService(
-			RunOutputManager.getInstance());
-		this.mobilityService = new MobilityService();
-		this.associationService = new MobileAssociationService();
-		this.accessPointAssociationService = new AccessPointAssociationService();
-		this.migrationCoordinator = new MigrationCoordinator();
+		SimulationServices services = SimulationServices.legacy();
+		this.resultsService = services.getResults();
+		this.mobilityService = services.getMobility();
+		this.associationService = services.getAssociation();
+		this.accessPointAssociationService = services.getAccessPointAssociation();
+		this.migrationCoordinator = services.getMigration();
 	}
 
 	public MobileController(String name, List<FogDevice> serverCloudlets, List<ApDevice> apDevices,
@@ -149,13 +152,27 @@ public class MobileController extends SimEntity {
 		MigrationPointPolicy migPointPolicy,
 		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
 		Coordinate coordDevices, int seed, boolean migrationAble) {
+		this(name, serverCloudlets, apDevices, smartThings, brokers, moduleMapping,
+			migPointPolicy, migStrategyPolicy, stepPolicy, coordDevices, seed,
+			migrationAble, SimulationServices.legacy());
+	}
+
+	public MobileController(String name, List<FogDevice> serverCloudlets,
+		List<ApDevice> apDevices, List<MobileDevice> smartThings,
+		List<FogBroker> brokers, ModuleMapping moduleMapping,
+		MigrationPointPolicy migPointPolicy,
+		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
+		Coordinate coordDevices, int seed, boolean migrationAble,
+		SimulationServices services) {
 		super(name);
-		this.resultsService = new SimulationResultsService(
-			RunOutputManager.getInstance());
-		this.mobilityService = new MobilityService();
-		this.associationService = new MobileAssociationService();
-		this.accessPointAssociationService = new AccessPointAssociationService();
-		this.migrationCoordinator = new MigrationCoordinator();
+		if (services == null) {
+			throw new IllegalArgumentException("Simulation services cannot be null");
+		}
+		this.resultsService = services.getResults();
+		this.mobilityService = services.getMobility();
+		this.associationService = services.getAssociation();
+		this.accessPointAssociationService = services.getAccessPointAssociation();
+		this.migrationCoordinator = services.getMigration();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
@@ -197,12 +214,12 @@ public class MobileController extends SimEntity {
 		MigrationStrategyPolicy migStrategyPolicy, int stepPolicy,
 		Coordinate coordDevices, int seed) {
 		super(name);
-		this.resultsService = new SimulationResultsService(
-			RunOutputManager.getInstance());
-		this.mobilityService = new MobilityService();
-		this.associationService = new MobileAssociationService();
-		this.accessPointAssociationService = new AccessPointAssociationService();
-		this.migrationCoordinator = new MigrationCoordinator();
+		SimulationServices services = SimulationServices.legacy();
+		this.resultsService = services.getResults();
+		this.mobilityService = services.getMobility();
+		this.associationService = services.getAssociation();
+		this.accessPointAssociationService = services.getAccessPointAssociation();
+		this.migrationCoordinator = services.getMigration();
 		this.applications = new HashMap<String, Application>();
 		this.globalCurrentCpuLoad = new HashMap<Integer, Double>();
 		setAppLaunchDelays(new HashMap<String, Integer>());
@@ -1051,7 +1068,7 @@ public class MobileController extends SimEntity {
 									}
 									if (st.isPostCopyStatus() && !st.isMigStatus()
 										&& !st.isMigStatusLive()) {
-										st.setMigStatusLive(true);
+										migrationCoordinator.beginLiveTransfer(st);
 										double baselineBandwidth = NetworkSlicing.getSliceBandwidth(
 											st.getVmLocalServerCloudlet(),
 											st.getDestinationServerCloudlet(), st.getNetworkSliceId());
@@ -1087,7 +1104,9 @@ public class MobileController extends SimEntity {
 								send(st.getSourceAp().getId(), handoffTime,
 									MobileEvents.START_HANDOFF, reservation);
 								send(st.getDestinationAp().getId(), handoffLocked,
-									MobileEvents.UNLOCKED_HANDOFF, st);
+									MobileEvents.UNLOCKED_HANDOFF,
+									new HandoffUnlockRequest(st,
+										reservation.getAssociationGeneration()));
 								MyStatistics.getInstance().incrementHandoffCount();
 								saveHandOff(st);
 								LogMobile.debug("MobileController.java", st.getName()
@@ -1115,7 +1134,9 @@ public class MobileController extends SimEntity {
 						if (st.isLockedToMigration() || st.isMigStatus()) {
 							if (st.getVmLocalServerCloudlet() != null) {
 								sendNow(st.getVmLocalServerCloudlet().getId(),
-									MobileEvents.ABORT_MIGRATION, st);
+									MobileEvents.ABORT_MIGRATION,
+									migrationCoordinator.event(st,
+										MigrationEvent.Stage.ABORT));
 							}
 						}
 						LogMobile.debug("MobileController.java", st.getName()

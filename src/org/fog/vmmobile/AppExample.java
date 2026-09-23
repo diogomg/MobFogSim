@@ -106,7 +106,6 @@ public class AppExample {
 	private static Coordinate coordDevices;
 	private static int seed;
 	private static Random rand;
-	private static final TopologyService TOPOLOGY_SERVICE = new TopologyService();
 	static final boolean CLOUD = true;
 
 	static final int numOfDepts = 1;
@@ -151,6 +150,8 @@ public class AppExample {
 
 	private static void executeSimulation(SimulationConfig configuration)
 		throws Exception {
+		SimulationContext context = SimulationContext.requireCurrent();
+		SimulationServices services = context.getServices();
 		/*
 		 *  Simulation steps
 		 *  
@@ -192,7 +193,7 @@ public class AppExample {
 		 */
 
 		Log.disable();
-		SimulationEventSink events = SimulationContext.requireCurrent().getEventSink();
+		SimulationEventSink events = context.getEventSink();
 		events.summary(configuration::toSummaryLine);
 
 		int numUser = 1; // number of cloud users
@@ -231,7 +232,7 @@ public class AppExample {
 					addServerCloudlet(serverCloudlets, coordDevices, i);
 				}
 			}
-			TOPOLOGY_SERVICE.createTransportNetwork(getServerCloudlets(),
+			services.getTopology().createTransportNetwork(getServerCloudlets(),
 				getLatencyBetweenCloudlets(), getRand());
 
 			/* It is creating Smart Things. */
@@ -245,11 +246,11 @@ public class AppExample {
 			}
 			smartThings.addAll(plannedSmartThings);
 
-			TOPOLOGY_SERVICE.loadMobility(getMobilityDirectory(),
+			services.getTopology().loadMobility(getMobilityDirectory(),
 				getMobilityOrderManifest(), getSmartThings());
 			MobileUserRegistration.preparePendingUsers(getSmartThings());
 
-			TOPOLOGY_SERVICE.connectAccessPoints(getServerCloudlets(),
+			services.getTopology().connectAccessPoints(getServerCloudlets(),
 				getApDevices(), getRand());
 			SimulationContext.requireCurrent().recordInitialTopologySize();
 		}
@@ -276,7 +277,7 @@ public class AppExample {
 			serverCloudlets, apDevices, smartThings,
 			brokerList, moduleMapping, getMigrationPointPolicy(),
 			getMigrationStrategyPolicy(), getStepPolicy(), getCoordDevices(),
-			getSeed(), isMigrationAble());
+			getSeed(), isMigrationAble(), services);
 		TimeKeeper.getInstance().setSimulationStartTime(
 			SimulationContext.requireCurrent().getClock().wallTimeMillis());
 		MyStatistics.getInstance().setSeed(getSeed());
@@ -359,7 +360,6 @@ public class AppExample {
 					+ st.getDirection() + " Speed: " + st.getSpeed()
 					+ " EntryTime: " + st.getStartTravelTime() + " seconds");
 		}
-		SimulationContext context = SimulationContext.requireCurrent();
 		context.startProgress(expectedSimulationEndTime(getSmartThings()));
 		events.detail("AppExample", () -> "Started at "
 			+ Calendar.getInstance().getTime());
