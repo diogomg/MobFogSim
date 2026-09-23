@@ -32,19 +32,20 @@ import org.fog.gui.core.Graph;
 import org.fog.gui.core.GraphSnapshot;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeCellRenderer;
+import org.fog.gui.core.TopologyCommands;
 
 /** A dialog to add a new edge */
 public class AddPhysicalEdge extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 	private JComboBox sourceNode;
 	private JComboBox targetNode;
 	private JTextField tfLatency;
 
 	public AddPhysicalEdge(final Graph graph, final JFrame frame) {
 
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -63,7 +64,7 @@ public class AddPhysicalEdge extends JDialog {
 
 	@SuppressWarnings("unchecked")
 	private JPanel createInputPanel() {
-		final GraphSnapshot snapshot = graph.snapshot();
+		final GraphSnapshot snapshot = commands.snapshot();
 
 		Component rigid = Box.createRigidArea(new Dimension(10, 0));
 
@@ -198,7 +199,7 @@ public class AddPhysicalEdge extends JDialog {
 						Node target = (Node) targetNode.getSelectedItem();
 
 						Edge edge = new Edge(target, latency);
-						graph.addEdge(source, edge);
+						commands.addEdge(source, edge);
 
 						setVisible(false);
 					}

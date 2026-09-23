@@ -21,12 +21,13 @@ import javax.swing.UIManager;
 import org.fog.gui.core.ActuatorGui;
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.SpringUtilities;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes" })
 public class AddActuator extends JDialog {
 	private static final long serialVersionUID = -511667786177319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JTextField actuatorName;
 	private JTextField actuatorType;
@@ -38,7 +39,7 @@ public class AddActuator extends JDialog {
 	 *        the parent frame
 	 */
 	public AddActuator(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -78,7 +79,7 @@ public class AddActuator extends JDialog {
 					if (!catchedError) {
 						ActuatorGui actuator = new ActuatorGui(actuatorName.getText(),
 							actuatorType.getText().toString());
-						graph.addNode(actuator);
+						commands.addNode(actuator);
 						setVisible(false);
 					}
 				}

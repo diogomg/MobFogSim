@@ -22,12 +22,13 @@ import org.fog.gui.core.Graph;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.SensorModule;
 import org.fog.gui.core.SpringUtilities;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes" })
 public class AddSensorModule extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JTextField sensorType;
 
@@ -38,7 +39,7 @@ public class AddSensorModule extends JDialog {
 	 *        the parent frame
 	 */
 	public AddSensorModule(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -83,7 +84,7 @@ public class AddSensorModule extends JDialog {
 					}
 					if (!catchedError) {
 						Node node = new SensorModule(sensorType.getText().toString());
-						graph.addNode(node);
+						commands.addNode(node);
 						setVisible(false);
 					}
 				}

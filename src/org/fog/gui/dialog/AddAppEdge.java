@@ -34,12 +34,13 @@ import org.fog.gui.core.GraphSnapshot;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeCellRenderer;
 import org.fog.gui.core.SpringUtilities;
+import org.fog.gui.core.TopologyCommands;
 
 /** A dialog to add a new edge */
 public class AddAppEdge extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 	private JComboBox sourceNode;
 	private JComboBox targetNode;
 	private JTextField tupleType;
@@ -48,7 +49,7 @@ public class AddAppEdge extends JDialog {
 
 	public AddAppEdge(final Graph graph, final JFrame frame) {
 
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -67,7 +68,7 @@ public class AddAppEdge extends JDialog {
 
 	@SuppressWarnings("unchecked")
 	private JPanel createInputPanel() {
-		final GraphSnapshot snapshot = graph.snapshot();
+		final GraphSnapshot snapshot = commands.snapshot();
 
 		Component rigid = Box.createRigidArea(new Dimension(10, 0));
 
@@ -235,7 +236,7 @@ public class AddAppEdge extends JDialog {
 					name = source.getName() + "-" + target.getName();
 					Edge edge = new Edge(target, name,
 						tupleType.getText().trim(), cpuLength, networkLength);
-					graph.addEdge(source, edge);
+					commands.addEdge(source, edge);
 					setVisible(false);
 				}
 

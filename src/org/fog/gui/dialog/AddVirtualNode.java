@@ -26,12 +26,13 @@ import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.VmNode;
 import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeType;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddVirtualNode extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JTextField tfName;
 	private JComboBox cType;
@@ -47,7 +48,7 @@ public class AddVirtualNode extends JDialog {
 	 *        the parent frame
 	 */
 	public AddVirtualNode(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -111,7 +112,7 @@ public class AddVirtualNode extends JDialog {
 						Node node = new VmNode(tfName.getText().toString(),
 							NodeType.fromExternal((String) cType.getSelectedItem()),
 							t1, t2, t3, t4);
-						graph.addNode(node);
+						commands.addNode(node);
 						setVisible(false);
 					}
 				}

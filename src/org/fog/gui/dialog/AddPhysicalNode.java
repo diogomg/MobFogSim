@@ -27,12 +27,13 @@ import org.fog.gui.core.NodeType;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.SwitchNode;
 import org.fog.gui.core.HostNode;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddPhysicalNode extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JLabel lName;
 	private JLabel lType;
@@ -51,7 +52,7 @@ public class AddPhysicalNode extends JDialog {
 	private JTextField top4;
 
 	public AddPhysicalNode(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -123,7 +124,7 @@ public class AddPhysicalNode extends JDialog {
 							if (!catchedError) {
 								Node node = new HostNode(tfName.getText().toString(), type, t1, t2,
 									t3, t4, t5);
-								graph.addNode(node);
+								commands.addNode(node);
 								setVisible(false);
 							}
 						}
@@ -153,7 +154,7 @@ public class AddPhysicalNode extends JDialog {
 							if (!catchedError) {
 								Node node = new SwitchNode(tfName.getText().toString(), type, t1,
 									t2, t3, t4);
-								graph.addNode(node);
+								commands.addNode(node);
 								setVisible(false);
 							}
 						}

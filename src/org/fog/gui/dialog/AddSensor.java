@@ -25,12 +25,13 @@ import org.fog.entities.Sensor;
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.SensorGui;
 import org.fog.gui.core.SpringUtilities;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddSensor extends JDialog {
 	private static final long serialVersionUID = -511667786177319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JTextField sensorName;
 	private JTextField sensorType;
@@ -48,7 +49,7 @@ public class AddSensor extends JDialog {
 	 *        the parent frame
 	 */
 	public AddSensor(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -109,7 +110,7 @@ public class AddSensor extends JDialog {
 								_sensorType, (String) distribution.getSelectedItem(),
 								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
 								deterministicVal_);
-							graph.addNode(sensor);
+							commands.addNode(sensor);
 							setVisible(false);
 						}
 					} else if (dist.equals("Uniform")) {
@@ -125,7 +126,7 @@ public class AddSensor extends JDialog {
 								_sensorType, (String) distribution.getSelectedItem(),
 								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
 								deterministicVal_);
-							graph.addNode(sensor);
+							commands.addNode(sensor);
 							setVisible(false);
 						}
 					} else if (dist.equals("Deterministic")) {
@@ -140,7 +141,7 @@ public class AddSensor extends JDialog {
 								_sensorType, (String) distribution.getSelectedItem(),
 								normalMean_, normalStdDev_, uniformLow_, uniformUp_,
 								deterministicVal_);
-							graph.addNode(sensor);
+							commands.addNode(sensor);
 							setVisible(false);
 						}
 					}

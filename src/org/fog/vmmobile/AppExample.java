@@ -3,7 +3,6 @@ package org.fog.vmmobile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -12,8 +11,6 @@ import java.util.Random;
 import java.util.Set;
 
 import org.cloudbus.cloudsim.Host;
-import org.cloudbus.cloudsim.Log;
-import org.cloudbus.cloudsim.NetworkTopology;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Storage;
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -38,18 +35,11 @@ import org.fog.localization.Coordinate;
 import org.fog.localization.GridGenerator;
 import org.fog.localization.GridPosition;
 import org.fog.localization.MapBounds;
-import org.fog.localization.MobilitySample;
-import org.fog.localization.MobilityTimeline;
-import org.fog.placement.MobileController;
-import org.fog.placement.ModuleMapping;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
 import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.FogUtils;
 
-import org.fog.utils.NetworkSlicing;
-import org.fog.utils.NetworkUsageMonitor;
-import org.fog.utils.TimeKeeper;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.fog.vmmigration.BeforeMigration;
 import org.fog.vmmigration.CompleteVM;
@@ -59,16 +49,13 @@ import org.fog.vmmigration.LiveMigration;
 import org.fog.vmmigration.LowestDistBwSmartThingAP;
 import org.fog.vmmigration.LowestDistBwSmartThingServerCloudlet;
 import org.fog.vmmigration.LowestLatency;
-import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.PrepareCompleteVM;
 import org.fog.vmmigration.PrepareContainerVM;
 import org.fog.vmmigration.PrepareLiveMigration;
 import org.fog.vmmigration.Service;
-import org.fog.vmmigration.VmDestinationPolicy;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.Policies;
-import org.fog.vmmobile.constants.Services;
 import org.fog.vmmobile.policy.LocationPolicy;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MigrationStrategyPolicy;
@@ -125,291 +112,23 @@ public class AppExample {
 
 	/** Runs one isolated simulation and returns its immutable final result. */
 	public static SimulationRunResult run(String[] args) throws Exception {
-		return run(SimulationConfig.parse(args));
+		return run(SimulationCli.parse(args));
 	}
 
 	/** Runs one already validated configuration for an embedded caller. */
 	public static SimulationRunResult run(SimulationConfig configuration)
 		throws Exception {
-		try (SimulationContext context = SimulationContext.open(configuration)) {
-			try {
-				executeSimulation(configuration);
-				context.publishResults();
-				return context.result();
-			}
-			catch (Exception error) {
-				context.recordFailure(error);
-				throw error;
-			}
-			catch (Error error) {
-				context.recordFailure(error);
-				throw error;
-			}
-		}
-	}
-
-	private static void executeSimulation(SimulationConfig configuration)
-		throws Exception {
-		SimulationContext context = SimulationContext.requireCurrent();
-		SimulationServices services = context.getServices();
-		/*
-		 *  Simulation steps
-		 *  
-		 *  First step: Follow the following steps
-		 *  Second step: Provide the user mobility dataset in the input directory
-		 *  Third step: Initialize the CloudSim package. It should be called
-		 *  before creating any entities.
-		 *  Fourth step: Create all devices
-		 *  Fifth step: Configure users as pending until their mobility entry time
-		 *  Sixth step: Configure the network
-		 *  Seventh step: Start the simulation; each user creates its broker, VM,
-		 *  and application after its scheduled entry and wireless association
-		 *  Final step: Print results when simulation is over
-		 *  
-		 *  Example parameters
-		 *  
-		 *  1 290538 0 0 10 11 0 61 0 0 0 60,40 70,30 1 2.5 2 summary
-		 *  
-		 *  First parameter: 0/1 -> migrations are denied or allowed
-		 *  Second parameter: Positive Integer -> seed to be used in the random numbers generation
-		 *  Third parameter: 0/1 -> Migration point approach is fixed (0) or based on the user speed (1)
-		 *  Fourth parameter: 0/1/2 -> Migration strategy approach is based on the lowest latency (0), lowest distance between the user and cloudlet (1), or lowest distance between user and Access Point (2)
-		 *  Fifth parameter: Positive Integer -> Number of users
-		 *  Sixth parameter: Positive Integer -> Base Network Bandwidth between cloudlets
-		 *  Seventh parameter: 0/1/2 -> Migration policy based on Complete VM/Cold migration (0), Complete Container migration (1), or Container Live Migration (2)
-		 *  Eighth parameter: Positive number -> Base Network Latency between cloudlets
-		 *  Ninth parameter: Non Negative Integer -> User Mobility prediction, in seconds
-		 *  Tenth parameter: Non Negative Integer -> User Mobility prediction inaccuracy, in meters
-		 *  Eleventh parameter: Slice scope: 0 transport network only,
-		 *  1 wireless network only, or 2 end-to-end. The default is 2 when omitted.
-		 *  Twelfth parameter: Comma-separated percentages of users assigned to each slice.
-		 *  Thirteenth parameter: Comma-separated network-slice bandwidth percentages.
-		 *  Fourteenth parameter: 0 for fixed slices or 1 to borrow idle slice capacity.
-		 *  Fifteenth parameter: Dynamic slice reallocation delay in seconds
-		 *  (default: 2).
-		 *  Sixteenth parameter: 0 edge servers only, 1 end devices only, 2 hybrid.
-		 *  Seventeenth parameter: summary, full, or none output mode
-		 *  (default: summary).
-		 */
-
-		Log.disable();
-		SimulationEventSink events = context.getEventSink();
-		events.summary(configuration::toSummaryLine);
-
-		int numUser = 1; // number of cloud users
-		Calendar calendar = Calendar.getInstance();
-		boolean traceFlag = false; // mean trace events
-		CloudSim.init(numUser, calendar, traceFlag);
-		setAccessPointLocationPolicy(LocationPolicy.FIXED);
-		setServerCloudletLocationPolicy(LocationPolicy.FIXED);
-		setStepPolicy(1);
-		applySimulationConfiguration(configuration);
-
-		/**
-		 * STEP 2: CREATE ALL DEVICES -> example from: CloudSim - example5.java
-		 **/
-
-		CloudSim.EntityRegistrationCheckpoint topologyCheckpoint =
-			CloudSim.checkpointEntityRegistrations();
-		try {
-			/* It is creating Access Points. It makes according positionApPolicy */
-			if (positionApPolicy == LocationPolicy.FIXED) {
-				// it creates the Access Point according coordDevices' size
-				addApDevicesFixed(apDevices, coordDevices);
-			} else {
-				// it creates the Access Points
-				for (int i = 0; i < MaxAndMin.MAX_AP_DEVICE; i++) {
-					addApDevicesRandon(apDevices, coordDevices, i);
-				}
-			}
-
-			/* It is creating Server Cloudlets. */
-			if (getServerCloudletLocationPolicy() == LocationPolicy.FIXED) {
-				addServerCloudlet(serverCloudlets, coordDevices);
-			} else {
-				// it creates the ServerCloudlets
-				for (int i = 0; i < MaxAndMin.MAX_SERVER_CLOUDLET; i++) {
-					addServerCloudlet(serverCloudlets, coordDevices, i);
-				}
-			}
-			services.getTopology().createTransportNetwork(getServerCloudlets(),
-				getLatencyBetweenCloudlets(), getRand());
-
-			/* It is creating Smart Things. */
-			int[] userSliceAssignments = NetworkSlicing.getUserSliceAssignments(
-				getMaxSmartThings());
-			List<MobileDevice> plannedSmartThings = new ArrayList<MobileDevice>();
-			for (int i = 0; i < getMaxSmartThings(); i++) {
-				addSmartThing(plannedSmartThings, coordDevices, i);
-				plannedSmartThings.get(i)
-					.setNetworkSliceId(userSliceAssignments[i]);
-			}
-			smartThings.addAll(plannedSmartThings);
-
-			services.getTopology().loadMobility(getMobilityDirectory(),
-				getMobilityOrderManifest(), getSmartThings());
-			MobileUserRegistration.preparePendingUsers(getSmartThings());
-
-			services.getTopology().connectAccessPoints(getServerCloudlets(),
-				getApDevices(), getRand());
-			SimulationContext.requireCurrent().recordInitialTopologySize();
-		}
-		catch (Exception error) {
-			apDevices.clear();
-			serverCloudlets.clear();
-			smartThings.clear();
-			NetworkTopology.reset();
-			CloudSim.restoreEntityRegistrations(topologyCheckpoint);
-			throw new SimulationBuildException(
-				"Could not assemble the simulation topology", error);
-		}
-
-		/**
-		 * STEP 3: CREATE CONTROLLER. Brokers, VMs, and applications are created
-		 * when each user's scheduled entry event occurs.
-		 **/
-
-		MobileController mobileController = null;
-		// initializing a module mapping
-		ModuleMapping moduleMapping = ModuleMapping.createModuleMapping();
-
-		mobileController = new MobileController("MobileController",
-			serverCloudlets, apDevices, smartThings,
-			brokerList, moduleMapping, getMigrationPointPolicy(),
-			getMigrationStrategyPolicy(), getStepPolicy(), getCoordDevices(),
-			getSeed(), isMigrationAble(), services);
-		TimeKeeper.getInstance().setSimulationStartTime(
-			SimulationContext.requireCurrent().getClock().wallTimeMillis());
-		MyStatistics.getInstance().setSeed(getSeed());
-		for (MobileDevice st : getSmartThings()) {
-			if (getMigrationPointPolicy() == MigrationPointPolicy.FIXED) {
-				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
-
-					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
-						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
-						+ getSeed() + "_st_" + st.getMyId() + ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"FIXED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
-							+ getSeed() + "_st_" + st.getMyId(), st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"FIXED_MIGRATION_POINT_with_LOWEST_LATENCY");
-				} else if (getMigrationStrategyPolicy()
-					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_ACCESS_POINT) {
-					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
-						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
-						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
-						+ getSeed() + "_st_" + st.getMyId(), st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP");
-
-				} else if (getMigrationStrategyPolicy()
-					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
-					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
-						+ "/latencies_FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
-						+ getSeed() + "_st_" + st.getMyId() + ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
-						+ getSeed() + "_st_" + st.getMyId(), st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET");
-				}
-			} else if (getMigrationPointPolicy() == MigrationPointPolicy.SPEED) {
-				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
-					MyStatistics.getInstance().setFileMap("./outputLatencies/" + st.getMyId()
-						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
-						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"SPEED_MIGRATION_POINT_with_LOWEST_LATENCY_seed_"
-						+ getSeed() + "_st_" + st.getMyId(), st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"SPEED_MIGRATION_POINT_with_LOWEST_LATENCY");
-
-				} else if (getMigrationStrategyPolicy()
-					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_ACCESS_POINT) {
-					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
-						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
-						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP_seed_"
-						+ getSeed() + "_st_" + st.getMyId(),st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP");
-
-				} else if (getMigrationStrategyPolicy()
-					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
-					MyStatistics.getInstance().setFileMap("./outputLatencies/"+ st.getMyId()
-						+ "/latencies_SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
-						+ getSeed() + "_st_" + st.getMyId()+ ".txt", st.getMyId());
-					MyStatistics.getInstance().putLantencyFileName(
-						"SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET_seed_"
-						+ getSeed() + "_st_" + st.getMyId(),st.getMyId());
-					MyStatistics.getInstance().setToPrint(
-						"SPEED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET");
-				}
-			}
-			MyStatistics.getInstance().putLantencyFileName("Time-latency", st.getMyId());
-			MyStatistics.getInstance().initialiseLatencyCounter(st.getMyId());
-		}
-
-		for (MobileDevice st : getSmartThings()) {
-			events.detail("AppExample", () ->
-				st.getName() + "- X: " + st.getCoord().getCoordX() + " Y: "
-					+ st.getCoord().getCoordY() + " Direction: "
-					+ st.getDirection() + " Speed: " + st.getSpeed()
-					+ " EntryTime: " + st.getStartTravelTime() + " seconds");
-		}
-		context.startProgress(expectedSimulationEndTime(getSmartThings()));
-		events.detail("AppExample", () -> "Started at "
-			+ Calendar.getInstance().getTime());
-		CloudSim.startSimulation();
-		context.completeProgress();
-		events.detail("AppExample", () -> "Simulation over");
-	}
-
-	private static double expectedSimulationEndTime(
-		List<MobileDevice> mobileDevices) {
-		double latestTraceTime = 0.0;
-		for (MobileDevice mobileDevice : mobileDevices) {
-			List<MobilitySample> path = mobileDevice.getMobilityPath();
-			if (!path.isEmpty()) {
-				latestTraceTime = Math.max(latestTraceTime,
-					MobilityTimeline.toSimulationTime(
-						path.get(path.size() - 1).getTimeSeconds()));
-			}
-		}
-		if (latestTraceTime <= 0.0) {
-			return MaxAndMin.MAX_SIMULATION_TIME;
-		}
-		return Math.min(latestTraceTime, MaxAndMin.MAX_SIMULATION_TIME);
+		return new SimulationRunner().run(configuration);
 	}
 
 	static void configureSimulationParameters(String[] args) {
-		applySimulationConfiguration(SimulationConfig.parse(args));
-	}
-
-	private static void applySimulationConfiguration(SimulationConfig configuration) {
-		setMigrationAble(configuration.isMigrationEnabled());
-		setSeed(configuration.getSeed());
+		SimulationConfig configuration = SimulationCli.parse(args);
 		SimulationContext context = SimulationContext.currentOrNull();
-		setRand(context == null
+		Random random = context == null
 			? new Random(configuration.getSeed() * Integer.MAX_VALUE)
-			: context.random("application"));
-		setMigrationPointPolicy(configuration.getMigrationPoint());
-		setMigrationStrategyPolicy(configuration.getMigrationStrategy());
-		setMaxSmartThings(configuration.getMaximumUsers());
-		setMaxBandwidth(configuration.getMaximumBandwidth());
-		setMigrationTechniquePolicy(configuration.getMigrationTechnique());
-		setLatencyBetweenCloudlets(configuration.getCloudletLatency());
-		setTravelPredicTimeForST(configuration.getTravelPredictionTime());
-		setMobilityPredictionError(configuration.getMobilityPredictionError());
-		NetworkSlicing.applyConfiguration(configuration.getSlicingConfiguration());
-		VmDestinationPolicy.configure(configuration.getVmDestination());
-		setMobilityDirectory(configuration.getMobilityDirectory());
-		setMobilityOrderManifest(configuration.getMobilityOrderManifest());
-		setOutputDirectory(configuration.getOutputDirectory());
-		setOutputMode(configuration.getOutputMode());
+			: context.random("application");
+		new ExampleSimulationConfiguration(configuration, random)
+			.activateLegacyCompatibility();
 	}
 
 	static void useSimulationContext(SimulationContext context) {
@@ -436,7 +155,7 @@ public class AppExample {
 		rand = null;
 	}
 
-	private static void addApDevicesFixed(List<ApDevice> apDevices,
+	static void addApDevicesFixed(List<ApDevice> apDevices,
 		Coordinate coordDevices) {
 		addApDevicesFixed(apDevices, coordDevices, MapBounds.defaults());
 	}
@@ -462,7 +181,7 @@ public class AppExample {
 
 	}
 
-	private static void addApDevicesRandon(List<ApDevice> apDevices,
+	static void addApDevicesRandon(List<ApDevice> apDevices,
 		Coordinate coordDevices, int i) {
 		addApDevicesRandom(apDevices, coordDevices, i, MapBounds.defaults());
 	}

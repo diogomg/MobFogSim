@@ -24,6 +24,7 @@ public class GraphView extends JPanel {
 
 	private JPanel canvas;
 	private Graph graph;
+	private TopologyCommands commands;
 
 	private Image imgHost;
 	private Image imgSensor;
@@ -36,6 +37,7 @@ public class GraphView extends JPanel {
 	public GraphView(final Graph graph) {
 
 		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 		imgHost = Toolkit.getDefaultToolkit().getImage(
 			this.getClass().getResource("/images/host.png"));
 		imgSwitch = Toolkit.getDefaultToolkit().getImage(
@@ -154,7 +156,7 @@ public class GraphView extends JPanel {
 					endpointPlaceHolders.add(new PlaceHolder(x, y));
 
 					coordForNodes.put(node, new Coordinates(x, y));
-					node.setCoordinate(new Coordinates(x, y));
+					commands.placeNode(node, new Coordinates(x, y));
 				}
 
 				coordForNodes = getCoordForNodes(levelToPlaceHolderMap, endpointPlaceHolders,
@@ -265,9 +267,9 @@ public class GraphView extends JPanel {
 		Map<Node, List<Node>> childrenMap = createChildrenMap(snapshot);
 
 		for (Node node : snapshot.nodes())
-			node.setPlaced(false);
+			commands.resetPlacement(node);
 		for (Node node : endpoints)
-			node.setPlaced(false);
+			commands.resetPlacement(node);
 
 		if (maxLevel < 0)
 			return new HashMap<Node, Coordinates>();
@@ -276,9 +278,8 @@ public class GraphView extends JPanel {
 		for (PlaceHolder placeHolder : levelToPlaceHolderMap.get(minLevel)) {
 			Node node = levelMap.get(minLevel).get(j);
 			placeHolder.setNode(node);
-			node.setCoordinate(placeHolder.getCoordinates());
+			commands.placeNode(node, placeHolder.getCoordinates());
 			coordForNodesMap.put(node, node.getCoordinate());
-			node.setPlaced(true);
 			j++;
 		}
 
@@ -292,9 +293,8 @@ public class GraphView extends JPanel {
 					PlaceHolder childPlaceHolder = levelToPlaceHolderMap.get(level).get(i);
 					childPlaceHolder.setOccupied(true);
 					childPlaceHolder.setNode(child);
-					child.setCoordinate(childPlaceHolder.getCoordinates());
+					commands.placeNode(child, childPlaceHolder.getCoordinates());
 					coordForNodesMap.put(child, child.getCoordinate());
-					child.setPlaced(true);
 					i++;
 				}
 			}
@@ -303,9 +303,8 @@ public class GraphView extends JPanel {
 					PlaceHolder placeHolder = levelToPlaceHolderMap.get(level).get(i);
 					placeHolder.setOccupied(true);
 					placeHolder.setNode(node);
-					node.setCoordinate(placeHolder.getCoordinates());
+					commands.placeNode(node, placeHolder.getCoordinates());
 					coordForNodesMap.put(node, node.getCoordinate());
-					node.setPlaced(true);
 					i++;
 				}
 			}
@@ -317,9 +316,8 @@ public class GraphView extends JPanel {
 				PlaceHolder placeHolder = endpointPlaceHolders.get(i);
 				placeHolder.setOccupied(true);
 				placeHolder.setNode(child);
-				child.setCoordinate(placeHolder.getCoordinates());
+				commands.placeNode(child, placeHolder.getCoordinates());
 				coordForNodesMap.put(child, child.getCoordinate());
-				child.setPlaced(true);
 				i++;
 			}
 		}
@@ -328,9 +326,8 @@ public class GraphView extends JPanel {
 				PlaceHolder placeHolder = endpointPlaceHolders.get(i);
 				placeHolder.setOccupied(true);
 				placeHolder.setNode(node);
-				node.setCoordinate(placeHolder.getCoordinates());
+				commands.placeNode(node, placeHolder.getCoordinates());
 				coordForNodesMap.put(node, node.getCoordinate());
-				node.setPlaced(true);
 				i++;
 			}
 		}
@@ -339,5 +336,6 @@ public class GraphView extends JPanel {
 
 	public void setGraph(Graph newGraph) {
 		this.graph = newGraph;
+		this.commands = new TopologyCommands(newGraph);
 	}
 }

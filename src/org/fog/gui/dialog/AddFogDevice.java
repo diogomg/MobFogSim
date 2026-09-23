@@ -21,12 +21,13 @@ import javax.swing.UIManager;
 import org.fog.gui.core.FogDeviceGui;
 import org.fog.gui.core.Graph;
 import org.fog.gui.core.SpringUtilities;
+import org.fog.gui.core.TopologyCommands;
 
 @SuppressWarnings({ "rawtypes" })
 public class AddFogDevice extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final Graph graph;
+	private final TopologyCommands commands;
 
 	private JLabel deviceNameLabel;
 	private JLabel upBwLabel;
@@ -45,7 +46,7 @@ public class AddFogDevice extends JDialog {
 	private JTextField rate;
 
 	public AddFogDevice(final Graph graph, final JFrame frame) {
-		this.graph = graph;
+		this.commands = new TopologyCommands(graph);
 
 		setLayout(new BorderLayout());
 
@@ -112,7 +113,7 @@ public class AddFogDevice extends JDialog {
 				if (!catchedError) {
 					FogDeviceGui fogDevice = new FogDeviceGui(deviceName.getText().toString(),
 						mips_, ram_, upBw_, downBw_, level_, rate_);
-					graph.addNode(fogDevice);
+					commands.addNode(fogDevice);
 					setVisible(false);
 				}
 			}
