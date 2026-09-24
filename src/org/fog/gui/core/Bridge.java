@@ -7,11 +7,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.fog.utils.distribution.DeterministicDistribution;
@@ -95,6 +98,7 @@ public final class Bridge {
 	private static Node parsePhysicalNode(JSONObject object, Path path) {
 		NodeType type = nodeType(object, path);
 		String name = string(object, "name", path);
+		NodeId nodeId = nodeId(object, name, type, path);
 		switch (type) {
 		case HOST:
 			int copies = object.get("nums") == null ? 1
@@ -104,27 +108,30 @@ public final class Bridge {
 					+ "' uses nums=" + copies
 					+ "; each expanded host must have a unique name", null);
 			}
-			return new HostNode(name, type, positiveLong(object, "pes", path),
+			return new HostNode(nodeId, name, type,
+				positiveLong(object, "pes", path),
 				positiveLong(object, "mips", path),
 				positiveInt(object, "ram", path),
 				positiveLong(object, "storage", path),
 				positiveLong(object, "bw", path));
 		case FOG_DEVICE:
-			return new FogDeviceGui(name, positiveLong(object, "mips", path),
+			return new FogDeviceGui(nodeId, name,
+				positiveLong(object, "mips", path),
 				positiveInt(object, "ram", path),
 				positiveLong(object, "upBw", path),
 				positiveLong(object, "downBw", path),
 				integer(object, "level", path),
 				nonNegativeDouble(object, "ratePerMips", path));
 		case SENSOR:
-			return new SensorGui(name, string(object, "sensorType", path),
+			return new SensorGui(nodeId, name,
+				string(object, "sensorType", path),
 				parseDistribution(object, path));
 		case ACTUATOR:
-			return new ActuatorGui(name,
+			return new ActuatorGui(nodeId, name,
 				string(object, "actuatorType", path));
 		case CORE_SWITCH:
 		case EDGE_SWITCH:
-			return new SwitchNode(name, type,
+			return new SwitchNode(nodeId, name, type,
 				positiveLong(object, "iops", path),
 				positiveInt(object, "upports", path),
 				positiveInt(object, "downports", path),
@@ -138,19 +145,21 @@ public final class Bridge {
 	private static Node parseVirtualNode(JSONObject object, Path path) {
 		NodeType type = nodeType(object, path);
 		String name = string(object, "name", path);
+		NodeId nodeId = nodeId(object, name, type, path);
 		switch (type) {
 		case VM:
-			return new VmNode(name, type, positiveLong(object, "size", path),
+			return new VmNode(nodeId, name, type,
+				positiveLong(object, "size", path),
 				positiveInt(object, "pes", path),
 				positiveLong(object, "mips", path),
 				positiveInt(object, "ram", path));
 		case APP_MODULE:
-			return new AppModule(name);
+			return new AppModule(nodeId, name);
 		case SENSOR_MODULE:
-			return new SensorModule(name,
+			return new SensorModule(nodeId, name,
 				stringOrDefault(object, "sensorType", name));
 		case ACTUATOR_MODULE:
-			return new ActuatorModule(name,
+			return new ActuatorModule(nodeId, name,
 				stringOrDefault(object, "actuatorType", name));
 		default:
 			throw invalid(path, "node '" + name
@@ -209,7 +218,6 @@ public final class Bridge {
 		return graphToJson(snapshot, type);
 	}
 
-	@SuppressWarnings("unchecked")
 	public static String graphToJson(Graph graph, TopologyType type) {
 		if (graph == null || type == null) {
 			throw new IllegalArgumentException(
@@ -218,25 +226,30 @@ public final class Bridge {
 		return graphToJson(graph.snapshot(), type);
 	}
 
-	@SuppressWarnings("unchecked")
 	private static String graphToJson(GraphSnapshot snapshot, TopologyType type) {
-		JSONObject topology = new JSONObject();
-		JSONArray nodes = new JSONArray();
-		JSONArray links = new JSONArray();
+		Map<String, Object> topology = new LinkedHashMap<String, Object>();
+		List<Object> nodes = new ArrayList<Object>();
+		List<Object> links = new ArrayList<Object>();
 		Map<UndirectedLink, Double> physicalLinks =
 			new HashMap<UndirectedLink, Double>();
 		Set<String> nodeNames = new HashSet<String>();
 		Map<Node, List<Edge>> adjacency = snapshot.asMap();
+		List<Node> orderedNodes = new ArrayList<Node>(snapshot.nodes());
 
-		for (Entry<Node, List<Edge>> entry : adjacency.entrySet()) {
-			Node source = entry.getKey();
-			validateNodeForTopology(source, type);
-			if (!nodeNames.add(source.getName())) {
+		for (Node node : orderedNodes) {
+			validateNodeForTopology(node, type);
+			if (!nodeNames.add(node.getName())) {
 				throw new IllegalArgumentException(
-					"Graph contains duplicate node name '" + source.getName() + "'");
+					"Graph contains duplicate node name '" + node.getName() + "'");
 			}
+		}
+		Collections.sort(orderedNodes, NODE_ORDER);
+
+		for (Node source : orderedNodes) {
 			nodes.add(nodeToJson(source));
-			for (Edge edge : entry.getValue()) {
+			List<Edge> orderedEdges = new ArrayList<Edge>(adjacency.get(source));
+			Collections.sort(orderedEdges, EDGE_ORDER);
+			for (Edge edge : orderedEdges) {
 				Node destination = edge.getNode();
 				validateNodeForTopology(destination, type);
 				if (!adjacency.containsKey(destination)) {
@@ -265,12 +278,12 @@ public final class Bridge {
 		}
 		topology.put("nodes", nodes);
 		topology.put("links", links);
-		return topology.toJSONString();
+		return JSONObject.toJSONString(topology);
 	}
 
-	@SuppressWarnings("unchecked")
-	private static JSONObject nodeToJson(Node node) {
-		JSONObject object = new JSONObject();
+	private static Map<String, Object> nodeToJson(Node node) {
+		Map<String, Object> object = new LinkedHashMap<String, Object>();
+		object.put("id", node.getNodeId().toString());
 		object.put("name", node.getName());
 		object.put("type", node.getType());
 		switch (node.getNodeType()) {
@@ -328,8 +341,8 @@ public final class Bridge {
 		return object;
 	}
 
-	@SuppressWarnings("unchecked")
-	private static void writeSensor(JSONObject object, SensorGui sensor) {
+	private static void writeSensor(Map<String, Object> object,
+		SensorGui sensor) {
 		object.put("sensorType", sensor.getSensorType());
 		object.put("distribution", sensor.getDistributionType());
 		Distribution distribution = sensor.getDistribution();
@@ -352,10 +365,9 @@ public final class Bridge {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private static JSONObject edgeToJson(Node source, Edge edge,
+	private static Map<String, Object> edgeToJson(Node source, Edge edge,
 		TopologyType type) {
-		JSONObject object = new JSONObject();
+		Map<String, Object> object = new LinkedHashMap<String, Object>();
 		object.put("source", source.getName());
 		object.put("destination", edge.getNode().getName());
 		if (type == TopologyType.PHYSICAL) {
@@ -425,6 +437,23 @@ public final class Bridge {
 	private static NodeType nodeType(JSONObject object, Path path) {
 		try {
 			return NodeType.fromExternal(string(object, "type", path));
+		}
+		catch (IllegalArgumentException error) {
+			throw invalid(path, error.getMessage(), error);
+		}
+	}
+
+	private static NodeId nodeId(JSONObject object, String name, NodeType type,
+		Path path) {
+		Object value = object.get("id");
+		if (value == null) {
+			return NodeId.fromLegacyName(name, type);
+		}
+		if (!(value instanceof String)) {
+			throw invalid(path, "field 'id' must be a UUID string", null);
+		}
+		try {
+			return NodeId.parse((String) value);
 		}
 		catch (IllegalArgumentException error) {
 			throw invalid(path, error.getMessage(), error);
@@ -515,6 +544,51 @@ public final class Bridge {
 		return cause == null ? new TopologyException(contextualMessage)
 			: new TopologyException(contextualMessage, cause);
 	}
+
+	private static final Comparator<Node> NODE_ORDER = new Comparator<Node>() {
+		@Override
+		public int compare(Node first, Node second) {
+			int nameComparison = first.getName().compareTo(second.getName());
+			return nameComparison != 0 ? nameComparison
+				: first.getNodeId().compareTo(second.getNodeId());
+		}
+	};
+
+	private static final Comparator<Edge> EDGE_ORDER = new Comparator<Edge>() {
+		@Override
+		public int compare(Edge first, Edge second) {
+			int comparison = first.getNode().getName().compareTo(
+				second.getNode().getName());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = first.getEdgeType().compareTo(second.getEdgeType());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = first.getName().compareTo(second.getName());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = first.getTupleType().compareTo(second.getTupleType());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = Long.compare(first.getBandwidth(), second.getBandwidth());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = Double.compare(first.getLatency(), second.getLatency());
+			if (comparison != 0) {
+				return comparison;
+			}
+			comparison = Double.compare(first.getTupleCpuLength(),
+				second.getTupleCpuLength());
+			return comparison != 0 ? comparison
+				: Double.compare(first.getTupleNetworkLength(),
+					second.getTupleNetworkLength());
+		}
+	};
 
 	private static final class UndirectedLink {
 		private final String first;

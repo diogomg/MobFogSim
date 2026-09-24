@@ -7,7 +7,6 @@ public class FogDeviceGui extends Node {
 	private static final long serialVersionUID = -8635044061126993668L;
 
 	private int level;
-	private String name;
 	private long mips;
 	private int ram;
 	private long upBw;
@@ -18,22 +17,18 @@ public class FogDeviceGui extends Node {
 
 	public FogDeviceGui(String name, long mips, int ram, long upBw, long downBw, int level,
 		double rate) {
-		super(name, NodeType.FOG_DEVICE);
-		this.name = name;
+		this(NodeId.create(), name, mips, ram, upBw, downBw, level, rate);
+	}
+
+	FogDeviceGui(NodeId nodeId, String name, long mips, int ram, long upBw,
+		long downBw, int level, double rate) {
+		super(nodeId, name, NodeType.FOG_DEVICE);
 		this.mips = mips;
 		this.ram = ram;
 		this.upBw = upBw;
 		this.downBw = downBw;
 		this.level = level;
 		this.ratePerMips = rate;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public long getMips() {

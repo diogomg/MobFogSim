@@ -1,5 +1,7 @@
 package org.fog.gui.core;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 
 /**
@@ -8,13 +10,16 @@ import java.io.Serializable;
 public class Node implements Serializable {
 	private static final long serialVersionUID = 823544330517091616L;
 
+	private NodeId nodeId;
 	private Coordinates coord;
 	private String name;
 	private NodeType type;
 	private boolean isPlaced;
 
 	public Node() {
+		nodeId = NodeId.create();
 		isPlaced = false;
+		coord = new Coordinates();
 	}
 
 	public Node(String name, String type) {
@@ -22,14 +27,29 @@ public class Node implements Serializable {
 	}
 
 	public Node(String name, NodeType type) {
+		this(NodeId.create(), name, type);
+	}
+
+	protected Node(NodeId nodeId, String name, NodeType type) {
+		if (nodeId == null) {
+			throw new IllegalArgumentException("Node ID cannot be null");
+		}
+		this.nodeId = nodeId;
 		this.name = name;
 		this.type = requireNodeType(type);
 		isPlaced = false;
 		coord = new Coordinates();
 	}
 
-	public void setName(String name) {
+	void renameTo(String name) {
+		if (name == null || name.trim().isEmpty()) {
+			throw new IllegalArgumentException("Node name cannot be empty");
+		}
 		this.name = name;
+	}
+
+	public NodeId getNodeId() {
+		return nodeId;
 	}
 
 	public String getName() {
@@ -70,10 +90,7 @@ public class Node implements Serializable {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
+		return nodeId.hashCode();
 	}
 
 	@Override
@@ -82,15 +99,10 @@ public class Node implements Serializable {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Node))
 			return false;
 		Node other = (Node) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
+		return nodeId.equals(other.nodeId);
 	}
 
 	@Override
@@ -104,6 +116,18 @@ public class Node implements Serializable {
 
 	public void setPlaced(boolean isPlaced) {
 		this.isPlaced = isPlaced;
+	}
+
+	/** Restores a stable identity when reading pre-NodeId Java serialisations. */
+	private void readObject(ObjectInputStream input)
+		throws IOException, ClassNotFoundException {
+		input.defaultReadObject();
+		if (nodeId == null) {
+			nodeId = NodeId.fromLegacyName(name, type);
+		}
+		if (coord == null) {
+			coord = new Coordinates();
+		}
 	}
 
 }

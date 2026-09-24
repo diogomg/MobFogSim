@@ -11,14 +11,17 @@ public class SensorGui extends Node implements Serializable {
 
 	private static final long serialVersionUID = 4087896123649020073L;
 
-	private String name;
 	private String sensorType;
 
 	private Distribution distribution;
 
 	public SensorGui(String name, String type, Distribution distribution) {
-		super(name, NodeType.SENSOR);
-		this.name = name;
+		this(NodeId.create(), name, type, distribution);
+	}
+
+	SensorGui(NodeId nodeId, String name, String type,
+		Distribution distribution) {
+		super(nodeId, name, NodeType.SENSOR);
 		sensorType = type;
 		this.distribution = distribution;
 	}
@@ -26,7 +29,6 @@ public class SensorGui extends Node implements Serializable {
 	public SensorGui(String name, String sensorType, String selectedItem, double normalMean_,
 		double normalStdDev_, double uniformLow_, double uniformUp_, double deterministicVal_) {
 		super(name, NodeType.SENSOR);
-		this.name = name;
 		this.sensorType = sensorType;
 		if (normalMean_ != -1) {
 			distribution = new NormalDistribution(normalMean_, normalStdDev_);
@@ -39,14 +41,6 @@ public class SensorGui extends Node implements Serializable {
 
 	public int getDistributionType() {
 		return distribution.getDistributionType();
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public Distribution getDistribution() {

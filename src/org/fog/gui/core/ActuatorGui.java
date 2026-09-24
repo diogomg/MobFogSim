@@ -6,21 +6,15 @@ public class ActuatorGui extends Node implements Serializable {
 
 	private static final long serialVersionUID = 4087896123649020073L;
 
-	private String name;
 	private String actuatorType;
 
 	public ActuatorGui(String name, String actuatorType) {
-		super(name, NodeType.ACTUATOR);
-		this.name = name;
+		this(NodeId.create(), name, actuatorType);
+	}
+
+	ActuatorGui(NodeId nodeId, String name, String actuatorType) {
+		super(nodeId, name, NodeType.ACTUATOR);
 		this.actuatorType = actuatorType;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	@Override

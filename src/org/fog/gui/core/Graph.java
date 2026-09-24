@@ -1,11 +1,16 @@
 package org.fog.gui.core;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * A graph model. Normally a model should not have any logic, but in this case
@@ -20,7 +25,7 @@ public class Graph implements Serializable {
 
 	public Graph() {
 		// when creating a new graph ensure that a new adjacencyList is created
-		adjacencyList = new HashMap<Node, List<Edge>>();
+		adjacencyList = new LinkedHashMap<Node, List<Edge>>();
 	}
 
 	public Graph(Map<Node, List<Edge>> adjacencyList) {
@@ -37,13 +42,29 @@ public class Graph implements Serializable {
 		if (adjacencyList == null) {
 			throw new IllegalArgumentException("Adjacency list cannot be null");
 		}
-		HashMap<Node, List<Edge>> copy = new HashMap<Node, List<Edge>>();
+		HashMap<Node, List<Edge>> copy =
+			new LinkedHashMap<Node, List<Edge>>();
+		Set<String> names = new HashSet<String>();
 		for (Entry<Node, List<Edge>> entry : adjacencyList.entrySet()) {
 			if (entry.getKey() == null || entry.getValue() == null) {
 				throw new IllegalArgumentException(
 					"Graph nodes and edge lists cannot be null");
 			}
+			requireNodeName(entry.getKey().getName());
+			if (!names.add(entry.getKey().getName())) {
+				throw new IllegalArgumentException("Graph contains duplicate node name '"
+					+ entry.getKey().getName() + "'");
+			}
 			copy.put(entry.getKey(), new ArrayList<Edge>(entry.getValue()));
+		}
+		for (Entry<Node, List<Edge>> entry : copy.entrySet()) {
+			for (Edge edge : entry.getValue()) {
+				if (edge == null || edge.getNode() == null
+					|| !copy.containsKey(edge.getNode())) {
+					throw new IllegalArgumentException(
+						"Graph edges must reference registered nodes");
+				}
+			}
 		}
 		return copy;
 	}
@@ -69,36 +90,54 @@ public class Graph implements Serializable {
 	 * of the adjacency list a new entry is added
 	 */
 	public void addEdge(Node key, Edge value) {
-		if (key == null) {
-			throw new IllegalArgumentException("Graph node cannot be null");
+		if (key == null || value == null || value.getNode() == null) {
+			throw new IllegalArgumentException(
+				"Graph edge source, value, and destination cannot be null");
 		}
-		if (value != null && value.getNode() == null) {
-			throw new IllegalArgumentException("Edge destination cannot be null");
+		if (!adjacencyList.containsKey(key)
+			|| !adjacencyList.containsKey(value.getNode())) {
+			throw new IllegalArgumentException(
+				"Graph edge endpoints must already belong to the graph");
 		}
-
-		if (adjacencyList.containsKey(key)) {
-			if (adjacencyList.get(key) == null) {
-				adjacencyList.put(key, new ArrayList<Edge>());
-			}
-			// add edge if not null
-			if (value != null) {
-				adjacencyList.get(key).add(value);
-			}
-		} else {
-			List<Edge> edges = new ArrayList<Edge>();
-			// add edge if not null
-			if (value != null) {
-				edges.add(value);
-			}
-
-			adjacencyList.put(key, edges);
-		}
+		adjacencyList.get(key).add(value);
 		invalidateSnapshot();
 	}
 
 	/** Simply adds a new node, without setting any edges */
 	public void addNode(Node node) {
-		addEdge(node, null);
+		if (node == null) {
+			throw new IllegalArgumentException("Graph node cannot be null");
+		}
+		requireNodeName(node.getName());
+		if (adjacencyList.containsKey(node)) {
+			throw new IllegalArgumentException(
+				"Graph already contains node ID " + node.getNodeId());
+		}
+		if (nodeWithName(node.getName(), null) != null) {
+			throw new IllegalArgumentException(
+				"Graph already contains node name '" + node.getName() + "'");
+		}
+		adjacencyList.put(node, new ArrayList<Edge>());
+		invalidateSnapshot();
+	}
+
+	/** Renames a registered node without changing its identity or graph edges. */
+	public void renameNode(Node node, String newName) {
+		if (node == null || !adjacencyList.containsKey(node)) {
+			throw new IllegalArgumentException(
+				"Only a registered graph node can be renamed");
+		}
+		requireNodeName(newName);
+		Node registered = registeredNode(node);
+		Node duplicate = nodeWithName(newName, registered);
+		if (duplicate != null) {
+			throw new IllegalArgumentException(
+				"Graph already contains node name '" + newName + "'");
+		}
+		if (!newName.equals(registered.getName())) {
+			registered.renameTo(newName);
+			invalidateSnapshot();
+		}
 	}
 
 	public void removeEdge(Node key, Edge value) {
@@ -162,6 +201,38 @@ public class Graph implements Serializable {
 	public void clearGraph() {
 		adjacencyList.clear();
 		invalidateSnapshot();
+	}
+
+	private Node registeredNode(Node node) {
+		for (Node candidate : adjacencyList.keySet()) {
+			if (candidate.equals(node)) {
+				return candidate;
+			}
+		}
+		throw new IllegalArgumentException("Node is not registered in the graph");
+	}
+
+	private Node nodeWithName(String name, Node excluded) {
+		for (Node candidate : adjacencyList.keySet()) {
+			if (candidate != excluded && name.equals(candidate.getName())) {
+				return candidate;
+			}
+		}
+		return null;
+	}
+
+	private static void requireNodeName(String name) {
+		if (name == null || name.trim().isEmpty()) {
+			throw new IllegalArgumentException("Graph node name cannot be empty");
+		}
+	}
+
+	/** Normalises pre-A4 serialisations to deterministic insertion ordering. */
+	private void readObject(ObjectInputStream input)
+		throws IOException, ClassNotFoundException {
+		input.defaultReadObject();
+		adjacencyList = copyAdjacencyList(adjacencyList);
+		cachedSnapshot = null;
 	}
 
 	public String toJsonString() {

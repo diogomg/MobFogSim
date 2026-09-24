@@ -9,7 +9,11 @@ public class AppModule extends Node {
 	public AppModule() {}
 
 	public AppModule(String name) {
-		super(name, NodeType.APP_MODULE);
+		this(NodeId.create(), name);
+	}
+
+	AppModule(NodeId nodeId, String name) {
+		super(nodeId, name, NodeType.APP_MODULE);
 	}
 
 	@Override

@@ -2,7 +2,7 @@ package org.fog.gui.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,7 +12,7 @@ public final class GraphSnapshot {
 	private final Map<Node, List<Edge>> adjacency;
 
 	GraphSnapshot(Map<Node, List<Edge>> source) {
-		Map<Node, List<Edge>> copy = new HashMap<Node, List<Edge>>();
+		Map<Node, List<Edge>> copy = new LinkedHashMap<Node, List<Edge>>();
 		for (Map.Entry<Node, List<Edge>> entry : source.entrySet()) {
 			copy.put(entry.getKey(), Collections.unmodifiableList(
 				new ArrayList<Edge>(entry.getValue())));

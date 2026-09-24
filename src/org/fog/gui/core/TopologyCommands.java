@@ -55,6 +55,11 @@ public final class TopologyCommands {
 		graph.addEdge(source, edge);
 	}
 
+	/** Renames a node while preserving its stable identity and every edge. */
+	public void renameNode(Node node, String newName) {
+		graph.renameNode(node, newName);
+	}
+
 	public void removeEdge(Node source, Edge edge) {
 		graph.removeEdge(source, edge);
 	}

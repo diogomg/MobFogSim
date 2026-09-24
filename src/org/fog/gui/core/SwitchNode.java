@@ -19,7 +19,12 @@ public class SwitchNode extends Node {
 
 	public SwitchNode(String name, NodeType type, long iops, int upports,
 		int downports, long bw) {
-		super(name, type);
+		this(NodeId.create(), name, type, iops, upports, downports, bw);
+	}
+
+	SwitchNode(NodeId nodeId, String name, NodeType type, long iops,
+		int upports, int downports, long bw) {
+		super(nodeId, name, type);
 		this.iops = iops;
 		this.upports = upports;
 		this.downports = downports;

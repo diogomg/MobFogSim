@@ -79,6 +79,7 @@ public class TopologyTypesTest {
 			assertEquals(7, networkSwitch.getDownports());
 			assertEquals(4.0, edge(graph, "host-a", "core-a").getLatency(),
 				0.000001);
+			NodeId hostId = node(graph, "host-a").getNodeId();
 
 			Graph reloaded = roundTrip(graph, TopologyType.PHYSICAL);
 			SwitchNode reloadedSwitch = (SwitchNode) node(reloaded, "core-a");
@@ -86,6 +87,7 @@ public class TopologyTypesTest {
 			assertEquals(7, reloadedSwitch.getDownports());
 			assertEquals(4.0, edge(reloaded, "host-a", "core-a").getLatency(),
 				0.000001);
+			assertEquals(hostId, node(reloaded, "host-a").getNodeId());
 		}
 		finally {
 			Files.deleteIfExists(file);
@@ -145,6 +147,64 @@ public class TopologyTypesTest {
 			restoredSensor.getDistribution()).getValue(), 0.000001);
 		assertEquals(2.5, edge(restored, "sensor", "fog").getLatency(),
 			0.000001);
+		assertEquals(sensor.getNodeId(), restoredSensor.getNodeId());
+	}
+
+	@Test
+	public void legacyJsonWithoutIdsGetsRepeatableStableIdentity()
+		throws Exception {
+		String json = "{\"nodes\":[{\"name\":\"vm\",\"type\":\"vm\","
+			+ "\"size\":10,\"pes\":1,\"mips\":100,\"ram\":128}],"
+			+ "\"links\":[]}";
+		Path file = writeTemporaryTopology(json);
+		try {
+			Graph first = Bridge.jsonToGraph(file.toString(),
+				TopologyType.VIRTUAL);
+			Graph second = Bridge.jsonToGraph(file.toString(),
+				TopologyType.VIRTUAL);
+
+			assertEquals(node(first, "vm").getNodeId(),
+				node(second, "vm").getNodeId());
+			assertTrue(Bridge.graphToJson(first, TopologyType.VIRTUAL)
+				.contains("\"id\""));
+		}
+		finally {
+			Files.deleteIfExists(file);
+		}
+	}
+
+	@Test
+	public void jsonIsDeterministicAcrossInsertionOrders() {
+		NodeId alphaId = NodeId.parse("00000000-0000-0000-0000-000000000001");
+		NodeId betaId = NodeId.parse("00000000-0000-0000-0000-000000000002");
+		NodeId gammaId = NodeId.parse("00000000-0000-0000-0000-000000000003");
+		VmNode alpha = vm(alphaId, "alpha");
+		VmNode beta = vm(betaId, "beta");
+		VmNode gamma = vm(gammaId, "gamma");
+		Graph first = new Graph();
+		first.addNode(gamma);
+		first.addNode(alpha);
+		first.addNode(beta);
+		first.addEdge(alpha, new Edge(gamma, "alpha-gamma", 300));
+		first.addEdge(alpha, new Edge(beta, "alpha-beta", 200));
+		first.addEdge(gamma, new Edge(beta, "gamma-beta", 100));
+
+		VmNode secondAlpha = vm(alphaId, "alpha");
+		VmNode secondBeta = vm(betaId, "beta");
+		VmNode secondGamma = vm(gammaId, "gamma");
+		Graph second = new Graph();
+		second.addNode(secondBeta);
+		second.addNode(secondAlpha);
+		second.addNode(secondGamma);
+		second.addEdge(secondGamma,
+			new Edge(secondBeta, "gamma-beta", 100));
+		second.addEdge(secondAlpha,
+			new Edge(secondBeta, "alpha-beta", 200));
+		second.addEdge(secondAlpha,
+			new Edge(secondGamma, "alpha-gamma", 300));
+
+		assertEquals(Bridge.graphToJson(first, TopologyType.VIRTUAL),
+			Bridge.graphToJson(second, TopologyType.VIRTUAL));
 	}
 
 	@Test
@@ -332,6 +392,10 @@ public class TopologyTypesTest {
 		Path file = Files.createTempFile("mobfogsim-topology-", ".json");
 		Files.write(file, json.getBytes(StandardCharsets.UTF_8));
 		return file;
+	}
+
+	private static VmNode vm(NodeId nodeId, String name) {
+		return new VmNode(nodeId, name, NodeType.VM, 10, 1, 100, 128);
 	}
 
 	private static Node node(Graph graph, String name) {

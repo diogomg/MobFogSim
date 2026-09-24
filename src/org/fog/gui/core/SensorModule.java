@@ -15,7 +15,11 @@ public class SensorModule extends Node {
 	}
 
 	public SensorModule(String name, String sensorType) {
-		super(name, NodeType.SENSOR_MODULE);
+		this(NodeId.create(), name, sensorType);
+	}
+
+	SensorModule(NodeId nodeId, String name, String sensorType) {
+		super(nodeId, name, NodeType.SENSOR_MODULE);
 		this.sensorType = sensorType;
 	}
 
