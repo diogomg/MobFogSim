@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
-import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.policy.MovementDirection;
 

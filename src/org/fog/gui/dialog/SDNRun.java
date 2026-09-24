@@ -2,10 +2,6 @@ package org.fog.gui.dialog;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.BorderFactory;
@@ -21,7 +17,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
-import javax.swing.Timer;
 
 import org.cloudbus.cloudsim.sdn.graph.example.GraphicSDNExample;
 
@@ -39,9 +34,6 @@ public class SDNRun extends JDialog {
 	private JLabel imageLabel;
 	private JLabel msgLabel;
 	private JComponent space;
-	private int counter = 0;
-	private Timer timer;
-
 	private GraphicSDNExample sdn;
 
 	public SDNRun(final String phy, final String vir, final String wlbk, final String wl,
@@ -159,39 +151,6 @@ public class SDNRun extends JDialog {
 			cause = cause.getCause();
 		}
 		return cause;
-	}
-
-	/** below only used for testing reading file to textarea */
-	private void startTest() {
-		ActionListener updateProBar = new ActionListener() {
-			public void actionPerformed(ActionEvent actionEvent) {
-				if (counter >= 100) {
-					timer.stop();
-					panel.remove(space);
-					panel.remove(imageLabel);
-					panel.remove(msgLabel);
-					pane.setVisible(true);
-					panel.revalidate();
-					panel.repaint();
-
-				} else {
-					counter += 2;
-				}
-			}
-		};
-		timer = new Timer(50, updateProBar);
-		timer.start();
-	}
-
-	private void readFile(String path, JTextArea area) {
-
-		try (FileReader reader = new FileReader(path);
-			BufferedReader br = new BufferedReader(reader)) {
-			area.read(br, null);
-			area.requestFocus();
-		} catch (Exception error) {
-			showFailure("Could not read output file " + path, error);
-		}
 	}
 
 }

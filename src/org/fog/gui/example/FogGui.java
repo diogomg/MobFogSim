@@ -275,11 +275,8 @@ public class FogGui extends JFrame {
 						return;
 					}
 					// run simulation
-					SDNRun run = new SDNRun(physicalTopologyFile, deploymentFile,
+					new SDNRun(physicalTopologyFile, deploymentFile,
 						workloads_background, workloads, FogGui.this);
-
-				} else if ("m".equals(mode)) {
-
 				}
 
 			}

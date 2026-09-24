@@ -15,7 +15,6 @@ import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.utils.Config;
 import org.fog.utils.EntityId;
 import org.fog.utils.FogEvents;
-import org.fog.utils.FogUtils;
 import org.fog.utils.Logger;
 import org.fog.utils.ModuleLaunchConfig;
 import org.fog.utils.NetworkSlicing;
@@ -329,9 +328,6 @@ public class MobileDevice extends FogDevice {
 				+ CloudSim.getEntityName(ev.getDestination()));
 		send(ev.getSource(), CloudSim.getMinTimeBetweenEvents(), FogEvents.TUPLE_ACK);
 
-		if (FogUtils.getApplicationCoverage().containsKey(tuple.getAppId())) {
-		}
-
 		if (tuple.getDirection() == Tuple.ACTUATOR) {
 			sendTupleToActuator(tuple);
 			return;
@@ -358,9 +354,6 @@ public class MobileDevice extends FogDevice {
 					}
 					break;
 				}
-			}
-			if (getName().equals("cloud") && tuple.getDestModuleName() == null) {
-				sendNow(getControllerId(), FogEvents.TUPLE_FINISHED, null);
 			}
 			if (appToModulesMap.containsKey(tuple.getAppId())) {
 				if (appToModulesMap.get(tuple.getAppId()).contains(tuple.getDestModuleName())) {

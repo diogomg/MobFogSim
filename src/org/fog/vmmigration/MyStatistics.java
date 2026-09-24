@@ -1,8 +1,6 @@
 package org.fog.vmmigration;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
@@ -16,8 +14,6 @@ import org.cloudbus.cloudsim.util.RunOutputManager;
 public class MyStatistics {
 	private static MyStatistics instance;
 
-	private double totalMigTimes;
-	private double timeOutApplication;
 	private int totalMigrations;
 
 	private long myCountLostTuple;
@@ -26,11 +22,8 @@ public class MyStatistics {
 	private String toPrint;
 	private Map<Integer, Integer> myCount;
 
-	private FileWriter fileLatency;
-	private BufferedWriter printFile;
 	private Map<Integer, File> fileMap;
 	private int seed;
-	private Map<Integer, Double> tupleLatency;
 	private int myCountTuple;
 	private int totalHandoff;
 
@@ -66,8 +59,6 @@ public class MyStatistics {
 	private Map<Integer, Double> energyHistory;
 
 	public MyStatistics() {
-		totalMigTimes = 0.0;
-		timeOutApplication = 0.0;
 		totalMigrations = 0;
 		myCountWithoutConnection = 0;
 		myCountWithoutVmTime = 0;
@@ -83,7 +74,6 @@ public class MyStatistics {
 		averageWithoutConnection = 0.0;
 		averageWithoutVmTime = 0.0;
 
-		tupleLatency = new HashMap<Integer, Double>();
 		this.fileMap = new HashMap<Integer, File>();
 
 		withoutConnectionTime = new HashMap<Integer, Double>();
@@ -255,22 +245,6 @@ public class MyStatistics {
 		}
 	}
 
-	public double getTotalMigTimes() {
-		return totalMigTimes;
-	}
-
-	public void setTotalMigTimes(double totalMigTimes) {
-		this.totalMigTimes = totalMigTimes;
-	}
-
-	public double getTimeOutApplication() {
-		return timeOutApplication;
-	}
-
-	public void setTimeOutApplication(double timeOutApplication) {
-		this.timeOutApplication = timeOutApplication;
-	}
-
 	public int getTotalMigrations() {
 		return totalMigrations;
 	}
@@ -281,22 +255,6 @@ public class MyStatistics {
 
 	public static void setInstance(MyStatistics instance) {
 		MyStatistics.instance = instance;
-	}
-
-	public FileWriter getFileLatency() {
-		return fileLatency;
-	}
-
-	public void setFileLatency(FileWriter fileLatency) {
-		this.fileLatency = fileLatency;
-	}
-
-	public void setPrintFile(BufferedWriter printFile) {
-		this.printFile = printFile;
-	}
-
-	public BufferedWriter getPrintFile() {
-		return printFile;
 	}
 
 	public Map<Integer, File> getFileMap() {
@@ -319,14 +277,6 @@ public class MyStatistics {
 
 	public void setSeed(int seed) {
 		this.seed = seed;
-	}
-
-	public Map<Integer, Double> getTupleLatency() {
-		return Collections.unmodifiableMap(tupleLatency);
-	}
-
-	public void setTupleLatency(Map<Integer, Double> tupleLatency) {
-		this.tupleLatency = copyMap(tupleLatency, "Tuple latency map");
 	}
 
 	public int getMyCountTuple() {

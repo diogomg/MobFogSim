@@ -28,8 +28,6 @@ import org.fog.vmmobile.port.SimulationEventLog;
 
 public class Controller extends SimEntity {
 
-	public static boolean ONLY_CLOUD = false;
-
 	private List<FogDevice> fogDevices;
 	private List<Sensor> sensors;
 	private List<Actuator> actuators;
@@ -96,9 +94,6 @@ public class Controller extends SimEntity {
 		case FogEvents.APP_SUBMIT:
 			processAppSubmit(ev);
 			break;
-		case FogEvents.TUPLE_FINISHED:
-			processTupleFinished(ev);
-			break;
 		case FogEvents.CONTROLLER_RESOURCE_MANAGE:
 			manageResources();
 			break;
@@ -127,8 +122,6 @@ public class Controller extends SimEntity {
 	protected void manageResources() {
 		send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
 	}
-
-	private void processTupleFinished(SimEvent ev) {}
 
 	private void line(String value) {
 		events.detailLine(() -> value);

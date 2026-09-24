@@ -1,11 +1,5 @@
 package org.fog.placement;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -21,10 +15,6 @@ import org.fog.vmmobile.FogDeviceIndex;
 import org.fog.vmmobile.SimulationEventSink;
 
 public abstract class ModulePlacement {
-
-	public static int ONLY_CLOUD = 1;
-	public static int EDGEWARDS = 2;
-	public static int USER_MAPPING = 3;
 
 	private List<FogDevice> fogDevices;
 	private FogDeviceIndex fogDeviceIndex = FogDeviceIndex.empty();
@@ -46,11 +36,6 @@ public abstract class ModulePlacement {
 
 	protected FogDevice getFogDeviceById(int fogDeviceId) {
 		return fogDeviceIndex.getById(fogDeviceId);
-	}
-
-	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device,
-		int instanceCount) {
-		return false;
 	}
 
 	protected boolean createModuleInstanceOnDevice(AppModule _module, final FogDevice device) {

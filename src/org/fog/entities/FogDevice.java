@@ -34,7 +34,7 @@ import org.fog.application.AppEdge;
 import org.fog.application.AppLoop;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
-import org.fog.localization.Coordinate;// myiFogSim
+import org.fog.localization.Coordinate;
 import org.fog.localization.MobilitySample;
 import org.fog.localization.MobilityTimeline;
 import org.fog.placement.HandoffConnectionRequest;
@@ -63,7 +63,6 @@ import org.fog.vmmigration.Service;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.constants.MobileEvents;
-import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.MembershipAction;
 import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 
@@ -686,12 +685,6 @@ public class FogDevice extends PowerDatacenter {
 		case MobileEvents.ABORT_MIGRATION:
 			invokeAbortMigration(ev);
 			break;
-		case MobileEvents.REMOVE_VM_OLD_CLOUDLET:
-			removeVmOldServerCloudlet(ev);
-			break;
-		case MobileEvents.ADD_VM_NEW_CLOUDLET:
-			addVmNewServerCloudlet(ev);
-			break;
 		case MobileEvents.DELIVERY_VM:
 			deliveryVM(ev);
 			break;
@@ -728,7 +721,6 @@ public class FogDevice extends PowerDatacenter {
 			+ smartThing.getVmLocalServerCloudlet().getActiveApplications() + " to "
 			+ smartThing.getDestinationServerCloudlet().getName() + " applications "
 			+ smartThing.getDestinationServerCloudlet().getActiveApplications());
-		smartThing.getVmLocalServerCloudlet().applicationMap.values();
 		Application app = smartThing.getVmLocalServerCloudlet().applicationMap.get("MyApp_vr_game"
 			+ smartThing.getMyId());
 		if (app == null) {
@@ -818,12 +810,6 @@ public class FogDevice extends PowerDatacenter {
 			MyStatistics.getInstance().finalDelayAfterNewConnection(smartThing.getMyId(),
 				getCharacteristics().getCpuTime( smartThing.getVmMobileDevice().getSize() * 1024 * 1024 * 8, 0.0));
 		}
-	}
-
-	private void addVmNewServerCloudlet(SimEvent ev) {
-	}
-
-	private void removeVmOldServerCloudlet(SimEvent ev) {
 	}
 
 	private void invokeAbortMigration(SimEvent ev) {
@@ -1441,9 +1427,6 @@ public class FogDevice extends PowerDatacenter {
 			return;
 		}
 
-		if (FogUtils.getApplicationCoverage().containsKey(tuple.getAppId())) {
-		}
-
 		if (tuple.getDirection() == Tuple.ACTUATOR) {
 			sendTupleToActuator(tuple);
 			return;
@@ -1460,10 +1443,6 @@ public class FogDevice extends PowerDatacenter {
 				break;
 			}
 		}
-		if (getName().equals("cloud") && tuple.getDestModuleName() == null) {
-			sendNow(getControllerId(), FogEvents.TUPLE_FINISHED, null);
-		}
-
 		if (appToModulesMap.containsKey(tuple.getAppId())) {
 			if (appToModulesMap.get(tuple.getAppId()).contains(tuple.getDestModuleName())) {
 				int vmId = -1;

@@ -3,7 +3,6 @@ package org.fog.localization;
 import java.util.List;
 
 import org.fog.entities.MobileDevice;
-import org.fog.vmmobile.constants.Directions;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.policy.MovementDirection;
 

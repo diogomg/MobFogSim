@@ -62,7 +62,6 @@ import org.fog.vmmobile.SimulationEventSink;
 import org.fog.vmmobile.SimulationServices;
 import org.fog.vmmobile.constants.MaxAndMin;
 import org.fog.vmmobile.constants.MobileEvents;
-import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MigrationStrategyPolicy;
 import org.fog.vmmobile.policy.MembershipAction;
@@ -362,8 +361,6 @@ public class MobileController extends SimEntity {
 		}
 	}
 
-	private void processTupleFinished(SimEvent ev) {}
-
 	protected void manageResources() {
 		send(getId(), Config.RESOURCE_MANAGE_INTERVAL, FogEvents.CONTROLLER_RESOURCE_MANAGE);
 	}
@@ -378,11 +375,6 @@ public class MobileController extends SimEntity {
 			break;
 		case MobileEvents.APP_SUBMIT_MIGRATE:
 			processAppSubmitMigration(ev);
-			break;
-		case FogEvents.TUPLE_FINISHED:
-			SimulationEventSink.current().trace("MobileController", () ->
-				"Received TUPLE_FINISHED");
-			processTupleFinished(ev);
 			break;
 		case FogEvents.CONTROLLER_RESOURCE_MANAGE:
 			manageResources();

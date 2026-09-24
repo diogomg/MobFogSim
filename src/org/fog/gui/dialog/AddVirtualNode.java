@@ -4,8 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -146,12 +144,6 @@ public class AddVirtualNode extends JDialog {
 		cType = new JComboBox(vmType);
 		lType.setLabelFor(cType);
 		cType.setSelectedIndex(-1);
-		cType.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-
-			}
-		});
 		springPanel.add(cType);
 
 		JLabel lSize = new JLabel("Size: ");

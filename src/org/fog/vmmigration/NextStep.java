@@ -7,7 +7,6 @@ import org.cloudbus.cloudsim.util.BufferedFileManager;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
-import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.localization.Coordinate;
 import org.fog.placement.MobileController;
 import org.fog.vmmobile.LogMobile;

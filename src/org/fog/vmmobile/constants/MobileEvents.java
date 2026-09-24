@@ -6,17 +6,9 @@ public class MobileEvents {
 	public static final int START_MIGRATION = 5002;
 	public static final int ABORT_MIGRATION = 5003;
 	public static final int MAKE_DECISION_MIGRATION = 500412;
-	public static final int REMOVE_VM_OLD_CLOUDLET = 5005;
-	public static final int ADD_VM_NEW_CLOUDLET = 5006;
 	public static final int STOP_SIMULATION = 5007;
 	public static final int START_HANDOFF = 5008;
 	public static final int DELIVERY_VM = 5009;
-	/** @deprecated Mobility is now driven by per-user {@link #MOBILITY_UPDATE} events. */
-	@Deprecated
-	public static final int NEXT_STEP = 5010;
-	/** @deprecated Mobility checks now run inside each mobility update. */
-	@Deprecated
-	public static final int CHECK_NEW_STEP = 5011;
 	public static final int CREATE_NEW_SMARTTHING = 5012;
 	public static final int UNLOCKED_HANDOFF = 5013;
 	public static final int CONNECT_ST_TO_SC = 5014;
