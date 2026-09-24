@@ -129,10 +129,10 @@ public final class MobileUserRegistration {
 		ApDevice sourceAp = user.getSourceAp();
 		FogDevice sourceServer = user.getSourceServerCloudlet();
 		if (sourceAp != null) {
-			sourceAp.desconnectApSmartThing(user);
+			sourceAp.disconnectApSmartThing(user);
 		}
 		if (sourceServer != null) {
-			sourceServer.desconnectServerCloudletSmartThing(user);
+			sourceServer.disconnectServerCloudletSmartThing(user);
 		}
 		user.setSourceAp(null);
 		user.setSourceServerCloudlet(null);

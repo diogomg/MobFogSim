@@ -43,7 +43,7 @@ public class HandoffConnectionEventTest {
 
 		HandoffConnectionRequest request = request(user, sourceServer,
 			destinationAp);
-		sourceServer.desconnectServerCloudletSmartThing(user);
+		sourceServer.disconnectServerCloudletSmartThing(user);
 		moveWirelessAssociation(user, sourceAp, destinationAp);
 		sendConnection(user, destinationServer, request);
 
@@ -66,7 +66,7 @@ public class HandoffConnectionEventTest {
 
 		HandoffConnectionRequest staleRequest = request(user, sourceServer,
 			staleDestinationAp);
-		sourceServer.desconnectServerCloudletSmartThing(user);
+		sourceServer.disconnectServerCloudletSmartThing(user);
 		moveWirelessAssociation(user, sourceAp, staleDestinationAp);
 		MobileUserRegistration.disconnectNetwork(user);
 		associate(user, currentAp, currentServer);

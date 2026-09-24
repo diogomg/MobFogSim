@@ -86,7 +86,7 @@ public class MigrationUtilityTest {
 			new MobilitySample(65.0, 0.0, 55.0, 56.0, 1.0),
 			new MobilitySample(83.25, 0.0, 60.0, 61.0, 1.0)));
 		user.setTravelTimeId(2);
-		user.setTravelPredicTime(60);
+		user.setTravelPredictionTime(60);
 		user.setMobilityPredictionError(0);
 
 		PredictionProbe probe = new PredictionProbe("prediction-probe", user);
@@ -115,7 +115,7 @@ public class MigrationUtilityTest {
 		@Override
 		public void processEvent(SimEvent event) {
 			if (event.getTag() == RUN_PREDICTION) {
-				Migration.serverClouletsAvailableList(
+				Migration.serverCloudletsAvailableList(
 					Collections.<FogDevice>emptyList(), user);
 				invoked = true;
 				CloudSim.terminateSimulation();

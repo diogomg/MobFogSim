@@ -81,8 +81,8 @@ public class AppExample {
 	private static LocationPolicy positionScPolicy = LocationPolicy.FIXED;
 	private static MigrationTechniquePolicy policyReplicaVM =
 		MigrationTechniquePolicy.COMPLETE_VM;
-	private static int travelPredicTimeForST; // in seconds
-	private static int mobilityPrecitionError;// in meters
+	private static int travelPredictionTimeForST; // in seconds
+	private static int mobilityPredictionError;// in meters
 	private static double latencyBetweenCloudlets;
 	private static int maxBandwidth;
 	private static int maxSmartThings;
@@ -181,9 +181,16 @@ public class AppExample {
 
 	}
 
-	static void addApDevicesRandon(List<ApDevice> apDevices,
+	static void addApDevicesRandom(List<ApDevice> apDevices,
 		Coordinate coordDevices, int i) {
 		addApDevicesRandom(apDevices, coordDevices, i, MapBounds.defaults());
+	}
+
+	/** @deprecated Use {@link #addApDevicesRandom(List, Coordinate, int)}. */
+	@Deprecated
+	static void addApDevicesRandon(List<ApDevice> apDevices,
+		Coordinate coordDevices, int i) {
+		addApDevicesRandom(apDevices, coordDevices, i);
 	}
 
 	static void addApDevicesRandom(List<ApDevice> apDevices,
@@ -328,8 +335,8 @@ public class AppExample {
 			st.setBeforeMigrate(beforeMigration);
 			st.setSensors(sensors);
 			st.setActuators(actuators);
-			st.setTravelPredicTime(getTravelPredicTimeForST());
-			st.setMobilityPredictionError(getMobilityPrecitionError());
+			st.setTravelPredictionTime(getTravelPredictionTimeForST());
+			st.setMobilityPredictionError(getMobilityPredictionError());
 			smartThing.add(i, st);
 		} catch (Exception e) {
 			throw new SimulationBuildException("Could not create mobile user " + i,
@@ -370,7 +377,7 @@ public class AppExample {
 			migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
 				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
 				getMigrationTechniquePolicy());
-		} else { // Policies.LOWEST_DIST_BW_SMARTTING_AP
+		} else { // Policies.LOWEST_DIST_BW_SMART_THING_AP
 			migrationStrategy = new LowestDistBwSmartThingAP(
 				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
 				getMigrationTechniquePolicy());
@@ -494,7 +501,7 @@ public class AppExample {
 					migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
 						getServerCloudlets(), getApDevices(),
 						getMigrationPointPolicy(), getMigrationTechniquePolicy());
-				} else { // LOWEST_DIST_BW_SMARTTING_AP
+				} else { // LOWEST_DIST_BW_SMART_THING_AP
 					migrationStrategy = new LowestDistBwSmartThingAP(
 						getServerCloudlets(), getApDevices(),
 						getMigrationPointPolicy(), getMigrationTechniquePolicy());
@@ -709,26 +716,44 @@ public class AppExample {
 		AppExample.policyReplicaVM = policyReplicaVM;
 	}
 
-	public static int getTravelPredicTimeForST() {
-		return travelPredicTimeForST;
+	public static int getTravelPredictionTimeForST() {
+		return travelPredictionTimeForST;
 	}
 
-	public static void setTravelPredicTimeForST(int travelPredicTimeForST) {
-		if (travelPredicTimeForST < 0) {
+	public static void setTravelPredictionTimeForST(int travelPredictionTimeForST) {
+		if (travelPredictionTimeForST < 0) {
 			throw new IllegalArgumentException("Travel prediction time cannot be negative");
 		}
-		AppExample.travelPredicTimeForST = travelPredicTimeForST;
+		AppExample.travelPredictionTimeForST = travelPredictionTimeForST;
 	}
 
+	/** @deprecated Use {@link #getTravelPredictionTimeForST()}. */
+	@Deprecated
+	public static int getTravelPredicTimeForST() {
+		return getTravelPredictionTimeForST();
+	}
+
+	/** @deprecated Use {@link #setTravelPredictionTimeForST(int)}. */
+	@Deprecated
+	public static void setTravelPredicTimeForST(int travelPredictionTimeForST) {
+		setTravelPredictionTimeForST(travelPredictionTimeForST);
+	}
+
+	public static int getMobilityPredictionError() {
+		return mobilityPredictionError;
+	}
+
+	/** @deprecated Use {@link #getMobilityPredictionError()}. */
+	@Deprecated
 	public static int getMobilityPrecitionError() {
-		return mobilityPrecitionError;
+		return getMobilityPredictionError();
 	}
 
-	public static void setMobilityPredictionError(int mobilityPrecitionError) {
-		if (mobilityPrecitionError < 0) {
+	public static void setMobilityPredictionError(int mobilityPredictionError) {
+		if (mobilityPredictionError < 0) {
 			throw new IllegalArgumentException("Mobility prediction error cannot be negative");
 		}
-		AppExample.mobilityPrecitionError = mobilityPrecitionError;
+		AppExample.mobilityPredictionError = mobilityPredictionError;
 	}
 
 	public static double getLatencyBetweenCloudlets() {

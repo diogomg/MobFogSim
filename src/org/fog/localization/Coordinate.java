@@ -24,8 +24,14 @@ public class Coordinate { // extends Map {
 			return true;
 	}
 
-	public void desableSmartThing(MobileDevice smartThing) {
+	public void disableSmartThing(MobileDevice smartThing) {
 		smartThing.setCoord(-1, -1);
+	}
+
+	/** @deprecated Use {@link #disableSmartThing(MobileDevice)}. */
+	@Deprecated
+	public void desableSmartThing(MobileDevice smartThing) {
+		disableSmartThing(smartThing);
 	}
 
 	public static double radiansToDegree(Double direction) {
@@ -73,7 +79,7 @@ public class Coordinate { // extends Map {
 			applySample(smartThing, sample);
 		}
 		else {
-			desableSmartThing(smartThing);
+			disableSmartThing(smartThing);
 		}
 	}
 
@@ -117,7 +123,7 @@ public class Coordinate { // extends Map {
 		}
 		else {
 			smartThing.setTravelTimeId(0);
-			desableSmartThing(smartThing);
+			disableSmartThing(smartThing);
 		}
 	}
 
@@ -125,7 +131,7 @@ public class Coordinate { // extends Map {
 		int x = (int) sample.getX();
 		int y = (int) sample.getY();
 		if (x < 0 || y < 0 || x >= MaxAndMin.MAX_X || y >= MaxAndMin.MAX_Y) {
-			desableSmartThing(smartThing);
+			disableSmartThing(smartThing);
 			return;
 		}
 		smartThing.setMovementDirection(
@@ -145,7 +151,7 @@ public class Coordinate { // extends Map {
 
 			if (decreaseX < 0 || decreaseY < 0 || increaseX >= MaxAndMin.MAX_X
 				|| increaseY >= MaxAndMin.MAX_Y) {// It checks the CoordDevices limits.
-				desableSmartThing(smartThing);
+				disableSmartThing(smartThing);
 				return;
 			}
 

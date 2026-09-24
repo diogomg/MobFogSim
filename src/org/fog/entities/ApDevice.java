@@ -54,7 +54,7 @@ public class ApDevice extends FogDevice {
 		}
 	}
 
-	public boolean desconnectApSmartThing(MobileDevice st) {
+	public boolean disconnectApSmartThing(MobileDevice st) {
 		if (st == null || st.getSourceAp() != this) {
 			return false;
 		}
@@ -62,10 +62,16 @@ public class ApDevice extends FogDevice {
 		NetworkSlicing.cancelWirelessTransfers(st);
 		boolean removed = dissociateMobileDevice(st);
 		st.setSourceAp(null);
-		LogMobile.debug("ApDevice.java", st.getName() + " was desconnected to " + getName());
+		LogMobile.debug("ApDevice.java", st.getName() + " was disconnected from " + getName());
 		// remove link
 		NetworkTopology.addLink(this.getId(), st.getId(), 0.0, 0.0);
 		return removed;
+	}
+
+	/** @deprecated Use {@link #disconnectApSmartThing(MobileDevice)}. */
+	@Deprecated
+	public boolean desconnectApSmartThing(MobileDevice st) {
+		return disconnectApSmartThing(st);
 	}
 
 	/** Atomically reserves one capacity slot for a delayed handoff. */

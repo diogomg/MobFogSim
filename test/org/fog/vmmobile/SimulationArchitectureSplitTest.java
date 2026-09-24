@@ -32,10 +32,10 @@ public class SimulationArchitectureSplitTest {
 	public void exampleConfigurationDerivesStableExperimentNames() {
 		assertEquals("FIXED_MIGRATION_POINT_with_LOWEST_LATENCY",
 			example(arguments("0", "0")).experimentLabel());
-		assertEquals("FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMARTTING_AP",
+		assertEquals("FIXED_MIGRATION_POINT_with_LOWEST_DIST_BW_SMART_THING_AP",
 			example(arguments("0", "2")).experimentLabel());
 		assertEquals("SPEED_MIGRATION_POINT_with_"
-			+ "LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET",
+			+ "LOWEST_DIST_BW_SMART_THING_SERVER_CLOUDLET",
 			example(arguments("1", "1")).experimentLabel());
 	}
 

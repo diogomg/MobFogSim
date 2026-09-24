@@ -318,7 +318,7 @@ public final class MigrationCoordinator {
 			return;
 		}
 
-		double preparationDelay = preparation.dataprepare(mobileDevice);
+		double preparationDelay = preparation.prepareData(mobileDevice);
 		this.events.trace("MigrationCoordinator", () ->
 			"Migration preparation delay " + preparationDelay);
 		if (preparationDelay < 0.0) {

@@ -228,7 +228,7 @@ public class AccessPointContentionEventTest {
 		}, new Runnable() {
 			@Override
 			public void run() {
-				accessPoint.desconnectApSmartThing(mobile);
+				accessPoint.disconnectApSmartThing(mobile);
 			}
 		}, 500.0);
 

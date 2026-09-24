@@ -104,8 +104,8 @@ public class MigrationPreparationTest {
 		PrepareCompleteVM preparation = new FixedTopologyLatencyPreparation(
 			succeedOnAttempt(2), 7.0);
 
-		assertEquals(52.0, preparation.dataprepare(mobileDevice), 0.0);
-		assertEquals(52.0, preparation.dataprepare(mobileDevice), 0.0);
+		assertEquals(52.0, preparation.prepareData(mobileDevice), 0.0);
+		assertEquals(52.0, preparation.prepareData(mobileDevice), 0.0);
 	}
 
 	@Test
@@ -115,7 +115,7 @@ public class MigrationPreparationTest {
 			new FogDevice("destination", 0, 0, 1));
 
 		assertEquals(-1.0, new PrepareCompleteVM(succeedOnAttempt(4))
-			.dataprepare(mobileDevice), 0.0);
+			.prepareData(mobileDevice), 0.0);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -125,7 +125,7 @@ public class MigrationPreparationTest {
 
 	@Test
 	public void duringMigrationManagementCompletes() {
-		assertTrue(new DuringMigration().managermentBetweeServerCloudlets());
+		assertTrue(new DuringMigration().managementBetweenServerCloudlets());
 	}
 
 	private static ConnectionAttemptPolicy succeedOnAttempt(final int successfulAttempt) {

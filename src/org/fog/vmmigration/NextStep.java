@@ -111,7 +111,7 @@ public class NextStep {
 
 	/** Ends a trace after its final timestamp has been observed. */
 	public static void finishMobility(MobileDevice smartThing) {
-		new Coordinate().desableSmartThing(smartThing);
+		new Coordinate().disableSmartThing(smartThing);
 		removeFromSimulation(smartThing);
 	}
 

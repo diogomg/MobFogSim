@@ -171,8 +171,8 @@ public class P0CorrectnessRegressionTest {
 				Collections.singletonList(accessPoint), user,
 				SimulationDuration.ofMilliseconds(0.25)));
 			assertTrue(server.connectServerCloudletSmartThing(user));
-			assertTrue(accessPoint.desconnectApSmartThing(user));
-			assertTrue(server.desconnectServerCloudletSmartThing(user));
+			assertTrue(accessPoint.disconnectApSmartThing(user));
+			assertTrue(server.disconnectServerCloudletSmartThing(user));
 		}
 
 		assertEquals("C1: AP topology latency drifted across associations",
@@ -559,7 +559,7 @@ public class P0CorrectnessRegressionTest {
 		AppExample.setPolicyReplicaVM(Policies.MIGRATION_COMPLETE_VM);
 		AppExample.setMigPointPolicy(Policies.FIXED_MIGRATION_POINT);
 		AppExample.setMigStrategyPolicy(Policies.LOWEST_LATENCY);
-		AppExample.setTravelPredicTimeForST(0);
+		AppExample.setTravelPredictionTimeForST(0);
 		AppExample.setMobilityPredictionError(0);
 	}
 

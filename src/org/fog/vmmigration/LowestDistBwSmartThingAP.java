@@ -18,7 +18,7 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	private List<FogDevice> serverCloudlets;
 	private List<ApDevice> apDevices;
 	private MigrationPointPolicy migPointPolicy;
-	private ApDevice correntAP;
+	private ApDevice currentAP;
 	private ApDevice nextAp;
 	private FogDevice nextServerCloudlet;
 	private MovementDirection smartThingPosition;
@@ -125,12 +125,24 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 		this.migPointPolicy = migPointPolicy;
 	}
 
-	public ApDevice getCorrentAP() {
-		return correntAP;
+	public ApDevice getCurrentAP() {
+		return currentAP;
 	}
 
-	public void setCorrentAP(ApDevice correntAP) {
-		this.correntAP = correntAP;
+	/** @deprecated Use {@link #getCurrentAP()}. */
+	@Deprecated
+	public ApDevice getCorrentAP() {
+		return getCurrentAP();
+	}
+
+	public void setCurrentAP(ApDevice currentAP) {
+		this.currentAP = currentAP;
+	}
+
+	/** @deprecated Use {@link #setCurrentAP(ApDevice)}. */
+	@Deprecated
+	public void setCorrentAP(ApDevice currentAP) {
+		setCurrentAP(currentAP);
 	}
 
 	public ApDevice getNextAp() {

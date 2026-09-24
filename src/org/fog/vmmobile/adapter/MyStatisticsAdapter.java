@@ -21,7 +21,7 @@ public final class MyStatisticsAdapter implements MobileStatisticsPort {
 
 	@Override
 	public void startWithoutConnection(int mobileDeviceId, double timeMillis) {
-		statistics.startWithoutConnetion(mobileDeviceId, timeMillis);
+		statistics.startWithoutConnection(mobileDeviceId, timeMillis);
 	}
 
 	@Override

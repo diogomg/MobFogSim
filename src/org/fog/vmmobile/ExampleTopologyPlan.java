@@ -68,7 +68,7 @@ public final class ExampleTopologyPlan {
 			return;
 		}
 		for (int index = 0; index < MaxAndMin.MAX_AP_DEVICE; index++) {
-			AppExample.addApDevicesRandon(accessPoints,
+			AppExample.addApDevicesRandom(accessPoints,
 				configuration.getCoordinateSpace(), index);
 		}
 	}

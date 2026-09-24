@@ -48,8 +48,8 @@ public class AppExampleParametersTest {
 		assertEquals(11, AppExample.getMaxBandwidth());
 		assertEquals(2, AppExample.getPolicyReplicaVM());
 		assertEquals(61.5, AppExample.getLatencyBetweenCloudlets(), DELTA);
-		assertEquals(12, AppExample.getTravelPredicTimeForST());
-		assertEquals(34, AppExample.getMobilityPrecitionError());
+		assertEquals(12, AppExample.getTravelPredictionTimeForST());
+		assertEquals(34, AppExample.getMobilityPredictionError());
 		assertEquals(NetworkSlicing.WIRELESS_NETWORK, NetworkSlicing.getScope());
 		assertEquals(4, NetworkSlicing.getSliceCount());
 		assertEquals(40.0, NetworkSlicing.getPercentage(0), DELTA);
@@ -277,8 +277,8 @@ public class AppExampleParametersTest {
 		assertEquals(11, AppExample.getMaxBandwidth());
 		assertEquals(2, AppExample.getPolicyReplicaVM());
 		assertEquals(61.5, AppExample.getLatencyBetweenCloudlets(), DELTA);
-		assertEquals(12, AppExample.getTravelPredicTimeForST());
-		assertEquals(34, AppExample.getMobilityPrecitionError());
+		assertEquals(12, AppExample.getTravelPredictionTimeForST());
+		assertEquals(34, AppExample.getMobilityPredictionError());
 		assertEquals(NetworkSlicing.WIRELESS_NETWORK, NetworkSlicing.getScope());
 		assertEquals(2, NetworkSlicing.getSliceCount());
 		assertEquals(70.0, NetworkSlicing.getPercentage(0), DELTA);

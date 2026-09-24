@@ -123,12 +123,24 @@ public class MyStatistics {
 				+ smartThingMyId + " - " + serverCloudletName + " - TupleType: - " + tupleType);
 	}
 
-	public void putLantencyFileName(String name, int smartThingMyId) {
+	public void putLatencyFileName(String name, int smartThingMyId) {
 		BufferedFileManager.writeLine(getFileMap().get(smartThingMyId), name);
 	}
 
-	public void startWithoutConnetion(int id, double clock) {
+	/** @deprecated Use {@link #putLatencyFileName(String, int)}. */
+	@Deprecated
+	public void putLantencyFileName(String name, int smartThingMyId) {
+		putLatencyFileName(name, smartThingMyId);
+	}
+
+	public void startWithoutConnection(int id, double clock) {
 		initialTimeWithoutConnection.put(id, clock);
+	}
+
+	/** @deprecated Use {@link #startWithoutConnection(int, double)}. */
+	@Deprecated
+	public void startWithoutConnetion(int id, double clock) {
+		startWithoutConnection(id, clock);
 	}
 
 	public void finalWithoutConnection(int id, double clock) {

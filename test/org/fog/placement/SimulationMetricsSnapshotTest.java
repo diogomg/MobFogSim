@@ -213,7 +213,7 @@ public class SimulationMetricsSnapshotTest {
 		statistics.setTotalMigrations(4);
 		statistics.setTotalMigrations(2);
 		assertEquals(2, statistics.getTotalMigrations());
-		statistics.startWithoutConnetion(42, 10.0);
+		statistics.startWithoutConnection(42, 10.0);
 		statistics.finalWithoutConnection(42, 15.0);
 		assertEquals(1, statistics.getMyCountWithoutConnection());
 		assertEquals(1, statistics.getMyCountWithoutConnection());

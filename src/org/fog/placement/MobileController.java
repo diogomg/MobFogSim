@@ -1027,12 +1027,12 @@ public class MobileController extends SimEntity {
 												destinationAccessPoint,
 												reservation.getAssociationGeneration());
 										LogMobile.debug("MobileController.java", st.getName()
-											+ " will be desconnected from "
+											+ " will be disconnected from "
 											+ sourceServer.getName() + " by handoff");
 										sendNow(sourceServer.getId(),
 											MobileEvents.MAKE_DECISION_MIGRATION, st);
 										sendNow(sourceServer.getId(),
-											MobileEvents.DESCONNECT_ST_TO_SC, st);
+											MobileEvents.DISCONNECT_ST_TO_SC, st);
 										send(connectionRequest.getDestinationServer().getId(),
 											handoffTime + delayConnection,
 											MobileEvents.CONNECT_ST_TO_SC, connectionRequest);
@@ -1113,7 +1113,7 @@ public class MobileController extends SimEntity {
 							}
 						}
 						LogMobile.debug("MobileController.java", st.getName()
-							+ " desconnected by AP_COVERAGE - Distance: " + distance);
+							+ " disconnected by AP_COVERAGE - Distance: " + distance);
 						LogMobile.debug("MobileController.java", st.getName() + " X: "
 							+ st.getCoord().getCoordX() + " Y: " + st.getCoord().getCoordY());
 					}

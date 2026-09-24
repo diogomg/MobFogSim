@@ -18,7 +18,7 @@ public class LowestLatency implements DecisionMigration {
 	private List<FogDevice> serverCloudlets;
 	private List<ApDevice> apDevices;
 	private MigrationPointPolicy migPointPolicy;
-	private ApDevice correntAP;
+	private ApDevice currentAP;
 	private ApDevice nextAp;
 	private FogDevice nextServerCloudlet;
 	private MigrationTechniquePolicy policyReplicaVM;
@@ -101,8 +101,14 @@ public class LowestLatency implements DecisionMigration {
 		}
 	}
 
+	public ApDevice getCurrentAP() {
+		return currentAP;
+	}
+
+	/** @deprecated Use {@link #getCurrentAP()}. */
+	@Deprecated
 	public ApDevice getCorrentAP() {
-		return correntAP;
+		return getCurrentAP();
 	}
 
 	public List<FogDevice> getServerCloudlets() {
@@ -191,8 +197,14 @@ public class LowestLatency implements DecisionMigration {
 		this.migPoint = migPoint;
 	}
 
-	public void setCorrentAP(ApDevice correntAP) {
-		this.correntAP = correntAP;
+	public void setCurrentAP(ApDevice currentAP) {
+		this.currentAP = currentAP;
+	}
+
+	/** @deprecated Use {@link #setCurrentAP(ApDevice)}. */
+	@Deprecated
+	public void setCorrentAP(ApDevice currentAP) {
+		setCurrentAP(currentAP);
 	}
 
 	public int getPolicyReplicaVM() {

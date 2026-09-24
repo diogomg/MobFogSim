@@ -12,7 +12,10 @@ public class MobileEvents {
 	public static final int CREATE_NEW_SMARTTHING = 5012;
 	public static final int UNLOCKED_HANDOFF = 5013;
 	public static final int CONNECT_ST_TO_SC = 5014;
-	public static final int DESCONNECT_ST_TO_SC = 5015;
+	public static final int DISCONNECT_ST_TO_SC = 5015;
+	/** @deprecated Use {@link #DISCONNECT_ST_TO_SC}. */
+	@Deprecated
+	public static final int DESCONNECT_ST_TO_SC = DISCONNECT_ST_TO_SC;
 	public static final int UNLOCKED_MIGRATION = 5016;
 	public static final int VM_MIGRATE = 5017;
 	public static final int APP_SUBMIT_MIGRATE = 5018;

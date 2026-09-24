@@ -52,7 +52,7 @@ public final class ExampleSimulationConfiguration {
 		AppExample.setMaxBandwidth(getMaximumBandwidth());
 		AppExample.setMigrationTechniquePolicy(getMigrationTechnique());
 		AppExample.setLatencyBetweenCloudlets(getCloudletLatency());
-		AppExample.setTravelPredicTimeForST(getTravelPredictionTime());
+		AppExample.setTravelPredictionTimeForST(getTravelPredictionTime());
 		AppExample.setMobilityPredictionError(getMobilityPredictionError());
 		AppExample.setAccessPointLocationPolicy(accessPointLocation);
 		AppExample.setServerCloudletLocationPolicy(serverCloudletLocation);
@@ -80,8 +80,8 @@ public final class ExampleSimulationConfiguration {
 			String suffix = experiment + "_seed_" + getSeed() + "_st_" + mobileId;
 			statistics.setFileMap("./outputLatencies/" + mobileId
 				+ "/latencies_" + suffix + ".txt", mobileId);
-			statistics.putLantencyFileName(suffix, mobileId);
-			statistics.putLantencyFileName("Time-latency", mobileId);
+			statistics.putLatencyFileName(suffix, mobileId);
+			statistics.putLatencyFileName("Time-latency", mobileId);
 			statistics.initialiseLatencyCounter(mobileId);
 		}
 	}
@@ -95,10 +95,10 @@ public final class ExampleSimulationConfiguration {
 			strategy = "LOWEST_LATENCY";
 			break;
 		case LOWEST_DISTANCE_TO_ACCESS_POINT:
-			strategy = "LOWEST_DIST_BW_SMARTTING_AP";
+			strategy = "LOWEST_DIST_BW_SMART_THING_AP";
 			break;
 		case LOWEST_DISTANCE_TO_SERVER_CLOUDLET:
-			strategy = "LOWEST_DIST_BW_SMARTTING_SERVERCLOUDLET";
+			strategy = "LOWEST_DIST_BW_SMART_THING_SERVER_CLOUDLET";
 			break;
 		default:
 			throw new IllegalStateException(

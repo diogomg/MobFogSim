@@ -305,7 +305,7 @@ public class MobileControllerDelayedEntryTest {
 		AppExample.setPolicyReplicaVM(Policies.MIGRATION_COMPLETE_VM);
 		AppExample.setMigPointPolicy(Policies.FIXED_MIGRATION_POINT);
 		AppExample.setMigStrategyPolicy(Policies.LOWEST_LATENCY);
-		AppExample.setTravelPredicTimeForST(0);
+		AppExample.setTravelPredictionTimeForST(0);
 		AppExample.setMobilityPredictionError(0);
 	}
 

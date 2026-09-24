@@ -83,10 +83,10 @@ public class AppModule extends PowerVm {
 
 	}
 
-	public void subscribeActuator(int id, String tuplyType) {
-		if (!actuatorSubscriptions.containsKey(tuplyType))
-			actuatorSubscriptions.put(tuplyType, new ArrayList<Integer>());
-		actuatorSubscriptions.get(tuplyType).add(id);
+	public void subscribeActuator(int id, String tupleType) {
+		if (!actuatorSubscriptions.containsKey(tupleType))
+			actuatorSubscriptions.put(tupleType, new ArrayList<Integer>());
+		actuatorSubscriptions.get(tupleType).add(id);
 	}
 
 	public void addSelectivity(String inputTupleType, String outputTupleType,

@@ -92,6 +92,9 @@ public class FogDevice extends PowerDatacenter {
 	 * ID of the parent Fog Device
 	 */
 	protected int parentId;
+	/** @deprecated Use {@link #getVolatileParentId()} and
+	 * {@link #setVolatileParentId(int)}. */
+	@Deprecated
 	protected int volatilParentId;
 
 	/**
@@ -148,7 +151,13 @@ public class FogDevice extends PowerDatacenter {
 	protected BeforeMigration beforeMigration;
 	protected double startTravelTime;
 	protected int travelTimeId;
+	/** @deprecated Use {@link #getTravelPredictionTime()} and
+	 * {@link #setTravelPredictionTime(int)}. */
+	@Deprecated
 	protected int travelPredicTime;
+	/** @deprecated Use {@link #getMobilityPredictionError()} and
+	 * {@link #setMobilityPredictionError(int)}. */
+	@Deprecated
 	protected int mobilityPrecitionError;
 
 	protected int myId;
@@ -279,20 +288,38 @@ public class FogDevice extends PowerDatacenter {
 		this.travelTimeId = travelTimeId;
 	}
 
-	public int getTravelPredicTime() {
+	public int getTravelPredictionTime() {
 		return travelPredicTime;
 	}
 
-	public void setTravelPredicTime(int travelPredicTime) {
-		this.travelPredicTime = travelPredicTime;
+	public void setTravelPredictionTime(int travelPredictionTime) {
+		this.travelPredicTime = travelPredictionTime;
 	}
 
-	public int getMobilityPrecitionError() {
+	/** @deprecated Use {@link #getTravelPredictionTime()}. */
+	@Deprecated
+	public int getTravelPredicTime() {
+		return getTravelPredictionTime();
+	}
+
+	/** @deprecated Use {@link #setTravelPredictionTime(int)}. */
+	@Deprecated
+	public void setTravelPredicTime(int travelPredictionTime) {
+		setTravelPredictionTime(travelPredictionTime);
+	}
+
+	public int getMobilityPredictionError() {
 		return mobilityPrecitionError;
 	}
 
-	public void setMobilityPredictionError(int mobilityPrecitionError) {
-		this.mobilityPrecitionError = mobilityPrecitionError;
+	/** @deprecated Use {@link #getMobilityPredictionError()}. */
+	@Deprecated
+	public int getMobilityPrecitionError() {
+		return getMobilityPredictionError();
+	}
+
+	public void setMobilityPredictionError(int mobilityPredictionError) {
+		this.mobilityPrecitionError = mobilityPredictionError;
 	}
 
 	public FogDevice() {
@@ -343,7 +370,7 @@ public class FogDevice extends PowerDatacenter {
 		smartThings = new HashSet<>();
 		smartThingsWithVm = new HashSet<>();
 		apDevices = new HashSet<>();
-		setVolatilParentId(-1);
+		setVolatileParentId(-1);
 		this.setAvailable(true);
 		this.setService(service);
 
@@ -368,7 +395,7 @@ public class FogDevice extends PowerDatacenter {
 		setActiveApplications(new ArrayList<String>());
 		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
-		setTravelPredicTime(0);
+		setTravelPredictionTime(0);
 		setMobilityPredictionError(0);
 		// If this resource doesn't have any PEs then no useful at all
 		if (getCharacteristics().getNumberOfPes() == 0) {
@@ -419,7 +446,7 @@ public class FogDevice extends PowerDatacenter {
 		smartThingsWithVm = new HashSet<>();
 
 		apDevices = new HashSet<>();
-		setVolatilParentId(-1);
+		setVolatileParentId(-1);
 
 		this.setAvailable(true);
 		setCharacteristics(characteristics);
@@ -441,7 +468,7 @@ public class FogDevice extends PowerDatacenter {
 		setActiveApplications(new ArrayList<String>());
 		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
-		setTravelPredicTime(0);
+		setTravelPredictionTime(0);
 		setMobilityPredictionError(0);
 		// If this resource doesn't have any PEs then no useful at all
 		if (getCharacteristics().getNumberOfPes() == 0) {
@@ -500,7 +527,7 @@ public class FogDevice extends PowerDatacenter {
 		setActiveApplications(new ArrayList<String>());
 		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
-		setTravelPredicTime(0);
+		setTravelPredictionTime(0);
 		setMobilityPredictionError(0);
 		// If this resource doesn't have any PEs then no useful at all
 		if (getCharacteristics().getNumberOfPes() == 0) {
@@ -582,7 +609,7 @@ public class FogDevice extends PowerDatacenter {
 		setActiveApplications(new ArrayList<String>());
 		setMobilityPath(Collections.<MobilitySample>emptyList());
 		setTravelTimeId(-1);
-		setTravelPredicTime(0);
+		setTravelPredictionTime(0);
 		setMobilityPredictionError(0);
 		if (getCharacteristics().getNumberOfPes() == 0) {
 			throw new Exception(super.getName()
@@ -691,8 +718,8 @@ public class FogDevice extends PowerDatacenter {
 		case MobileEvents.CONNECT_ST_TO_SC:
 			connectServerCloudletSmartThing(ev);
 			break;
-		case MobileEvents.DESCONNECT_ST_TO_SC:
-			desconnectServerCloudletSmartThing(ev);
+		case MobileEvents.DISCONNECT_ST_TO_SC:
+			disconnectServerCloudletSmartThing(ev);
 			break;
 		case MobileEvents.UNLOCKED_MIGRATION:
 			unLockedMigration(ev);
@@ -761,14 +788,14 @@ public class FogDevice extends PowerDatacenter {
 		}
 	}
 
-	private void desconnectServerCloudletSmartThing(SimEvent ev) {
+	private void disconnectServerCloudletSmartThing(SimEvent ev) {
 		MobileDevice smartThing = (MobileDevice) ev.getData();
 		if (smartThing == null
 			|| smartThing.getLifecycleState() == MobileDeviceLifecycle.FINISHED) {
 			return;
 		}
-		if (desconnectServerCloudletSmartThing(smartThing)) {
-			MyStatistics.getInstance().startWithoutConnetion(
+		if (disconnectServerCloudletSmartThing(smartThing)) {
+			MyStatistics.getInstance().startWithoutConnection(
 				smartThing.getMyId(), CloudSim.clock());
 		}
 	}
@@ -851,7 +878,7 @@ public class FogDevice extends PowerDatacenter {
 		return true;
 	}
 
-	public boolean desconnectServerCloudletSmartThing(MobileDevice st) {
+	public boolean disconnectServerCloudletSmartThing(MobileDevice st) {
 		if (st == null || st.getSourceServerCloudlet() != this) {
 			return false;
 		}
@@ -861,9 +888,15 @@ public class FogDevice extends PowerDatacenter {
 			st.setParentId(-1);
 		}
 		detachChild(st.getId());
-		LogMobile.debug("FogDevice.java", st.getName() + " was desconnected to " + getName());
+		LogMobile.debug("FogDevice.java", st.getName() + " was disconnected from " + getName());
 		return removed;
 
+	}
+
+	/** @deprecated Use {@link #disconnectServerCloudletSmartThing(MobileDevice)}. */
+	@Deprecated
+	public boolean desconnectServerCloudletSmartThing(MobileDevice st) {
+		return disconnectServerCloudletSmartThing(st);
 	}
 
 	private void invokeStartMigration(SimEvent ev) {
@@ -956,8 +989,8 @@ public class FogDevice extends PowerDatacenter {
 
 			float migrationLocked = (smartThing.getVmMobileDevice().getSize() * (smartThing
 				.getSpeed() + 1)) + 20000;
-			if (migrationLocked < smartThing.getTravelPredicTime() * 1000) {
-				migrationLocked = smartThing.getTravelPredicTime() * 1000;
+			if (migrationLocked < smartThing.getTravelPredictionTime() * 1000) {
+				migrationLocked = smartThing.getTravelPredictionTime() * 1000;
 			}
 			send(smartThing.getVmLocalServerCloudlet().getId(), migrationLocked,
 				MobileEvents.UNLOCKED_MIGRATION,
@@ -1351,7 +1384,7 @@ public class FogDevice extends PowerDatacenter {
 
 	int numClients = 0;
 
-	public void saveLostTupple(String a, String filename) {
+	public void saveLostTuple(String a, String filename) {
 		try (PrintWriter out1 = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(filename, true))
 		{
@@ -1360,6 +1393,12 @@ public class FogDevice extends PowerDatacenter {
 			throw new IllegalStateException(
 				"Could not record lost tuple " + filename, e);
 		}
+	}
+
+	/** @deprecated Use {@link #saveLostTuple(String, String)}. */
+	@Deprecated
+	public void saveLostTupple(String a, String filename) {
+		saveLostTuple(a, filename);
 	}
 
 	protected void processTupleArrival(SimEvent ev) {
@@ -1381,8 +1420,8 @@ public class FogDevice extends PowerDatacenter {
 				}
 				else {
 					MyStatistics.getInstance().incrementLostTupleCount();
-					saveLostTupple(String.valueOf(CloudSim.clock()), st.getId()
-						+ "fdlostTupple.txt");
+					saveLostTuple(String.valueOf(CloudSim.clock()), st.getId()
+						+ "fdlostTuple.txt");
 					if (st.isMigStatus()) {
 						LogMobile.debug("FogDevice.java", st.getName() + " is in Migration");
 						return;
@@ -2133,12 +2172,24 @@ public class FogDevice extends PowerDatacenter {
 		}
 	}
 
-	public int getVolatilParentId() {
+	public int getVolatileParentId() {
 		return volatilParentId;
 	}
 
-	public void setVolatilParentId(int volatilParentId) {
-		this.volatilParentId = volatilParentId;
+	public void setVolatileParentId(int volatileParentId) {
+		this.volatilParentId = volatileParentId;
+	}
+
+	/** @deprecated Use {@link #getVolatileParentId()}. */
+	@Deprecated
+	public int getVolatilParentId() {
+		return getVolatileParentId();
+	}
+
+	/** @deprecated Use {@link #setVolatileParentId(int)}. */
+	@Deprecated
+	public void setVolatilParentId(int volatileParentId) {
+		setVolatileParentId(volatileParentId);
 	}
 
 	public BeforeMigration getBeforeMigrate() {

@@ -79,13 +79,20 @@ public final class Migration {
 		}
 	}
 
-	public static List<FogDevice> serverClouletsAvailableList(List<FogDevice> oldServerCloudlets,
+	public static List<FogDevice> serverCloudletsAvailableList(List<FogDevice> oldServerCloudlets,
 		MobileDevice smartThing) {
 		ServerPrediction result = predictAvailableServers(oldServerCloudlets,
 			smartThing, CloudSim.clock(), MovementDirection.fromLegacy(
 				LegacySimulationAdapters.migrationRandom().nextInt(8) + 1));
 		applyPrediction(smartThing, result.getPrediction());
 		return result.getAvailableServers();
+	}
+
+	/** @deprecated Use {@link #serverCloudletsAvailableList(List, MobileDevice)}. */
+	@Deprecated
+	public static List<FogDevice> serverClouletsAvailableList(
+		List<FogDevice> oldServerCloudlets, MobileDevice smartThing) {
+		return serverCloudletsAvailableList(oldServerCloudlets, smartThing);
 	}
 
 	/** Pure candidate calculation used by migration policies. */
@@ -103,7 +110,7 @@ public final class Migration {
 		List<MobilitySample> path = smartThing.getMobilityPath();
 		// The prediction parameter is elapsed trace time, not a number of rows.
 		double targetTime = MobilityTimeline.toTraceTime(simulationTimeMillis)
-			+ smartThing.getTravelPredicTime();
+			+ smartThing.getTravelPredictionTime();
 		MobilitySample predictedSample = MobilityTimeline.sampleAtOrBefore(path, targetTime);
 
 		int x = (int) predictedSample.getX();
@@ -114,7 +121,7 @@ public final class Migration {
 
 		// related to the ninth parameter: User Mobility prediction inaccuracy, in meters
 		Coordinate coord_inaccurated = Coordinate.newCoordinateWithError(coord_prev,
-			smartThing.getMobilityPrecitionError(), predictionErrorDirection);
+			smartThing.getMobilityPredictionError(), predictionErrorDirection);
 
 		MigrationPrediction prediction = new MigrationPrediction(
 			smartThing.getTravelTimeId(), coord_real.getCoordX(), coord_real.getCoordY(),
@@ -145,7 +152,7 @@ public final class Migration {
 	public static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,
 		MobileDevice smartThing) {
 		return Distances.findClosestServerCloudlet(
-			serverClouletsAvailableList(serverCloudlets, smartThing), smartThing);
+			serverCloudletsAvailableList(serverCloudlets, smartThing), smartThing);
 	}
 
 	static Optional<FogDevice> nextServerCloudlet(List<FogDevice> serverCloudlets,

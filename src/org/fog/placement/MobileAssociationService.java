@@ -81,7 +81,7 @@ public final class MobileAssociationService {
 		if (mobileDevice.getSourceServerCloudlet() != null
 			&& mobileDevice.getSourceServerCloudlet() != sourceAp.getServerCloudlet()) {
 			mobileDevice.getSourceServerCloudlet()
-				.desconnectServerCloudletSmartThing(mobileDevice);
+				.disconnectServerCloudletSmartThing(mobileDevice);
 		}
 		if (mobileDevice.getSourceServerCloudlet() == null) {
 			try {

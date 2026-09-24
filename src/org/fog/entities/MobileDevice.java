@@ -290,7 +290,8 @@ public class MobileDevice extends FogDevice {
 		}
 	}
 
-	public void saveLostTupple(String a, String filename) {
+	@Override
+	public void saveLostTuple(String a, String filename) {
 		try (PrintWriter out1 = RunOutputManager.getInstance()
 			.newDetailedPrintWriter(filename, true)) {
 			out1.println(a);
@@ -298,6 +299,13 @@ public class MobileDevice extends FogDevice {
 			throw new IllegalStateException(
 				"Could not record lost tuple " + filename, e);
 		}
+	}
+
+	/** @deprecated Use {@link #saveLostTuple(String, String)}. */
+	@Override
+	@Deprecated
+	public void saveLostTupple(String a, String filename) {
+		saveLostTuple(a, filename);
 	}
 
 	protected void processTupleArrival(SimEvent ev) {
@@ -335,7 +343,7 @@ public class MobileDevice extends FogDevice {
 
 		if ((isMigStatus() || isHandoffStatus())) {
 			MyStatistics.getInstance().incrementLostTupleCount();
-			saveLostTupple(String.valueOf(CloudSim.clock()), tuple.getUserId() + "mdlostTupple.txt");
+			saveLostTuple(String.valueOf(CloudSim.clock()), tuple.getUserId() + "mdlostTuple.txt");
 			return;
 		}
 		else {

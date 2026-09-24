@@ -40,7 +40,7 @@ abstract class AbstractMigrationPreparation implements BeforeMigration {
 	}
 
 	@Override
-	public final double dataprepare(MobileDevice smartThing) {
+	public final double prepareData(MobileDevice smartThing) {
 		FogDevice sourceServerCloudlet = smartThing.getVmLocalServerCloudlet();
 		FogDevice destinationServerCloudlet = smartThing.getDestinationServerCloudlet();
 		ConnectionPreparationResult connection = prepareConnection(
@@ -53,6 +53,13 @@ abstract class AbstractMigrationPreparation implements BeforeMigration {
 			.getCpuTime(getPreparationWorkload(smartThing), 0.0);
 		return processingDelay + connection.getDelay()
 			+ getTopologyLatency(sourceServerCloudlet, destinationServerCloudlet);
+	}
+
+	/** @deprecated Use {@link #prepareData(MobileDevice)}. */
+	@Override
+	@Deprecated
+	public final double dataprepare(MobileDevice smartThing) {
+		return prepareData(smartThing);
 	}
 
 	final ConnectionPreparationResult prepareConnection(FogDevice sourceServerCloudlet,
