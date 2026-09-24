@@ -11,8 +11,8 @@ public class ActuatorGui extends Node implements Serializable {
 
 	public ActuatorGui(String name, String actuatorType) {
 		super(name, NodeType.ACTUATOR);
-		setName(name);
-		setActuatorType(actuatorType);
+		this.name = name;
+		this.actuatorType = actuatorType;
 	}
 
 	public String getName() {

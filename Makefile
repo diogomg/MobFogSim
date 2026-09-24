@@ -6,6 +6,8 @@ TEST_CLASSES := $(BUILD_DIR)/test-classes
 TEST_SOURCE_LIST := $(BUILD_DIR)/test-sources.list
 TEST_SUITE_LIST := $(BUILD_DIR)/test-suites.list
 TEST_CLASSPATH := $(TEST_CLASSES):$(MAIN_CLASSPATH)
+FOG_LINT_CLASSES := $(BUILD_DIR)/lint-classes
+FOG_SOURCE_LIST := $(BUILD_DIR)/fog-sources.list
 P0_REGRESSION_SUITES := org.fog.placement.P0CorrectnessRegressionTest
 RUN_ARGS ?= 1 290538 0 0 80 61 0 11 0 0 0 60,40 70,30 1 2 0 summary
 JACOCO_VERSION := 0.8.15
@@ -21,7 +23,7 @@ BENCHMARK_FIXTURES ?= baseline
 BENCHMARK_OUTPUT ?=
 BENCHMARK_JAVA_OPTS ?= -Xms256m -Xmx14g -Dfile.encoding=UTF-8 -Duser.language=en -Duser.country=GB -Duser.timezone=UTC
 
-.PHONY: compile compile-tests discover-tests list-tests run test coverage \
+.PHONY: compile compile-tests discover-tests list-tests run test lint coverage \
 	coverage-tools benchmark benchmark-matrix list-benchmark-fixtures \
 	demonstrate-p0-defects clean
 
@@ -32,6 +34,15 @@ compile:
 	javac -encoding UTF-8 -classpath 'jars/*:jars/commons-math3-3.5/*' -d $(MAIN_CLASSES) @$(MAIN_SOURCE_LIST)
 	cp -R src/images/* $(MAIN_CLASSES)/images/
 	cp -R src/topologies/* $(MAIN_CLASSES)/topologies/
+
+# The bundled CloudSim sources retain legacy deprecation warnings. Enforce the
+# zero-warning contract on the locally maintained org.fog code.
+lint: compile
+	rm -rf $(FOG_LINT_CLASSES)
+	mkdir -p $(FOG_LINT_CLASSES)
+	find src/org/fog -name '*.java' -print > $(FOG_SOURCE_LIST)
+	javac -encoding UTF-8 -Xlint:all -Werror -Xmaxwarns 10000 \
+		-classpath '$(MAIN_CLASSPATH)' -d $(FOG_LINT_CLASSES) @$(FOG_SOURCE_LIST)
 
 run: compile
 	java -Xmx10g -Dfile.encoding=UTF-8 -classpath '$(MAIN_CLASSPATH)' org.fog.vmmobile.AppExample $(RUN_ARGS)

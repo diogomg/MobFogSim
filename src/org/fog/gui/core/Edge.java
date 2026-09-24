@@ -67,7 +67,7 @@ public class Edge implements Serializable {
 	/** copy edge */
 	public Edge(Node to, Map<String, Object> info) {
 		setDestination(to);
-		setInfo(info);
+		applyInfo(info);
 		Object storedType = info.get("edgeType");
 		if (storedType != null) {
 			try {
@@ -184,6 +184,10 @@ public class Edge implements Serializable {
 	}
 
 	public void setInfo(Map<String, Object> info) {
+		applyInfo(info);
+	}
+
+	private void applyInfo(Map<String, Object> info) {
 		if (info == null) {
 			throw new IllegalArgumentException("Edge information cannot be null");
 		}

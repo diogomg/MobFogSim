@@ -8,8 +8,8 @@ public class ModuleLaunchConfig {
 	private int instanceCount;
 
 	public ModuleLaunchConfig(AppModule module, int instanceCount) {
-		setModule(module);
-		setInstanceCount(instanceCount);
+		this.module = module;
+		this.instanceCount = instanceCount;
 	}
 
 	public AppModule getModule() {

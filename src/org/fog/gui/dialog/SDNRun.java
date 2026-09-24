@@ -34,8 +34,10 @@ public class SDNRun extends JDialog {
 	private JLabel imageLabel;
 	private JLabel msgLabel;
 	private JComponent space;
-	private GraphicSDNExample sdn;
+	private transient GraphicSDNExample sdn;
 
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public SDNRun(final String phy, final String vir, final String wlbk, final String wl,
 		final JFrame frame) {
 		physicalTopologyFile = phy;

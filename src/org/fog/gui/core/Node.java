@@ -14,7 +14,7 @@ public class Node implements Serializable {
 	private boolean isPlaced;
 
 	public Node() {
-		setPlaced(false);
+		isPlaced = false;
 	}
 
 	public Node(String name, String type) {
@@ -23,8 +23,8 @@ public class Node implements Serializable {
 
 	public Node(String name, NodeType type) {
 		this.name = name;
-		setNodeType(type);
-		setPlaced(false);
+		this.type = requireNodeType(type);
+		isPlaced = false;
 		coord = new Coordinates();
 	}
 
@@ -45,10 +45,14 @@ public class Node implements Serializable {
 	}
 
 	public void setNodeType(NodeType type) {
+		this.type = requireNodeType(type);
+	}
+
+	private static NodeType requireNodeType(NodeType type) {
 		if (type == null) {
 			throw new IllegalArgumentException("Node type cannot be null");
 		}
-		this.type = type;
+		return type;
 	}
 
 	public NodeType getNodeType() {

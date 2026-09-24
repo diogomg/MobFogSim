@@ -23,11 +23,10 @@ import org.fog.gui.core.Graph;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes" })
 public class AddActuator extends JDialog {
 	private static final long serialVersionUID = -511667786177319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JTextField actuatorName;
 	private JTextField actuatorType;
@@ -38,6 +37,8 @@ public class AddActuator extends JDialog {
 	 * @param frame
 	 *        the parent frame
 	 */
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddActuator(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -121,7 +122,7 @@ public class AddActuator extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

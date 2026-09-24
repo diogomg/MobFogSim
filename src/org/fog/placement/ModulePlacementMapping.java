@@ -65,6 +65,8 @@ public class ModulePlacementMapping extends ModulePlacement {
 		}
 	}
 
+	// Placement construction deliberately runs the overridable mapping lifecycle.
+	@SuppressWarnings("this-escape")
 	public ModulePlacementMapping(List<FogDevice> fogDevices, Application application,
 		ModuleMapping moduleMapping, Map<Integer, Double> globalCPULoad) {
 		this.setFogDevices(fogDevices);
@@ -80,6 +82,7 @@ public class ModulePlacementMapping extends ModulePlacement {
 		mapModules();
 	}
 
+	@SuppressWarnings("this-escape")
 	public ModulePlacementMapping(List<FogDevice> fogDevices, Application application,
 		ModuleMapping moduleMapping, Map<Integer, Double> globalCPULoad, boolean migration) {
 		this.setFogDevices(fogDevices);

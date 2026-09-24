@@ -24,16 +24,18 @@ public class GraphView extends JPanel {
 
 	private JPanel canvas;
 	private Graph graph;
-	private TopologyCommands commands;
+	private transient TopologyCommands commands;
 
-	private Image imgHost;
-	private Image imgSensor;
-	private Image imgSwitch;
-	private Image imgAppModule;
-	private Image imgActuator;
-	private Image imgSensorModule;
-	private Image imgActuatorModule;
+	private transient Image imgHost;
+	private transient Image imgSensor;
+	private transient Image imgSwitch;
+	private transient Image imgAppModule;
+	private transient Image imgActuator;
+	private transient Image imgSensorModule;
+	private transient Image imgActuatorModule;
 
+	// Swing construction necessarily invokes overridable JPanel hooks.
+	@SuppressWarnings("this-escape")
 	public GraphView(final Graph graph) {
 
 		this.graph = graph;

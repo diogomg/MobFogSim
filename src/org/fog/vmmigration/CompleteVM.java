@@ -15,7 +15,7 @@ public class CompleteVM implements VmMigrationTechnique {
 	}
 
 	public CompleteVM(MigrationPointPolicy migPointPolicy) {
-		setMigrationPointPolicy(migPointPolicy);
+		this.migPointPolicy = requireMigrationPointPolicy(migPointPolicy);
 	}
 
 	@Override
@@ -37,7 +37,7 @@ public class CompleteVM implements VmMigrationTechnique {
 	@Override
 	public boolean migrationPointFunction(double distance, double migTime, int speed) {
 		// ((migTime/1000.0) * speed);//minimal distance to migration
-		double newDistance = (double) (migTime / 1000.0) * speed;
+		double newDistance = (migTime / 1000.0) * speed;
 		// the boundary is on the middle between the two APs
 		newDistance += MaxAndMin.MAX_DISTANCE_TO_HANDOFF / 2.0;
 		if ((distance >= MaxAndMin.AP_COVERAGE - newDistance || distance >= MaxAndMin.AP_COVERAGE
@@ -78,10 +78,15 @@ public class CompleteVM implements VmMigrationTechnique {
 	}
 
 	public void setMigrationPointPolicy(MigrationPointPolicy migPointPolicy) {
+		this.migPointPolicy = requireMigrationPointPolicy(migPointPolicy);
+	}
+
+	private static MigrationPointPolicy requireMigrationPointPolicy(
+		MigrationPointPolicy migPointPolicy) {
 		if (migPointPolicy == null) {
 			throw new IllegalArgumentException("Migration point policy cannot be null");
 		}
-		this.migPointPolicy = migPointPolicy;
+		return migPointPolicy;
 	}
 
 }

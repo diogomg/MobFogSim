@@ -31,6 +31,8 @@ public class AppModule extends PowerVm {
 	 */
 	private Map<String, List<Integer>> actuatorSubscriptions;
 
+	// CloudSim's Vm contract initializes modules through inherited mutable APIs.
+	@SuppressWarnings("this-escape")
 	public AppModule(
 		int id,
 		String name,
@@ -66,6 +68,7 @@ public class AppModule extends PowerVm {
 		setActuatorSubscriptions(new HashMap<String, List<Integer>>());
 	}
 
+	@SuppressWarnings("this-escape")
 	public AppModule(AppModule operator) {
 		super(FogUtils.generateEntityId(), operator.getUserId(), operator.getMips(), 1, operator
 			.getRam(), operator.getBw(), operator.getSize(), 1, operator.getVmm(),

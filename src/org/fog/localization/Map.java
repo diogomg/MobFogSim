@@ -5,9 +5,8 @@ public class Map {
 	private int map[][];
 
 	public Map(int sizeMap) {
-		// TODO Auto-generated constructor stub
-		this.setSizeMap(sizeMap);
-		this.setMap(this.getMap());
+		this.sizeMap = sizeMap;
+		map = new int[sizeMap][sizeMap];
 	}
 
 	public Map() {

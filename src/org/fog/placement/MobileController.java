@@ -143,6 +143,8 @@ public class MobileController extends SimEntity {
 			coordDevices, seed, migrationAble);
 	}
 
+	// CloudSim entities are registered only after controller topology setup.
+	@SuppressWarnings("this-escape")
 	public MobileController(String name, List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, List<MobileDevice> smartThings,
 		List<FogBroker> brokers, ModuleMapping moduleMapping,
@@ -154,6 +156,7 @@ public class MobileController extends SimEntity {
 			migrationAble, SimulationServices.currentOrLegacy());
 	}
 
+	@SuppressWarnings("this-escape")
 	public MobileController(String name, List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, List<MobileDevice> smartThings,
 		List<FogBroker> brokers, ModuleMapping moduleMapping,
@@ -206,6 +209,7 @@ public class MobileController extends SimEntity {
 			coordDevices, seed);
 	}
 
+	@SuppressWarnings("this-escape")
 	public MobileController(String name, List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, List<MobileDevice> smartThings,
 		MigrationPointPolicy migPointPolicy,
@@ -1310,7 +1314,7 @@ public class MobileController extends SimEntity {
 		if (brokerList == null) {
 			throw new IllegalArgumentException("Broker list cannot be null");
 		}
-		this.brokerList = brokerList;
+		MobileController.brokerList = brokerList;
 	}
 
 	private static Map<Integer, FogBroker> indexBrokersByMobileId(

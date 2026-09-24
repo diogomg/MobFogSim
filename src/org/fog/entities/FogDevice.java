@@ -326,6 +326,9 @@ public class FogDevice extends PowerDatacenter {
 
 	}
 
+	// CloudSim entities are configured through mutable lifecycle APIs; callbacks
+	// cannot observe the entity until construction and registration complete.
+	@SuppressWarnings("this-escape")
 	public FogDevice(String name, int coordX, int coordY, int id) {
 		super(name);
 		this.coord = new Coordinate();
@@ -342,6 +345,7 @@ public class FogDevice extends PowerDatacenter {
 		super(name);
 	}
 
+	@SuppressWarnings("this-escape")
 	public FogDevice(String name, FogDeviceCharacteristics characteristics,
 		VmAllocationPolicy vmAllocationPolicy, List<Storage> storageList,
 		double schedulingInterval, double uplinkBandwidth, double downlinkBandwidth,
@@ -354,6 +358,7 @@ public class FogDevice extends PowerDatacenter {
 			MigrationTechniquePolicy.fromLegacy(policyReplicaVM), beforeMigration);
 	}
 
+	@SuppressWarnings("this-escape")
 	public FogDevice(String name, FogDeviceCharacteristics characteristics,
 		VmAllocationPolicy vmAllocationPolicy, List<Storage> storageList,
 		double schedulingInterval, double uplinkBandwidth, double downlinkBandwidth,
@@ -426,6 +431,7 @@ public class FogDevice extends PowerDatacenter {
 		setChildToLatencyMap(new HashMap<Integer, Double>());
 	}
 
+	@SuppressWarnings("this-escape")
 	public FogDevice(
 		String name,
 		FogDeviceCharacteristics characteristics,
@@ -499,6 +505,7 @@ public class FogDevice extends PowerDatacenter {
 		setChildToLatencyMap(new HashMap<Integer, Double>());
 	}
 
+	@SuppressWarnings("this-escape")
 	public FogDevice(
 		String name,
 		FogDeviceCharacteristics characteristics,
@@ -558,6 +565,7 @@ public class FogDevice extends PowerDatacenter {
 		setChildToLatencyMap(new HashMap<Integer, Double>());
 	}
 
+	@SuppressWarnings("this-escape")
 	public FogDevice(
 		String name, long mips, int ram,
 		double uplinkBandwidth, double downlinkBandwidth, double ratePerMips, PowerModel powerModel)

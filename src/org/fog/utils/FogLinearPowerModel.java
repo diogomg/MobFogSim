@@ -34,9 +34,9 @@ public class FogLinearPowerModel implements PowerModel {
 	 *        the static power
 	 */
 	public FogLinearPowerModel(double maxPower, double staticPower) {
-		setMaxPower(maxPower);
-		setStaticPower(staticPower);
-		setConstant((maxPower - getStaticPower()) / 100);
+		this.maxPower = maxPower;
+		this.staticPower = staticPower;
+		constant = (maxPower - staticPower) / 100;
 	}
 
 	@Override

@@ -33,7 +33,7 @@ public class FractionalSelectivity implements SelectivityModel {
 			throw new IllegalArgumentException("Selectivity random stream cannot be null");
 		}
 		this.random = random;
-		setSelectivity(selectivity);
+		this.selectivity = requireSelectivity(selectivity);
 	}
 
 	/**
@@ -52,12 +52,16 @@ public class FractionalSelectivity implements SelectivityModel {
 	 *        value
 	 */
 	public void setSelectivity(double selectivity) {
+		this.selectivity = requireSelectivity(selectivity);
+	}
+
+	private static double requireSelectivity(double selectivity) {
 		if (!Double.isFinite(selectivity)
 			|| selectivity < 0.0 || selectivity > 1.0) {
 			throw new IllegalArgumentException(
 				"Selectivity must be finite and between 0 and 1");
 		}
-		this.selectivity = selectivity;
+		return selectivity;
 	}
 
 	/**

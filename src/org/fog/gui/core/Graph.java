@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 public class Graph implements Serializable {
 	private static final long serialVersionUID = 745864022429447529L;
 
-	private Map<Node, List<Edge>> adjacencyList;
+	private HashMap<Node, List<Edge>> adjacencyList;
 	private transient GraphSnapshot cachedSnapshot;
 
 	public Graph() {
@@ -24,14 +24,20 @@ public class Graph implements Serializable {
 	}
 
 	public Graph(Map<Node, List<Edge>> adjacencyList) {
-		setAdjacencyList(adjacencyList);
+		this.adjacencyList = copyAdjacencyList(adjacencyList);
 	}
 
 	public void setAdjacencyList(Map<Node, List<Edge>> adjacencyList) {
+		this.adjacencyList = copyAdjacencyList(adjacencyList);
+		invalidateSnapshot();
+	}
+
+	private static HashMap<Node, List<Edge>> copyAdjacencyList(
+		Map<Node, List<Edge>> adjacencyList) {
 		if (adjacencyList == null) {
 			throw new IllegalArgumentException("Adjacency list cannot be null");
 		}
-		Map<Node, List<Edge>> copy = new HashMap<Node, List<Edge>>();
+		HashMap<Node, List<Edge>> copy = new HashMap<Node, List<Edge>>();
 		for (Entry<Node, List<Edge>> entry : adjacencyList.entrySet()) {
 			if (entry.getKey() == null || entry.getValue() == null) {
 				throw new IllegalArgumentException(
@@ -39,8 +45,7 @@ public class Graph implements Serializable {
 			}
 			copy.put(entry.getKey(), new ArrayList<Edge>(entry.getValue()));
 		}
-		this.adjacencyList = copy;
-		invalidateSnapshot();
+		return copy;
 	}
 
 	public Map<Node, List<Edge>> getAdjacencyList() {

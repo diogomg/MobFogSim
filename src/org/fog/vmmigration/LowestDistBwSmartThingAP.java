@@ -36,10 +36,13 @@ public class LowestDistBwSmartThingAP implements DecisionMigration {
 	public LowestDistBwSmartThingAP(List<FogDevice> serverCloudlets,
 		List<ApDevice> apDevices, MigrationPointPolicy migPointPolicy,
 		MigrationTechniquePolicy policyReplicaVM) {
-		setServerCloudlets(serverCloudlets);
-		setApDevices(apDevices);
-		setMigPointPolicy(migPointPolicy);
-		setMigrationTechniquePolicy(policyReplicaVM);
+		this.serverCloudlets = new ArrayList<FogDevice>(serverCloudlets);
+		this.apDevices = new ArrayList<ApDevice>(apDevices);
+		if (migPointPolicy == null || policyReplicaVM == null) {
+			throw new IllegalArgumentException("Migration policies cannot be null");
+		}
+		this.migPointPolicy = migPointPolicy;
+		this.policyReplicaVM = policyReplicaVM;
 	}
 
 	@Override

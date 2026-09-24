@@ -30,6 +30,8 @@ public class Actuator extends SimEntity {
 	private int myId;
 	private boolean enabled = true;
 
+	// CloudSim entities are invisible to simulation callbacks until registration.
+	@SuppressWarnings("this-escape")
 	public Actuator(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, String actuatorType, String srcModuleName) {
 		super(name);
@@ -42,6 +44,7 @@ public class Actuator extends SimEntity {
 		setMyId(userId);
 	}
 
+	@SuppressWarnings("this-escape")
 	public Actuator(String name, int userId, String appId, String actuatorType) {
 		super(name);
 		this.setAppId(appId);

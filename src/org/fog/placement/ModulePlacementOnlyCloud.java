@@ -20,6 +20,8 @@ public class ModulePlacementOnlyCloud extends ModulePlacement {
 	private List<Actuator> actuators;
 	private int cloudId;
 
+	// Placement construction deliberately runs the overridable mapping lifecycle.
+	@SuppressWarnings("this-escape")
 	public ModulePlacementOnlyCloud(List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, Application application) {
 		this.setFogDevices(fogDevices);

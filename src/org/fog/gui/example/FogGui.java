@@ -64,6 +64,8 @@ public class FogGui extends JFrame {
 
 	private String mode;  // 'm':manual; 'i':import
 
+	// Swing construction necessarily invokes overridable JFrame hooks.
+	@SuppressWarnings("this-escape")
 	public FogGui() {
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setPreferredSize(new Dimension(1280, 800));
@@ -547,7 +549,7 @@ public class FogGui extends JFrame {
 	}
 
 	private static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

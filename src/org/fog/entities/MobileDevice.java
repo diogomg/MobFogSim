@@ -115,6 +115,9 @@ public class MobileDevice extends FogDevice {
 		// TODO Auto-generated constructor stub
 	}
 
+	// CloudSim entities are configured through mutable lifecycle APIs; callbacks
+	// cannot observe the entity until construction and registration complete.
+	@SuppressWarnings("this-escape")
 	public MobileDevice(String name, Coordinate coord, int coordX, int coordY, int id) {
 		// TODO Auto-generated constructor stub
 		super(name, coordX, coordY, id);
@@ -149,6 +152,7 @@ public class MobileDevice extends FogDevice {
 		this(name, coordX, coordY, id, MovementDirection.fromLegacy(dir), sp);
 	}
 
+	@SuppressWarnings("this-escape")
 	public MobileDevice(String name, int coordX, int coordY, int id,
 		MovementDirection direction, int sp) {
 
@@ -192,6 +196,7 @@ public class MobileDevice extends FogDevice {
 			maxServiceValue, vmSize, migrationTechnique);
 	}
 
+	@SuppressWarnings("this-escape")
 	public MobileDevice(String name, FogDeviceCharacteristics characteristics,
 		AppModuleAllocationPolicy vmAllocationPolicy,
 		LinkedList<Storage> storageList, double schedulingInterval,

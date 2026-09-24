@@ -53,27 +53,27 @@ public class AppEdge {
 
 	public AppEdge(String source, String destination, double tupleCpuLength,
 		double tupleNwLength, String tupleType, int direction, int edgeType) {
-		setSource(source);
-		setDestination(destination);
-		setTupleCpuLength(tupleCpuLength);
-		setTupleNwLength(tupleNwLength);
-		setTupleType(tupleType);
-		setDirection(direction);
-		setEdgeType(edgeType);
-		setPeriodic(false);
+		this.source = source;
+		this.destination = destination;
+		this.tupleCpuLength = tupleCpuLength;
+		this.tupleNwLength = tupleNwLength;
+		this.tupleType = tupleType;
+		this.direction = direction;
+		this.edgeType = edgeType;
+		isPeriodic = false;
 	}
 
 	public AppEdge(String source, String destination, double periodicity, double tupleCpuLength,
 		double tupleNwLength, String tupleType, int direction, int edgeType) {
-		setSource(source);
-		setDestination(destination);
-		setTupleCpuLength(tupleCpuLength);
-		setTupleNwLength(tupleNwLength);
-		setTupleType(tupleType);
-		setDirection(direction);
-		setEdgeType(edgeType);
-		setPeriodic(true);
-		setPeriodicity(periodicity);
+		this.source = source;
+		this.destination = destination;
+		this.tupleCpuLength = tupleCpuLength;
+		this.tupleNwLength = tupleNwLength;
+		this.tupleType = tupleType;
+		this.direction = direction;
+		this.edgeType = edgeType;
+		isPeriodic = true;
+		this.periodicity = periodicity;
 	}
 
 	public String getSource() {

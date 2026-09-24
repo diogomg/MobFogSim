@@ -29,11 +29,10 @@ import org.fog.gui.core.SwitchNode;
 import org.fog.gui.core.HostNode;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddPhysicalNode extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JLabel lName;
 	private JLabel lType;
@@ -44,13 +43,15 @@ public class AddPhysicalNode extends JDialog {
 	private JLabel lop4;
 
 	private JTextField tfName;
-	private JComboBox cType;
+	private JComboBox<String> cType;
 	private JTextField tfBw;
 	private JTextField top1;
 	private JTextField top2;
 	private JTextField top3;
 	private JTextField top4;
 
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddPhysicalNode(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -219,14 +220,13 @@ public class AddPhysicalNode extends JDialog {
 
 		lType = new JLabel("Type: "); // , JLabel.TRAILING);
 		springPanel.add(lType);
-		cType = new JComboBox(vmType);
+		cType = new JComboBox<String>(vmType);
 		lType.setLabelFor(cType);
 		cType.setSelectedIndex(0);
 		cType.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
-				JComboBox ctype = (JComboBox) e.getSource();
-				String item = (String) ctype.getSelectedItem();
+				String item = (String) cType.getSelectedItem();
 				updatePanel(item);
 			}
 		});
@@ -273,7 +273,7 @@ public class AddPhysicalNode extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

@@ -204,24 +204,28 @@ public class Application {
 	}
 
 	public Application(String appId, int userId) {
-		setAppId(appId);
-		setUserId(userId);
-		setModules(new ArrayList<AppModule>());
-		setEdges(new ArrayList<AppEdge>());
-		setGeoCoverage(null);
-		setLoops(new ArrayList<AppLoop>());
-		setEdgeMap(new HashMap<String, AppEdge>());
+		this.appId = appId;
+		this.userId = userId;
+		modules = new ArrayList<AppModule>();
+		edges = new ArrayList<AppEdge>();
+		geoCoverage = null;
+		loops = new ArrayList<AppLoop>();
+		edgeMap = new HashMap<String, AppEdge>();
 	}
 
 	public Application(String appId, List<AppModule> modules,
 		List<AppEdge> edges, List<AppLoop> loops, GeoCoverage geoCoverage) {
-		setAppId(appId);
-		setModules(modules);
-		setEdges(edges);
-		setGeoCoverage(geoCoverage);
-		setLoops(loops);
-		setEdgeMap(new HashMap<String, AppEdge>());
-		for (AppEdge edge : edges) {
+		if (modules == null || edges == null || loops == null) {
+			throw new IllegalArgumentException(
+				"Application modules, edges, and loops cannot be null");
+		}
+		this.appId = appId;
+		this.modules = new ArrayList<AppModule>(modules);
+		this.edges = new ArrayList<AppEdge>(edges);
+		this.geoCoverage = geoCoverage;
+		this.loops = new ArrayList<AppLoop>(loops);
+		edgeMap = new HashMap<String, AppEdge>();
+		for (AppEdge edge : this.edges) {
 			registerEdgeInMap(edge);
 		}
 	}

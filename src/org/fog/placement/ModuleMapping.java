@@ -40,7 +40,7 @@ public class ModuleMapping {
 	}
 
 	protected ModuleMapping() {
-		setModuleMapping(new HashMap<String, Map<String, Integer>>());
+		moduleMapping = new HashMap<String, Map<String, Integer>>();
 	}
 
 	/**

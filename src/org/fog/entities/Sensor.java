@@ -31,6 +31,8 @@ public class Sensor extends SimEntity {
 	private double latency;
 	private boolean enabled = true;
 
+	// CloudSim entities are invisible to simulation callbacks until registration.
+	@SuppressWarnings("this-escape")
 	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, Distribution transmitDistribution, int cpuLength, int nwLength,
 		String tupleType, String destModuleName) {
@@ -48,6 +50,7 @@ public class Sensor extends SimEntity {
 
 	}
 
+	@SuppressWarnings("this-escape")
 	public Sensor(String name, int userId, String appId, int gatewayDeviceId, double latency,
 		GeoLocation geoLocation, Distribution transmitDistribution, String tupleType) {
 		super(validateRequiredFields(name, appId, tupleType, transmitDistribution));
@@ -73,6 +76,7 @@ public class Sensor extends SimEntity {
 	 * @param appId
 	 * @param transmitDistribution
 	 */
+	@SuppressWarnings("this-escape")
 	public Sensor(String name, String tupleType, int userId, String appId,
 		Distribution transmitDistribution) {
 		super(validateRequiredFields(name, appId, tupleType, transmitDistribution));

@@ -23,11 +23,10 @@ import org.fog.gui.core.Graph;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes" })
 public class AddFogDevice extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JLabel deviceNameLabel;
 	private JLabel upBwLabel;
@@ -45,6 +44,8 @@ public class AddFogDevice extends JDialog {
 	private JTextField level;
 	private JTextField rate;
 
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddFogDevice(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -188,7 +189,7 @@ public class AddFogDevice extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

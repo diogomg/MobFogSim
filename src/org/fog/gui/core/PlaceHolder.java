@@ -23,18 +23,18 @@ public class PlaceHolder {
 	}
 
 	public PlaceHolder(Coordinates coordinates) {
-		setCoordinates(coordinates);
-		setOccupied(false);
+		this.coordinates = coordinates;
+		isOccupied = false;
 	}
 
 	public PlaceHolder() {
-		setCoordinates(new Coordinates());
-		setOccupied(false);
+		coordinates = new Coordinates();
+		isOccupied = false;
 	}
 
 	public PlaceHolder(int x, int y) {
-		setCoordinates(new Coordinates(x, y));
-		setOccupied(false);
+		coordinates = new Coordinates(x, y);
+		isOccupied = false;
 	}
 
 	public Coordinates getCoordinates() {

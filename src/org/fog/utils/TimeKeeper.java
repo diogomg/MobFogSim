@@ -147,15 +147,15 @@ public class TimeKeeper {
 
 	public TimeKeeper() {
 		count = 1;
-		setEmitTimes(new HashMap<Integer, Double>());
-		setEndTimes(new HashMap<Integer, Double>());
-		setLoopIdToTupleIds(new HashMap<Integer, List<Integer>>());
-		setTupleTypeToAverageCpuTime(new HashMap<String, Double>());
-		setTupleTypeToExecutedTupleCount(new HashMap<String, Integer>());
-		setTupleIdToCpuStartTime(new HashMap<Integer, Double>());
-		setLoopIdToCurrentAverage(new HashMap<Integer, Double>());
-		setLoopIdToCurrentNum(new HashMap<Integer, Integer>());
-		setMaxLoopExecutionTime(new HashMap<Integer, Double>());
+		emitTimes = new HashMap<Integer, Double>();
+		endTimes = new HashMap<Integer, Double>();
+		loopIdToTupleIds = new HashMap<Integer, List<Integer>>();
+		tupleTypeToAverageCpuTime = new HashMap<String, Double>();
+		tupleTypeToExecutedTupleCount = new HashMap<String, Integer>();
+		tupleIdToCpuStartTime = new HashMap<Integer, Double>();
+		loopIdToCurrentAverage = new HashMap<Integer, Double>();
+		loopIdToCurrentNum = new HashMap<Integer, Integer>();
+		maxLoopExecutionTime = new HashMap<Integer, Double>();
 	}
 
 	public int getCount() {

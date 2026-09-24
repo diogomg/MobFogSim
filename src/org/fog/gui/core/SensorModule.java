@@ -16,7 +16,7 @@ public class SensorModule extends Node {
 
 	public SensorModule(String name, String sensorType) {
 		super(name, NodeType.SENSOR_MODULE);
-		setSensorType(sensorType);
+		this.sensorType = sensorType;
 	}
 
 	public String getSensorType() {

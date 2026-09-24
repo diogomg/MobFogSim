@@ -36,6 +36,8 @@ public class ModulePlacementEdgewards extends ModulePlacement {
 	protected Map<Integer, Map<String, Double>> currentModuleLoadMap;
 	protected Map<Integer, Map<String, Integer>> currentModuleInstanceNum;
 
+	// Placement construction deliberately runs the overridable mapping lifecycle.
+	@SuppressWarnings("this-escape")
 	public ModulePlacementEdgewards(List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, Application application, ModuleMapping moduleMapping) {
 		this.setFogDevices(fogDevices);

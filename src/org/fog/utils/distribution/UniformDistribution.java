@@ -3,6 +3,7 @@ package org.fog.utils.distribution;
 import java.util.Random;
 
 public class UniformDistribution extends Distribution {
+	private static final long serialVersionUID = 1L;
 
 	private double min;
 	private double max;
@@ -21,9 +22,12 @@ public class UniformDistribution extends Distribution {
 			throw new IllegalArgumentException(
 				"Uniform minimum cannot be greater than maximum");
 		}
-		setMin(min);
-		setMax(max);
-		setRandom(random);
+		if (random == null) {
+			throw new IllegalArgumentException("Random generator cannot be null");
+		}
+		this.min = min;
+		this.max = max;
+		this.random = random;
 	}
 
 	@Override

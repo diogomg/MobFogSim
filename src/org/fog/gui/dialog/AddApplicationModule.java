@@ -24,11 +24,10 @@ import org.fog.gui.core.Node;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes" })
 public class AddApplicationModule extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JTextField tfName;
 
@@ -38,6 +37,8 @@ public class AddApplicationModule extends JDialog {
 	 * @param frame
 	 *        the parent frame
 	 */
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddApplicationModule(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -120,7 +121,7 @@ public class AddApplicationModule extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

@@ -18,22 +18,22 @@ public class SensorGui extends Node implements Serializable {
 
 	public SensorGui(String name, String type, Distribution distribution) {
 		super(name, NodeType.SENSOR);
-		setName(name);
-		setSensorType(type);
-		setDistribution(distribution);
+		this.name = name;
+		sensorType = type;
+		this.distribution = distribution;
 	}
 
 	public SensorGui(String name, String sensorType, String selectedItem, double normalMean_,
 		double normalStdDev_, double uniformLow_, double uniformUp_, double deterministicVal_) {
 		super(name, NodeType.SENSOR);
-		setName(name);
-		setSensorType(sensorType);
+		this.name = name;
+		this.sensorType = sensorType;
 		if (normalMean_ != -1) {
-			setDistribution(new NormalDistribution(normalMean_, normalStdDev_));
+			distribution = new NormalDistribution(normalMean_, normalStdDev_);
 		} else if (uniformLow_ != -1) {
-			setDistribution(new UniformDistribution(uniformLow_, uniformUp_));
+			distribution = new UniformDistribution(uniformLow_, uniformUp_);
 		} else if (deterministicVal_ != -1) {
-			setDistribution(new DeterministicDistribution(deterministicVal_));
+			distribution = new DeterministicDistribution(deterministicVal_);
 		}
 	}
 

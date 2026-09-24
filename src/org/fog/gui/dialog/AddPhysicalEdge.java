@@ -38,11 +38,13 @@ import org.fog.gui.core.TopologyCommands;
 public class AddPhysicalEdge extends JDialog {
 	private static final long serialVersionUID = 4794808969864918000L;
 
-	private final TopologyCommands commands;
-	private JComboBox sourceNode;
-	private JComboBox targetNode;
+	private final transient TopologyCommands commands;
+	private JComboBox<Node> sourceNode;
+	private JComboBox<Node> targetNode;
 	private JTextField tfLatency;
 
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddPhysicalEdge(final Graph graph, final JFrame frame) {
 
 		this.commands = new TopologyCommands(graph);
@@ -62,7 +64,6 @@ public class AddPhysicalEdge extends JDialog {
 		setVisible(true);
 	}
 
-	@SuppressWarnings("unchecked")
 	private JPanel createInputPanel() {
 		final GraphSnapshot snapshot = commands.snapshot();
 
@@ -77,13 +78,13 @@ public class AddPhysicalEdge extends JDialog {
 		JPanel textAreaPanel = new JPanel();
 		textAreaPanel.setLayout(new BoxLayout(textAreaPanel, BoxLayout.LINE_AXIS));
 
-		ComboBoxModel sourceNodeModel = new DefaultComboBoxModel(snapshot.nodes()
-			.toArray());
+		ComboBoxModel<Node> sourceNodeModel = new DefaultComboBoxModel<Node>(
+			snapshot.nodes().toArray(new Node[0]));
 
 		sourceNodeModel.setSelectedItem(null);
 
-		sourceNode = new JComboBox(sourceNodeModel);
-		targetNode = new JComboBox();
+		sourceNode = new JComboBox<Node>(sourceNodeModel);
+		targetNode = new JComboBox<Node>();
 		sourceNode.setMaximumSize(sourceNode.getPreferredSize());
 		sourceNode.setMinimumSize(new Dimension(150, sourceNode.getPreferredSize().height));
 		sourceNode.setPreferredSize(new Dimension(150, sourceNode.getPreferredSize().height));
@@ -124,8 +125,9 @@ public class AddPhysicalEdge extends JDialog {
 						}
 					}
 
-					ComboBoxModel targetNodeModel = new DefaultComboBoxModel(nodesToDisplay
-						.toArray());
+					ComboBoxModel<Node> targetNodeModel =
+						new DefaultComboBoxModel<Node>(
+							nodesToDisplay.toArray(new Node[0]));
 					targetNode.setModel(targetNodeModel);
 				}
 			}

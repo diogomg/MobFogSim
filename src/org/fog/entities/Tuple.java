@@ -33,6 +33,8 @@ public class Tuple extends Cloudlet {
 	 */
 	private Map<String, Integer> moduleCopyMap;
 
+	// CloudSim requires tuple metadata to be installed through its Cloudlet API.
+	@SuppressWarnings("this-escape")
 	public Tuple(String appId, int cloudletId, int direction, long cloudletLength, int pesNumber,
 		long cloudletFileSize, long cloudletOutputSize,
 		UtilizationModel utilizationModelCpu,

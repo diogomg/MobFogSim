@@ -103,7 +103,8 @@ public class FogDeviceCharacteristics extends DatacenterCharacteristics {
 	 * @pre costPerStorage >= 0
 	 * @post $none
 	 */
-	@SuppressWarnings("serial")
+	// CloudSim owns the mutable DatacenterCharacteristics initialization contract.
+	@SuppressWarnings({"serial", "this-escape"})
 	public FogDeviceCharacteristics(
 		String architecture,
 		String os,

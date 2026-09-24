@@ -8,6 +8,10 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -118,6 +122,29 @@ public class TopologyTypesTest {
 			((SensorGui) node(reloaded, "uniform")).getDistribution();
 		assertEquals(1.25, uniformDistribution.getMin(), 0.000001);
 		assertEquals(9.75, uniformDistribution.getMax(), 0.000001);
+	}
+
+	@Test
+	public void graphJavaSerialisationPreservesTopologyState() throws Exception {
+		Graph graph = new Graph();
+		FogDeviceGui fog = new FogDeviceGui("fog", 1000, 1024, 1000,
+			1000, 1, 0.1);
+		SensorGui sensor = new SensorGui("sensor", "temperature",
+			new DeterministicDistribution(5.5));
+		fog.setCoordinate(new Coordinates(7, 9));
+		sensor.setCoordinate(new Coordinates(3, 4));
+		graph.addNode(fog);
+		graph.addNode(sensor);
+		graph.addEdge(sensor, new Edge(fog, 2.5));
+
+		Graph restored = javaSerialisationRoundTrip(graph);
+		SensorGui restoredSensor = (SensorGui) node(restored, "sensor");
+		assertEquals(3, restoredSensor.getCoordinate().getX());
+		assertEquals(4, restoredSensor.getCoordinate().getY());
+		assertEquals(5.5, ((DeterministicDistribution)
+			restoredSensor.getDistribution()).getValue(), 0.000001);
+		assertEquals(2.5, edge(restored, "sensor", "fog").getLatency(),
+			0.000001);
 	}
 
 	@Test
@@ -286,6 +313,18 @@ public class TopologyTypesTest {
 		}
 		finally {
 			Files.deleteIfExists(file);
+		}
+	}
+
+	private static Graph javaSerialisationRoundTrip(Graph graph)
+		throws Exception {
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
+			output.writeObject(graph);
+		}
+		try (ObjectInputStream input = new ObjectInputStream(
+			new ByteArrayInputStream(bytes.toByteArray()))) {
+			return (Graph) input.readObject();
 		}
 	}
 

@@ -1,12 +1,13 @@
 package org.fog.utils.distribution;
 
 public class DeterministicDistribution extends Distribution {
+	private static final long serialVersionUID = 1L;
 
 	private double value;
 
 	public DeterministicDistribution(double value) {
 		super();
-		setValue(value);
+		this.value = value;
 	}
 
 	@Override

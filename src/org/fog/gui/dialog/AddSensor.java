@@ -27,15 +27,14 @@ import org.fog.gui.core.SensorGui;
 import org.fog.gui.core.SpringUtilities;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddSensor extends JDialog {
 	private static final long serialVersionUID = -511667786177319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JTextField sensorName;
 	private JTextField sensorType;
-	private JComboBox distribution;
+	private JComboBox<String> distribution;
 	private JTextField uniformLowerBound;
 	private JTextField uniformUpperBound;
 	private JTextField deterministicValue;
@@ -48,6 +47,8 @@ public class AddSensor extends JDialog {
 	 * @param frame
 	 *        the parent frame
 	 */
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddSensor(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -179,14 +180,13 @@ public class AddSensor extends JDialog {
 
 		JLabel distLabel = new JLabel("Distribution Type: ", JLabel.TRAILING);
 		springPanel.add(distLabel);
-		distribution = new JComboBox(distributionType);
+		distribution = new JComboBox<String>(distributionType);
 		distLabel.setLabelFor(distribution);
 		distribution.setSelectedIndex(-1);
 		distribution.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
-				JComboBox ctype = (JComboBox) e.getSource();
-				String item = (String) ctype.getSelectedItem();
+				String item = (String) distribution.getSelectedItem();
 				updatePanel(item);
 			}
 		});
@@ -261,7 +261,7 @@ public class AddSensor extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);

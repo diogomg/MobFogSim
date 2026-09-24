@@ -46,6 +46,8 @@ public class Controller extends SimEntity {
 			SimulationServices.currentOrLegacy());
 	}
 
+	// CloudSim entities are registered only after controller topology setup.
+	@SuppressWarnings("this-escape")
 	public Controller(String name, List<FogDevice> fogDevices, List<Sensor> sensors,
 		List<Actuator> actuators, ModuleMapping moduleMapping,
 		SimulationServices services) {

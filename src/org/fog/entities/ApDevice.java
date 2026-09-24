@@ -238,6 +238,8 @@ public class ApDevice extends FogDevice {
 		return true;
 	}
 
+	// The access point is registered only after its mutable topology state is set.
+	@SuppressWarnings("this-escape")
 	public ApDevice(String name, int coordX, int coordY, int id) {
 		super(name, coordX, coordY, id);
 		smartThings = new HashSet<>();
@@ -249,6 +251,7 @@ public class ApDevice extends FogDevice {
 
 	}
 
+	@SuppressWarnings("this-escape")
 	public ApDevice(String name, int coordX, int coordY,
 		int id, double downLink, double energyCons,
 		int max, double upLinkBand, double upLinkLat) {

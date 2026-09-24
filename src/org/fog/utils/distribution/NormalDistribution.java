@@ -3,6 +3,7 @@ package org.fog.utils.distribution;
 import java.util.Random;
 
 public class NormalDistribution extends Distribution {
+	private static final long serialVersionUID = 1L;
 
 	private double mean;
 	private double stdDev;
@@ -12,9 +13,12 @@ public class NormalDistribution extends Distribution {
 	}
 
 	public NormalDistribution(double mean, double stdDev, Random random) {
-		setMean(mean);
-		setStdDev(stdDev);
-		setRandom(random);
+		if (random == null) {
+			throw new IllegalArgumentException("Random generator cannot be null");
+		}
+		this.mean = mean;
+		this.stdDev = stdDev;
+		this.random = random;
 	}
 
 	@Override

@@ -26,14 +26,13 @@ import org.fog.gui.core.Node;
 import org.fog.gui.core.NodeType;
 import org.fog.gui.core.TopologyCommands;
 
-@SuppressWarnings({ "rawtypes", "unchecked" })
 public class AddVirtualNode extends JDialog {
 	private static final long serialVersionUID = -5116677861770319577L;
 
-	private final TopologyCommands commands;
+	private final transient TopologyCommands commands;
 
 	private JTextField tfName;
-	private JComboBox cType;
+	private JComboBox<String> cType;
 	private JTextField tfSize;
 	private JTextField tfPes;
 	private JTextField tfMips;
@@ -45,6 +44,8 @@ public class AddVirtualNode extends JDialog {
 	 * @param frame
 	 *        the parent frame
 	 */
+	// Swing construction necessarily invokes overridable JDialog hooks.
+	@SuppressWarnings("this-escape")
 	public AddVirtualNode(final Graph graph, final JFrame frame) {
 		this.commands = new TopologyCommands(graph);
 
@@ -141,7 +142,7 @@ public class AddVirtualNode extends JDialog {
 
 		JLabel lType = new JLabel("Type: ", JLabel.TRAILING);
 		springPanel.add(lType);
-		cType = new JComboBox(vmType);
+		cType = new JComboBox<String>(vmType);
 		lType.setLabelFor(cType);
 		cType.setSelectedIndex(-1);
 		springPanel.add(cType);
@@ -179,7 +180,7 @@ public class AddVirtualNode extends JDialog {
 	}
 
 	public static void setUIFont(javax.swing.plaf.FontUIResource f) {
-		java.util.Enumeration keys = UIManager.getDefaults().keys();
+		java.util.Enumeration<Object> keys = UIManager.getDefaults().keys();
 		while (keys.hasMoreElements()) {
 			Object key = keys.nextElement();
 			Object value = UIManager.get(key);
