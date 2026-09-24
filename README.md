@@ -56,6 +56,12 @@ release into the ignored `build/tools` directory and writes the reports under
 `build/reports/coverage`. Use `make clean` to remove the generated `build`
 directory only.
 
+Run `make lint` to enforce the zero-warning contract for maintained `org.fog`
+sources. Cross-package contracts for units, topology, contention, mobile-user
+retirement, and terminal metrics are recorded in the
+[overall architecture](docs/architecture/OVERALL_ARCHITECTURE.md) document and
+its decision index.
+
 Run the reproducible small, reference, and large performance fixtures with
 `make benchmark`. This records wall time, peak RSS, event counts, topology
 sizes, output bytes, environment details, input checksums, and semantic digests
