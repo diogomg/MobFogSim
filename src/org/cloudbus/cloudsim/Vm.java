@@ -8,7 +8,6 @@
 package org.cloudbus.cloudsim;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -75,7 +74,7 @@ public class Vm {
 	private boolean beingInstantiated;
 
 	/** The mips allocation history. */
-	private final List<VmStateHistoryEntry> stateHistory = new LinkedList<VmStateHistoryEntry>();
+	private final List<VmStateHistoryEntry> stateHistory = new ArrayList<VmStateHistoryEntry>();
 
 	/**
 	 * Creates a new VMCharacteristics object.

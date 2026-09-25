@@ -8,7 +8,6 @@
 package org.cloudbus.cloudsim;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.cloudbus.cloudsim.core.CloudSim;
@@ -31,7 +30,10 @@ public class HostDynamicWorkload extends Host {
 	private double previousUtilizationMips;
 
 	/** The state history. */
-	private final List<HostStateHistoryEntry> stateHistory = new LinkedList<HostStateHistoryEntry>();
+	private final List<HostStateHistoryEntry> stateHistory = new ArrayList<HostStateHistoryEntry>();
+
+	/** Whether automatic host and VM state-history recording is enabled. */
+	private boolean stateHistoryRecordingEnabled = true;
 
 	/**
 	 * Instantiates a new host.
@@ -122,11 +124,13 @@ public class HostDynamicWorkload extends Host {
 						+ ": %.2f", CloudSim.clock(), totalRequestedMips - totalAllocatedMips);
 				}
 
-				vm.addStateHistoryEntry(
-					currentTime,
-					totalAllocatedMips,
-					totalRequestedMips,
-					(vm.isInMigration() && !getVmsMigratingIn().contains(vm)));
+				if (isStateHistoryRecordingEnabled()) {
+					vm.addStateHistoryEntry(
+						currentTime,
+						totalAllocatedMips,
+						totalRequestedMips,
+						(vm.isInMigration() && !getVmsMigratingIn().contains(vm)));
+				}
 
 				if (vm.isInMigration()
 					&& getVmScheduler().getVmsMigratingOut().contains(vm.getUid())) {
@@ -141,11 +145,13 @@ public class HostDynamicWorkload extends Host {
 			hostTotalRequestedMips += totalRequestedMips;
 		}
 
-		addStateHistoryEntry(
-			currentTime,
-			getUtilizationMips(),
-			hostTotalRequestedMips,
-			(getUtilizationMips() > 0));
+		if (isStateHistoryRecordingEnabled()) {
+			addStateHistoryEntry(
+				currentTime,
+				getUtilizationMips(),
+				hostTotalRequestedMips,
+				(getUtilizationMips() > 0));
+		}
 
 		return smallerTime;
 	}
@@ -280,6 +286,33 @@ public class HostDynamicWorkload extends Host {
 	 */
 	public List<HostStateHistoryEntry> getStateHistory() {
 		return stateHistory;
+	}
+
+	/**
+	 * Checks whether automatic host and VM state-history recording is enabled.
+	 *
+	 * @return true when processing updates append state-history entries
+	 */
+	public boolean isStateHistoryRecordingEnabled() {
+		return stateHistoryRecordingEnabled;
+	}
+
+	/**
+	 * Enables or disables automatic host and VM state-history recording. Disabling
+	 * recording also releases all history currently retained by this host and its
+	 * resident VMs.
+	 *
+	 * @param enabled
+	 *        whether processing updates should append state-history entries
+	 */
+	public void setStateHistoryRecordingEnabled(boolean enabled) {
+		stateHistoryRecordingEnabled = enabled;
+		if (!enabled) {
+			getStateHistory().clear();
+			for (Vm vm : getVmList()) {
+				vm.getStateHistory().clear();
+			}
+		}
 	}
 
 	/**

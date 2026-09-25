@@ -15,6 +15,7 @@ import java.util.Set;
 import org.apache.commons.math3.util.Pair;
 import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.Host;
+import org.cloudbus.cloudsim.HostDynamicWorkload;
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Storage;
@@ -383,6 +384,7 @@ public class FogDevice extends PowerDatacenter {
 		setMigrationTechniquePolicy(policyReplicaVM);
 		setMigrationStrategy(migrationStrategy);
 		setCharacteristics(characteristics);
+		configureStateHistoryRecording(false);
 		setVmAllocationPolicy(vmAllocationPolicy);
 		setLastProcessTime(0.0);
 		setStorageList(storageList);
@@ -456,6 +458,7 @@ public class FogDevice extends PowerDatacenter {
 
 		this.setAvailable(true);
 		setCharacteristics(characteristics);
+		configureStateHistoryRecording(false);
 		setVmAllocationPolicy(vmAllocationPolicy);
 		setLastProcessTime(0.0);
 		setStorageList(storageList);
@@ -516,6 +519,7 @@ public class FogDevice extends PowerDatacenter {
 		throws Exception {
 		super(name, characteristics, vmAllocationPolicy, storageList, schedulingInterval);
 		setCharacteristics(characteristics);
+		configureStateHistoryRecording(false);
 		setVmAllocationPolicy(vmAllocationPolicy);
 		setLastProcessTime(0.0);
 		setStorageList(storageList);
@@ -604,6 +608,7 @@ public class FogDevice extends PowerDatacenter {
 			arch, os, vmm, host, time_zone, cost, costPerMem, costPerStorage, costPerBw);
 
 		setCharacteristics(characteristics);
+		configureStateHistoryRecording(false);
 
 		setLastProcessTime(0.0);
 		setVmList(new ArrayList<Vm>());
@@ -1759,6 +1764,29 @@ public class FogDevice extends PowerDatacenter {
 
 	public PowerHost getHost() {
 		return (PowerHost) getHostList().get(0);
+	}
+
+	/**
+	 * Configures automatic host and VM state-history recording for every dynamic
+	 * workload host in this fog device. Fog devices disable recording by default;
+	 * callers that need CloudSim histories can explicitly re-enable it.
+	 *
+	 * @param enabled
+	 *        whether processing updates should retain state-history entries
+	 */
+	public void setStateHistoryRecordingEnabled(boolean enabled) {
+		configureStateHistoryRecording(enabled);
+	}
+
+	private void configureStateHistoryRecording(boolean enabled) {
+		if (getCharacteristics() == null) {
+			return;
+		}
+		for (Host host : getCharacteristics().getHostList()) {
+			if (host instanceof HostDynamicWorkload) {
+				((HostDynamicWorkload) host).setStateHistoryRecordingEnabled(enabled);
+			}
+		}
 	}
 
 	public int getParentId() {
