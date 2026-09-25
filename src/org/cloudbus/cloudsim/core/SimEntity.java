@@ -111,7 +111,7 @@ public abstract class SimEntity implements Cloneable {
 		}
 		if (tag == CloudSimTags.VM_DATACENTER_EVENT) {
 			SimEvent e = CloudSim.sendDCEvent(id, dest, delay, tag, data);
-			myFutureQ.addEvent(e);
+			myFutureQ.addEventReference(e);
 		}
 		else {
 			CloudSim.send(id, dest, delay, tag, data);

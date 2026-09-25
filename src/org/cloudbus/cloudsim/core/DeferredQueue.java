@@ -10,10 +10,8 @@ package org.cloudbus.cloudsim.core;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.cloudbus.cloudsim.core.predicates.Predicate;
 
@@ -29,15 +27,49 @@ import org.cloudbus.cloudsim.core.predicates.Predicate;
  */
 public class DeferredQueue {
 
-	/** Events indexed by destination, preserving delivery order per entity. */
-	private final Map<Integer, ArrayDeque<SimEvent>> eventsByDestination =
-		new HashMap<Integer, ArrayDeque<SimEvent>>();
+	/** Events indexed directly by dense CloudSim entity ID. */
+	private final List<ArrayDeque<SimEvent>> eventsByDestination =
+		new ArrayList<ArrayDeque<SimEvent>>();
 
 	/** Number of queued events across every destination. */
 	private int size;
 
 	/** Stable deferred insertion order used by the compatibility iterator. */
 	private long serial;
+
+	/** Prepares a retained queue for a newly registered dense entity ID. */
+	void registerDestination(int destination) {
+		queueFor(destination, true);
+	}
+
+	/** Clears events for an entity while retaining its reusable queue. */
+	void clearDestination(int destination) {
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, false);
+		if (destinationEvents != null) {
+			size -= destinationEvents.size();
+			destinationEvents.clear();
+		}
+	}
+
+	private ArrayDeque<SimEvent> queueFor(int destination, boolean create) {
+		if (destination < 0) {
+			throw new IllegalArgumentException(
+				"Deferred-event destination cannot be negative: " + destination);
+		}
+		if (!create && destination >= eventsByDestination.size()) {
+			return null;
+		}
+		while (eventsByDestination.size() <= destination) {
+			eventsByDestination.add(null);
+		}
+		ArrayDeque<SimEvent> destinationEvents =
+			eventsByDestination.get(destination);
+		if (destinationEvents == null && create) {
+			destinationEvents = new ArrayDeque<SimEvent>();
+			eventsByDestination.set(destination, destinationEvents);
+		}
+		return destinationEvents;
+	}
 
 	/**
 	 * Adds a new event to the queue. Adding a new event to the queue preserves
@@ -48,11 +80,7 @@ public class DeferredQueue {
 	 */
 	public void addEvent(SimEvent newEvent) {
 		int destination = newEvent.getDestination();
-		ArrayDeque<SimEvent> destinationEvents = eventsByDestination.get(destination);
-		if (destinationEvents == null) {
-			destinationEvents = new ArrayDeque<SimEvent>();
-			eventsByDestination.put(destination, destinationEvents);
-		}
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, true);
 
 		// Events normally reach the deferred queue in nondecreasing clock order.
 		// Keep a fallback for direct callers that add an earlier event.
@@ -76,7 +104,7 @@ public class DeferredQueue {
 
 	/** Counts events for one destination that match the predicate. */
 	public int count(int destination, Predicate predicate) {
-		ArrayDeque<SimEvent> destinationEvents = eventsByDestination.get(destination);
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, false);
 		if (destinationEvents == null) {
 			return 0;
 		}
@@ -95,16 +123,15 @@ public class DeferredQueue {
 
 	/** Removes and returns the first matching event for one destination. */
 	public SimEvent poll(int destination, Predicate predicate) {
-		ArrayDeque<SimEvent> destinationEvents = eventsByDestination.get(destination);
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, false);
 		if (destinationEvents == null) {
 			return null;
 		}
 
 		if (predicate == CloudSim.SIM_ANY) {
 			SimEvent event = destinationEvents.pollFirst();
-			size--;
-			if (destinationEvents.isEmpty()) {
-				eventsByDestination.remove(destination);
+			if (event != null) {
+				size--;
 			}
 			return event;
 		}
@@ -115,9 +142,6 @@ public class DeferredQueue {
 			if (predicate.match(event)) {
 				iterator.remove();
 				size--;
-				if (destinationEvents.isEmpty()) {
-					eventsByDestination.remove(destination);
-				}
 				return event;
 			}
 		}
@@ -126,7 +150,7 @@ public class DeferredQueue {
 
 	/** Returns the first matching event for one destination without removing it. */
 	public SimEvent find(int destination, Predicate predicate) {
-		ArrayDeque<SimEvent> destinationEvents = eventsByDestination.get(destination);
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, false);
 		if (destinationEvents != null) {
 			if (predicate == CloudSim.SIM_ANY) {
 				return destinationEvents.peekFirst();
@@ -147,8 +171,10 @@ public class DeferredQueue {
 	 */
 	public Iterator<SimEvent> iterator() {
 		final List<SimEvent> snapshot = new ArrayList<SimEvent>();
-		for (ArrayDeque<SimEvent> destinationEvents : eventsByDestination.values()) {
-			snapshot.addAll(destinationEvents);
+		for (ArrayDeque<SimEvent> destinationEvents : eventsByDestination) {
+			if (destinationEvents != null) {
+				snapshot.addAll(destinationEvents);
+			}
 		}
 		Collections.sort(snapshot);
 
@@ -180,12 +206,9 @@ public class DeferredQueue {
 
 	private void removeEntry(SimEvent event) {
 		int destination = event.getDestination();
-		ArrayDeque<SimEvent> destinationEvents = eventsByDestination.get(destination);
+		ArrayDeque<SimEvent> destinationEvents = queueFor(destination, false);
 		if (destinationEvents != null && destinationEvents.remove(event)) {
 			size--;
-			if (destinationEvents.isEmpty()) {
-				eventsByDestination.remove(destination);
-			}
 		}
 	}
 

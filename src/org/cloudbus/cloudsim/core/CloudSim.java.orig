@@ -1098,7 +1098,7 @@ public class CloudSim {
 	public static boolean cancelAll(FutureQueue sourceQueue) {
 		countador++;
 		boolean removed = false;
-		Iterator<SimEvent> iter = sourceQueue.unorderedIterator();
+		Iterator<SimEvent> iter = sourceQueue.iterator();
 		while (iter.hasNext()) {
 			SimEvent event = iter.next();
 			removed |= future.remove(event);

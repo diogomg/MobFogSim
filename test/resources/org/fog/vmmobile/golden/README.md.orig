@@ -27,7 +27,7 @@ readability.
 To inspect a candidate baseline after compiling the tests, run:
 
 ```sh
-java -classpath 'build/test-classes:build/classes:jars/*:jars/commons-math3-3.5/*' \
+java -classpath 'build/test-classes:jars/*:jars/commons-math3-3.5/*' \
   org.fog.vmmobile.ReferenceSimulationGoldenTest migration-disabled
 ```
 
@@ -42,11 +42,3 @@ duration and 700--1,200 ms handoff setup duration no longer rewrite AP/server
 topology latency. Consequently, tuple/loop timing, event counts, energy, and
 network-usage totals differ from the Phase 0 characterisation while the seed,
 mobility trace, handoff schedule, and migration policies remain unchanged.
-
-On 24 September 2026, RAM-optimization Phase 2 corrected the
-`migration-disabled` internal `CREATE` count from two to one. A property-gated
-trace verified that `My_broker0` was scheduled and dispatched exactly once at
-simulation time 9,053,100; the second legacy count came from mutating event
-ordering keys after insertion into the old `TreeSet` queue. All application,
-topology, tuple, timing, energy, network, and tag counters remained identical.
-The other three reference snapshots required no changes.

@@ -7,38 +7,47 @@
 
 package org.cloudbus.cloudsim.core;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.List;
+import java.util.PriorityQueue;
 
 /**
  * This class implements the future event queue used by {@link Simulation}. The
- * event queue uses a {@link TreeSet} in order to store the events.
+ * hot path uses a {@link PriorityQueue}; sorted snapshot iterators retain the
+ * ordering and removal behavior expected by compatibility callers.
  * 
  * @author Marcos Dias de Assuncao
  * @since CloudSim Toolkit 1.0
  * @see Simulation
- * @see java.util.TreeSet
+ * @see java.util.PriorityQueue
  */
 public class FutureQueue {
 
 	/** Opaque snapshot used to undo events appended by a failed transaction. */
 	static final class Checkpoint {
-		private final SortedSet<SimEvent> events;
+		private final List<SimEvent> events;
 		private final long serial;
+		private final long firstSerial;
 
-		private Checkpoint(SortedSet<SimEvent> events, long serial) {
+		private Checkpoint(List<SimEvent> events, long serial, long firstSerial) {
 			this.events = events;
 			this.serial = serial;
+			this.firstSerial = firstSerial;
 		}
 	}
 
-	/** The sorted set. */
-	private final SortedSet<SimEvent> sortedSet = new TreeSet<SimEvent>();
+	/** Binary heap of events ordered by time and stable serial. */
+	private final PriorityQueue<SimEvent> priorityQueue =
+		new PriorityQueue<SimEvent>();
 
-	/** The serial. */
-	private long serial = 0;
+	/** Serial assigned to ordinary tail insertions. */
+	private long serial;
+
+	/** Decreasing serial assigned to head insertions. */
+	private long firstSerial = -1L;
 
 	/**
 	 * Add a new event to the queue. Adding a new event to the queue preserves
@@ -49,7 +58,7 @@ public class FutureQueue {
 	 */
 	public void addEvent(SimEvent newEvent) {
 		newEvent.setSerial(serial++);
-		sortedSet.add(newEvent);
+		priorityQueue.add(newEvent);
 	}
 
 	/**
@@ -59,8 +68,26 @@ public class FutureQueue {
 	 *        The event to be put in the queue.
 	 */
 	public void addEventFirst(SimEvent newEvent) {
-		newEvent.setSerial(0);
-		sortedSet.add(newEvent);
+		newEvent.setSerial(firstSerial--);
+		priorityQueue.add(newEvent);
+	}
+
+	/**
+	 * Tracks an event already serialised by another future queue without
+	 * mutating its ordering key.
+	 */
+	void addEventReference(SimEvent event) {
+		priorityQueue.add(event);
+	}
+
+	/** Returns the earliest event without removing it. */
+	public SimEvent peek() {
+		return priorityQueue.peek();
+	}
+
+	/** Removes and returns the earliest event. */
+	public SimEvent poll() {
+		return priorityQueue.poll();
 	}
 
 	/**
@@ -69,7 +96,38 @@ public class FutureQueue {
 	 * @return the iterator
 	 */
 	public Iterator<SimEvent> iterator() {
-		return sortedSet.iterator();
+		final List<SimEvent> snapshot =
+			new ArrayList<SimEvent>(priorityQueue);
+		Collections.sort(snapshot);
+		final Iterator<SimEvent> snapshotIterator = snapshot.iterator();
+		return new Iterator<SimEvent>() {
+			private SimEvent current;
+
+			@Override
+			public boolean hasNext() {
+				return snapshotIterator.hasNext();
+			}
+
+			@Override
+			public SimEvent next() {
+				current = snapshotIterator.next();
+				return current;
+			}
+
+			@Override
+			public void remove() {
+				if (current == null) {
+					throw new IllegalStateException();
+				}
+				priorityQueue.remove(current);
+				current = null;
+			}
+		};
+	}
+
+	/** Returns the heap iterator for internal scans that do not require ordering. */
+	Iterator<SimEvent> unorderedIterator() {
+		return priorityQueue.iterator();
 	}
 
 	/**
@@ -78,7 +136,7 @@ public class FutureQueue {
 	 * @return the size
 	 */
 	public int size() {
-		return sortedSet.size();
+		return priorityQueue.size();
 	}
 
 	/**
@@ -89,7 +147,7 @@ public class FutureQueue {
 	 * @return true, if successful
 	 */
 	public boolean remove(SimEvent event) {
-		return sortedSet.remove(event);
+		return priorityQueue.remove(event);
 	}
 
 	/**
@@ -100,27 +158,29 @@ public class FutureQueue {
 	 * @return true, if successful
 	 */
 	public boolean removeAll(Collection<SimEvent> events) {
-		return sortedSet.removeAll(events);
+		return priorityQueue.removeAll(events);
 	}
 
 	/**
 	 * Clears the queue.
 	 */
 	public void clear() {
-		sortedSet.clear();
+		priorityQueue.clear();
 	}
 
 	Checkpoint checkpoint() {
-		return new Checkpoint(new TreeSet<SimEvent>(sortedSet), serial);
+		return new Checkpoint(new ArrayList<SimEvent>(priorityQueue),
+			serial, firstSerial);
 	}
 
 	void restore(Checkpoint checkpoint) {
 		if (checkpoint == null) {
 			throw new IllegalArgumentException("Future-queue checkpoint cannot be null");
 		}
-		sortedSet.clear();
-		sortedSet.addAll(checkpoint.events);
+		priorityQueue.clear();
+		priorityQueue.addAll(checkpoint.events);
 		serial = checkpoint.serial;
+		firstSerial = checkpoint.firstSerial;
 	}
 
 }
