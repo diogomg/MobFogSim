@@ -3,6 +3,8 @@ package org.fog.vmmigration;
 import java.util.Collection;
 import java.util.Optional;
 
+import org.cloudbus.cloudsim.Host;
+
 import org.cloudbus.cloudsim.Vm;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
@@ -95,11 +97,12 @@ public final class MobileEdgeHostSelector {
 		Collection<MobileDevice> activeMobileDevices) {
 		MobileDevice closest = null;
 		double closestDistance = Double.MAX_VALUE;
-		Vm vm = applicationOwner.getVmMobileDevice();
 		for (MobileDevice candidate : activeMobileDevices) {
 			if (candidate == applicationOwner || candidate == applicationOwner.getVmLocalServerCloudlet()
 				|| candidate.getSourceAp() == null || candidate.isMigStatus()
-				|| !candidate.isAvailable() || !candidate.getHost().isSuitableForVm(vm)) {
+				|| !candidate.isAvailable()
+				|| !isSuitableForBundle(candidate.getHost(),
+					applicationOwner.getVmMobileDevices())) {
 				continue;
 			}
 			double distance = Distances.checkDistance(applicationOwner.getCoord(), candidate.getCoord());
@@ -109,5 +112,31 @@ public final class MobileEdgeHostSelector {
 			}
 		}
 		return closest;
+	}
+
+	static boolean isSuitableForBundle(Host host,
+		Collection<? extends Vm> virtualMachines) {
+		if (host == null || virtualMachines == null || virtualMachines.isEmpty()) {
+			return false;
+		}
+		long storage = 0L;
+		long bandwidth = 0L;
+		int ram = 0;
+		double mips = 0.0;
+		for (Vm virtualMachine : virtualMachines) {
+			if (virtualMachine == null
+				|| host.getVmScheduler().getPeCapacity()
+					< virtualMachine.getCurrentRequestedMaxMips()) {
+				return false;
+			}
+			storage += virtualMachine.getSize();
+			bandwidth += virtualMachine.getCurrentRequestedBw();
+			ram += virtualMachine.getCurrentRequestedRam();
+			mips += virtualMachine.getCurrentRequestedTotalMips();
+		}
+		return host.getStorage() >= storage
+			&& host.getBwProvisioner().getAvailableBw() >= bandwidth
+			&& host.getRamProvisioner().getAvailableRam() >= ram
+			&& host.getVmScheduler().getAvailableMips() >= mips;
 	}
 }

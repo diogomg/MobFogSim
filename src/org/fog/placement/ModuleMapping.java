@@ -110,7 +110,13 @@ public class ModuleMapping {
 			throw new IllegalArgumentException(
 				"Destination, module, and non-negative count are required");
 		}
-		moduleMapping.remove(sourceDeviceName);
+		Map<String, Integer> source = moduleMapping.get(sourceDeviceName);
+		if (source != null) {
+			source.remove(moduleName);
+			if (source.isEmpty()) {
+				moduleMapping.remove(sourceDeviceName);
+			}
+		}
 		Map<String, Integer> destination =
 			moduleMapping.get(destinationDeviceName);
 		if (destination == null) {

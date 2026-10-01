@@ -19,6 +19,36 @@ public final class MobileUserApplicationFactory {
 
 	public static Application create(String appId, int brokerId, int mobileId,
 		AppModule userVm) {
+		MobileApplicationDescriptor descriptor =
+			MobileApplicationDescriptor.forUser(mobileId,
+				mobileNameFromVm(userVm), 0);
+		return create(appId, brokerId, userVm, descriptor,
+			MobileApplicationProfile.standard());
+	}
+
+	public static Application create(MobileApplicationDescriptor descriptor,
+		int brokerId, AppModule userVm) {
+		return create(descriptor, brokerId, userVm,
+			MobileApplicationProfile.standard());
+	}
+
+	public static Application create(MobileApplicationDescriptor descriptor,
+		int brokerId, AppModule userVm, MobileApplicationProfile profile) {
+		if (descriptor == null) {
+			throw new IllegalArgumentException(
+				"Mobile application descriptor cannot be null");
+		}
+		if (profile == null) {
+			throw new IllegalArgumentException(
+				"Mobile application profile cannot be null");
+		}
+		return create(descriptor.getApplicationId(), brokerId, userVm,
+			descriptor, profile);
+	}
+
+	private static Application create(String appId, int brokerId,
+		AppModule userVm, MobileApplicationDescriptor descriptor,
+		MobileApplicationProfile profile) {
 		if (appId == null || appId.trim().isEmpty()) {
 			throw new IllegalArgumentException("Mobile application ID cannot be empty");
 		}
@@ -28,37 +58,48 @@ public final class MobileUserApplicationFactory {
 
 		Application application = Application.createApplication(appId, brokerId);
 		application.addAppModule(userVm);
-		String client = "client" + mobileId;
-		String eeg = "EEG" + mobileId;
-		String display = "DISPLAY" + mobileId;
-		String sensorTuple = "_SENSOR" + mobileId;
-		String concentrationTuple = "CONCENTRATION" + mobileId;
-		String globalStateTuple = "GLOBAL_GAME_STATE" + mobileId;
+		String client = descriptor.getClientModuleName();
+		String eeg = descriptor.getSensorTupleType();
+		String display = descriptor.getActuatorType();
+		String sensorTuple = descriptor.getSensorOutputTupleType();
+		String concentrationTuple = descriptor.getConcentrationTupleType();
+		String globalStateTuple = descriptor.getGlobalStateTupleType();
 		String vmName = userVm.getName();
-		application.addAppModule(client, "appModuleClient" + mobileId, 10);
+		application.addAppModule(client, descriptor.getClientImageName(),
+			profile.getClientRamMebibytes());
 
-		application.addAppEdge(eeg, client, 966, 54, eeg, Tuple.UP, AppEdge.SENSOR);
-		application.addAppEdge(client, vmName, 966, 54, sensorTuple,
-			Tuple.UP, AppEdge.MODULE);
-		application.addAppEdge(vmName, vmName, 1000, 966, 54,
-			"PLAYER_GAME_STATE" + mobileId, Tuple.UP, AppEdge.MODULE);
-		application.addAppEdge(vmName, client, 2439, 87, concentrationTuple,
-			Tuple.DOWN, AppEdge.MODULE);
-		application.addAppEdge(vmName, client, 2439, 28, 87, globalStateTuple,
-			Tuple.DOWN, AppEdge.MODULE);
-		application.addAppEdge(client, display, 2439, 87,
-			"SELF_STATE_UPDATE" + mobileId, Tuple.DOWN, AppEdge.ACTUATOR);
-		application.addAppEdge(client, display, 2439, 87,
-			"GLOBAL_STATE_UPDATE" + mobileId, Tuple.DOWN, AppEdge.ACTUATOR);
+		application.addAppEdge(eeg, client, profile.getTupleCpuLength(),
+			profile.getUplinkTupleBytes(), eeg, Tuple.UP, AppEdge.SENSOR);
+		application.addAppEdge(client, vmName, profile.getTupleCpuLength(),
+			profile.getUplinkTupleBytes(), sensorTuple, Tuple.UP, AppEdge.MODULE);
+		application.addAppEdge(vmName, vmName,
+			profile.getStateUpdateIntervalMillis(), profile.getTupleCpuLength(),
+			profile.getUplinkTupleBytes(),
+			descriptor.getPlayerStateTupleType(), Tuple.UP, AppEdge.MODULE);
+		application.addAppEdge(vmName, client, profile.getResponseCpuLength(),
+			profile.getDownlinkTupleBytes(), concentrationTuple, Tuple.DOWN,
+			AppEdge.MODULE);
+		application.addAppEdge(vmName, client,
+			profile.getGlobalUpdateIntervalMillis(),
+			profile.getGlobalUpdateCpuLength(), profile.getDownlinkTupleBytes(),
+			globalStateTuple, Tuple.DOWN, AppEdge.MODULE);
+		application.addAppEdge(client, display,
+			profile.getResponseCpuLength(), profile.getDownlinkTupleBytes(),
+			descriptor.getSelfStateUpdateTupleType(), Tuple.DOWN, AppEdge.ACTUATOR);
+		application.addAppEdge(client, display,
+			profile.getResponseCpuLength(), profile.getDownlinkTupleBytes(),
+			descriptor.getGlobalStateUpdateTupleType(), Tuple.DOWN, AppEdge.ACTUATOR);
 
 		application.addTupleMapping(client, eeg, sensorTuple,
-			new FractionalSelectivity(0.9));
+			new FractionalSelectivity(profile.getSelectivity()));
 		application.addTupleMapping(client, concentrationTuple,
-			"SELF_STATE_UPDATE" + mobileId, new FractionalSelectivity(1.0));
+			descriptor.getSelfStateUpdateTupleType(),
+			new FractionalSelectivity(1.0));
 		application.addTupleMapping(vmName, sensorTuple, concentrationTuple,
 			new FractionalSelectivity(1.0));
 		application.addTupleMapping(client, globalStateTuple,
-			"GLOBAL_STATE_UPDATE" + mobileId, new FractionalSelectivity(1.0));
+			descriptor.getGlobalStateUpdateTupleType(),
+			new FractionalSelectivity(1.0));
 
 		List<String> modules = new ArrayList<String>();
 		modules.add(eeg);
@@ -69,5 +110,14 @@ public final class MobileUserApplicationFactory {
 		application.setLoops(Collections.singletonList(new AppLoop(modules)));
 		application.setPlacementStrategy("Mapping");
 		return application;
+	}
+
+	private static String mobileNameFromVm(AppModule userVm) {
+		if (userVm == null) {
+			return "unknown";
+		}
+		String prefix = "AppModuleVm_";
+		return userVm.getName().startsWith(prefix)
+			? userVm.getName().substring(prefix.length()) : userVm.getName();
 	}
 }

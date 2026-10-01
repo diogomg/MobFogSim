@@ -1,6 +1,7 @@
 package org.fog.vmmobile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.cloudbus.cloudsim.NetworkTopology;
@@ -16,15 +17,35 @@ import org.fog.vmmobile.policy.LocationPolicy;
 public final class ExampleTopologyPlan {
 	private final SimulationContext context;
 	private final ExampleSimulationConfiguration configuration;
+	private final List<MobileApplicationProfile> applicationProfiles;
 
 	public ExampleTopologyPlan(SimulationContext context,
 		ExampleSimulationConfiguration configuration) {
+		this(context, configuration, AppExample.APPLICATION_PROFILES);
+	}
+
+	public ExampleTopologyPlan(SimulationContext context,
+		ExampleSimulationConfiguration configuration, int applicationsPerUser) {
+		this(context, configuration,
+			MobileApplicationProfile.standardProfiles(applicationsPerUser));
+	}
+
+	public ExampleTopologyPlan(SimulationContext context,
+		ExampleSimulationConfiguration configuration,
+		List<MobileApplicationProfile> applicationProfiles) {
 		if (context == null || configuration == null) {
 			throw new IllegalArgumentException(
 				"Simulation context and example configuration cannot be null");
 		}
+		if (applicationProfiles == null || applicationProfiles.isEmpty()
+			|| applicationProfiles.contains(null)) {
+			throw new IllegalArgumentException(
+				"At least one non-null application profile is required");
+		}
 		this.context = context;
 		this.configuration = configuration;
+		this.applicationProfiles = Collections.unmodifiableList(
+			new ArrayList<MobileApplicationProfile>(applicationProfiles));
 	}
 
 	/** Builds the complete topology or restores the pre-build registration set. */
@@ -91,7 +112,7 @@ public final class ExampleTopologyPlan {
 		List<MobileDevice> planned = new ArrayList<MobileDevice>();
 		for (int index = 0; index < configuration.getMaximumUsers(); index++) {
 			AppExample.addSmartThing(planned,
-				configuration.getCoordinateSpace(), index);
+				configuration.getCoordinateSpace(), index, applicationProfiles);
 			planned.get(index).setNetworkSliceId(userSliceAssignments[index]);
 		}
 		mobileDevices.addAll(planned);

@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.nio.file.Paths;
 
 import org.cloudbus.cloudsim.Log;
@@ -22,19 +24,26 @@ import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.util.RunOutputManager;
 import org.cloudbus.cloudsim.util.RunOutputMode;
 import org.fog.entities.ApDevice;
+import org.fog.entities.MobileActuator;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.MobileSensor;
+import org.fog.application.AppEdge;
+import org.fog.application.Application;
 import org.fog.localization.Coordinate;
 import org.fog.localization.MobilitySample;
 import org.fog.utils.distribution.DeterministicDistribution;
 import org.fog.vmmobile.AppExample;
+import org.fog.vmmobile.AppExampleMultipleApplications;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.constants.MobileEvents;
 import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmigration.MyStatistics;
+import org.fog.vmmigration.CompleteVM;
+import org.fog.vmmigration.LowestLatency;
+import org.fog.vmmobile.policy.MigrationTechniquePolicy;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -114,6 +123,91 @@ public class MobileControllerDelayedEntryTest {
 		assertTrue(controller.getApplications().containsKey("MyApp_vr_game0"));
 		assertTrue(user.getSensors().iterator().next().isEnabled());
 		assertTrue(user.getActuators().iterator().next().isEnabled());
+	}
+
+	@Test
+	public void entryCreatesEveryConfiguredApplicationAndVmForOneUser() {
+		List<FogDevice> servers = new ArrayList<FogDevice>();
+		List<ApDevice> accessPoints = new ArrayList<ApDevice>();
+		List<MobileDevice> users = new ArrayList<MobileDevice>();
+		List<FogBroker> brokers = new ArrayList<FogBroker>();
+		configureAppExample(servers, accessPoints, users);
+		AppExample.addServerCloudlet(servers, new Coordinate(), 0);
+		ApDevice accessPoint = new ApDevice("multiAppEntryAp", 0, 0, 0,
+			100 * 1024 * 1024, 200, 500, 100 * 1024 * 1024, 4);
+		accessPoint.setServerCloudlet(servers.get(0));
+		accessPoints.add(accessPoint);
+		AppExample.addSmartThing(users, new Coordinate(), 0,
+			AppExampleMultipleApplications.APPLICATION_PROFILES);
+		MobileDevice user = users.get(0);
+		MyStatistics.getInstance().initialiseLatencyCounter(user.getMyId());
+		user.setCoord(0, 0);
+		user.setTravelTimeId(0);
+		MobileUserRegistration.preparePendingUser(user);
+		ModuleMapping mappings = ModuleMapping.createModuleMapping();
+		MobileController controller = new MobileController("multiAppController",
+			servers, accessPoints, users, brokers, mappings,
+			Policies.FIXED_MIGRATION_POINT, Policies.LOWEST_LATENCY, 1,
+			new Coordinate(), 1, false);
+
+		assertTrue(controller.activateMobileUser(user));
+
+		assertEquals(2, user.getApplicationsPerUser());
+		assertEquals(2, user.getVmMobileDevices().size());
+		assertEquals(2, brokers.get(0).getVmList().size());
+		assertEquals(2, servers.get(0).getHost().getVmList().size());
+		assertEquals(2, user.getSensors().size());
+		assertEquals(2, user.getActuators().size());
+		assertTrue(user.getMigrationTechnique() instanceof CompleteVM);
+		assertTrue(user.getMigrationStrategy() instanceof LowestLatency);
+		assertEquals(MigrationTechniquePolicy.COMPLETE_VM,
+			user.getMigrationTechniquePolicy());
+		assertEquals(1000.0, user.getVmMobileDevices().get(0).getMips(), 0.0);
+		assertEquals(16000L, user.getVmMobileDevices().get(1).getBw());
+		Set<String> applicationIds = new HashSet<String>();
+		for (MobileSensor sensor : user.getSensors()) {
+			assertTrue(sensor.isEnabled());
+			applicationIds.add(sensor.getAppId());
+			if (sensor.getAppId().equals("MyApp_vr_game0")) {
+				assertEquals(1.0, sensor.getLatency(), 0.0);
+			}
+			else if (sensor.getAppId().equals("MyApp_vr_game0_app1")) {
+				assertEquals(2.0, sensor.getTransmitDistribution()
+					.getMeanInterTransmitTime(), 0.0);
+			}
+		}
+		for (MobileActuator actuator : user.getActuators()) {
+			if (actuator.getAppId().equals("MyApp_vr_game0")) {
+				assertEquals(0.25, actuator.getLatency(), 0.0);
+			}
+		}
+		assertEquals(new HashSet<String>(Arrays.asList("MyApp_vr_game0",
+			"MyApp_vr_game0_app1")), applicationIds);
+		for (String applicationId : applicationIds) {
+			assertTrue(controller.getApplications().containsKey(applicationId));
+		}
+		Application latencyApp = controller.getApplications()
+			.get("MyApp_vr_game0");
+		Application trafficApp = controller.getApplications()
+			.get("MyApp_vr_game0_app1");
+		assertEquals(8192.0,
+			edgeByTupleType(trafficApp, "EEG0_app1").getTupleNwLength(), 0.0);
+		assertEquals(32.0,
+			edgeByTupleType(latencyApp, "EEG0").getTupleNwLength(), 0.0);
+		assertTrue(mappings.getModuleMapping().get(servers.get(0).getName())
+			.containsKey("AppModuleVm_SmartThing0_app1"));
+		assertTrue(mappings.getModuleMapping().get(user.getName())
+			.containsKey("client0_app1"));
+	}
+
+	private static AppEdge edgeByTupleType(Application application,
+		String tupleType) {
+		for (AppEdge edge : application.getEdges()) {
+			if (tupleType.equals(edge.getTupleType())) {
+				return edge;
+			}
+		}
+		throw new AssertionError("Missing application edge " + tupleType);
 	}
 
 	@Test

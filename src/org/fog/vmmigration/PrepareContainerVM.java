@@ -16,7 +16,7 @@ public class PrepareContainerVM extends AbstractMigrationPreparation {
 
 	@Override
 	protected double getPreparationWorkload(MobileDevice smartThing) {
-		return smartThing.getVmMobileDevice().getSize() * 1024 * 1024
+		return smartThing.getTotalVmSize() * 1024 * 1024
 			* MaxAndMin.PROCESS_CONTAINER;
 	}
 }

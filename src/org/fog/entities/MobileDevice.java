@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.fog.application.AppModule;
@@ -23,6 +24,7 @@ import org.fog.utils.SimulationDuration;
 import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.VmMigrationTechnique;
 import org.fog.vmmobile.SimulationEventSink;
+import org.fog.vmmobile.MobileApplicationProfile;
 import org.fog.vmmobile.MobileSession;
 import org.fog.vmmobile.policy.MovementDirection;
 import org.cloudbus.cloudsim.Storage;
@@ -44,6 +46,10 @@ public class MobileDevice extends FogDevice {
 	private WirelessAssociation wirelessAssociation;
 	private HandoffReservation pendingHandoffReservation;
 	private Vm vmMobileDevice;
+	private List<Vm> vmMobileDevices = new ArrayList<Vm>();
+	private int applicationsPerUser = 1;
+	private List<MobileApplicationProfile> applicationProfiles =
+		MobileApplicationProfile.standardProfiles(1);
 	private double migTime;
 	private boolean migPoint;
 	private boolean migZone;
@@ -562,6 +568,69 @@ public class MobileDevice extends FogDevice {
 
 	public void setVmMobileDevice(Vm vmMobileDevice) {
 		this.vmMobileDevice = vmMobileDevice;
+		this.vmMobileDevices = new ArrayList<Vm>();
+		if (vmMobileDevice != null) {
+			this.vmMobileDevices.add(vmMobileDevice);
+		}
+	}
+
+	/** Returns every VM owned by this user; the first is the legacy primary VM. */
+	public List<Vm> getVmMobileDevices() {
+		return java.util.Collections.unmodifiableList(vmMobileDevices);
+	}
+
+	public void setVmMobileDevices(List<? extends Vm> virtualMachines) {
+		if (virtualMachines == null) {
+			throw new IllegalArgumentException("Mobile VM list cannot be null");
+		}
+		List<Vm> copy = new ArrayList<Vm>();
+		for (Vm virtualMachine : virtualMachines) {
+			if (virtualMachine == null) {
+				throw new IllegalArgumentException(
+					"Mobile VM list cannot contain null entries");
+			}
+			copy.add(virtualMachine);
+		}
+		this.vmMobileDevices = copy;
+		this.vmMobileDevice = copy.isEmpty() ? null : copy.get(0);
+	}
+
+	public int getApplicationsPerUser() {
+		return applicationsPerUser;
+	}
+
+	public void setApplicationsPerUser(int applicationsPerUser) {
+		setApplicationProfiles(
+			MobileApplicationProfile.standardProfiles(applicationsPerUser));
+	}
+
+	public List<MobileApplicationProfile> getApplicationProfiles() {
+		return java.util.Collections.unmodifiableList(applicationProfiles);
+	}
+
+	public MobileApplicationProfile getApplicationProfile(int applicationIndex) {
+		return applicationProfiles.get(applicationIndex);
+	}
+
+	public void setApplicationProfiles(
+		List<MobileApplicationProfile> applicationProfiles) {
+		if (applicationProfiles == null || applicationProfiles.isEmpty()
+			|| applicationProfiles.contains(null)) {
+			throw new IllegalArgumentException(
+				"At least one non-null application profile is required");
+		}
+		this.applicationProfiles =
+			new ArrayList<MobileApplicationProfile>(applicationProfiles);
+		this.applicationsPerUser = applicationProfiles.size();
+	}
+
+	/** Aggregate VM image size used by bundle migration timing. */
+	public double getTotalVmSize() {
+		double total = 0.0;
+		for (Vm virtualMachine : vmMobileDevices) {
+			total += virtualMachine.getSize();
+		}
+		return total;
 	}
 
 	public double getVmSize() {

@@ -23,7 +23,7 @@ public final class MigrationDecision {
 	private final FogDevice expectedSourceServer;
 	private final FogDevice expectedVmHost;
 	private final FogDevice expectedDestination;
-	private final Vm expectedVm;
+	private final List<Vm> expectedVms;
 	private final MobileDeviceLifecycle expectedLifecycle;
 	private final MobileSession.MigrationState expectedMigrationState;
 	private final long expectedAssociationGeneration;
@@ -51,7 +51,8 @@ public final class MigrationDecision {
 		this.expectedSourceServer = mobileDevice.getSourceServerCloudlet();
 		this.expectedVmHost = mobileDevice.getVmLocalServerCloudlet();
 		this.expectedDestination = mobileDevice.getDestinationServerCloudlet();
-		this.expectedVm = mobileDevice.getVmMobileDevice();
+		this.expectedVms = Collections.unmodifiableList(
+			new ArrayList<Vm>(mobileDevice.getVmMobileDevices()));
 		this.expectedLifecycle = mobileDevice.getLifecycleState();
 		this.expectedMigrationState = mobileDevice.getSession().getMigration();
 		this.expectedAssociationGeneration = mobileDevice.getSession()
@@ -122,7 +123,7 @@ public final class MigrationDecision {
 			&& mobileDevice.getSourceServerCloudlet() == expectedSourceServer
 			&& mobileDevice.getVmLocalServerCloudlet() == expectedVmHost
 			&& mobileDevice.getDestinationServerCloudlet() == expectedDestination
-			&& mobileDevice.getVmMobileDevice() == expectedVm
+			&& mobileDevice.getVmMobileDevices().equals(expectedVms)
 			&& mobileDevice.getLifecycleState() == expectedLifecycle
 			&& mobileDevice.getSession().getMigration() == expectedMigrationState
 			&& mobileDevice.getSession().getAssociationGeneration()

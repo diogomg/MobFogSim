@@ -23,7 +23,7 @@ public interface VmMigrationTechnique {
 			smartThing.getDestinationServerCloudlet(),
 			smartThing.getNetworkSliceId());
 		double migrationTimeMillis = migrationTimeFunction(
-			smartThing.getVmMobileDevice().getSize(), bandwidth)
+			smartThing.getTotalVmSize(), bandwidth)
 			+ getFixedDelayMillis(smartThing);
 		double distance = Distances.checkDistance(
 			smartThing.getSourceAp().getCoord(), smartThing.getCoord());
@@ -75,7 +75,7 @@ public interface VmMigrationTechnique {
 			smartThing.getDestinationServerCloudlet(),
 			smartThing.getNetworkSliceId());
 		double migrationTimeMillis = migrationTimeFunction(
-			smartThing.getVmMobileDevice().getSize(), bandwidth)
+			smartThing.getTotalVmSize(), bandwidth)
 			+ getFixedDelayMillis(smartThing);
 		double distance = Distances.checkDistance(
 			smartThing.getSourceAp().getCoord(), smartThing.getCoord());

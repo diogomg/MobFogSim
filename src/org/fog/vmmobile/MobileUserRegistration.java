@@ -59,26 +59,74 @@ public final class MobileUserRegistration {
 
 	public static void configurePeripherals(MobileDevice user, FogBroker broker,
 		String appId) {
+		configurePeripherals(user, broker, appId, true);
+	}
+
+	/** Configures all peripherals while retaining their per-application IDs. */
+	public static void configurePeripherals(MobileDevice user,
+		FogBroker broker) {
+		configurePeripherals(user, broker, null, false);
+	}
+
+	private static void configurePeripherals(MobileDevice user,
+		FogBroker broker, String appId, boolean overwriteApplication) {
 		validateUserAndPeripherals(user);
 		if (broker == null) {
 			throw new IllegalArgumentException("User broker cannot be null");
 		}
-		if (appId == null || appId.trim().isEmpty()) {
+		if (overwriteApplication && (appId == null || appId.trim().isEmpty())) {
 			throw new IllegalArgumentException("User application ID cannot be empty");
 		}
 		for (MobileSensor sensor : user.getSensors()) {
-			sensor.setAppId(appId);
+			MobileApplicationProfile profile = overwriteApplication
+				? user.getApplicationProfile(0)
+				: profileFor(user, sensor.getAppId());
+			if (overwriteApplication) {
+				sensor.setAppId(appId);
+			}
+			else if (sensor.getAppId() == null
+				|| sensor.getAppId().trim().isEmpty()) {
+				throw new IllegalStateException(
+					"Mobile sensor application ID cannot be empty");
+			}
 			sensor.setUserId(broker.getId());
 			sensor.setGatewayDeviceId(user.getId());
-			sensor.setLatency(6.0);
+			sensor.setLatency(profile.getSensorLatencyMillis());
 		}
 		for (MobileActuator actuator : user.getActuators()) {
+			MobileApplicationProfile profile = overwriteApplication
+				? user.getApplicationProfile(0)
+				: profileFor(user, actuator.getAppId());
 			actuator.setUserId(broker.getId());
-			actuator.setAppId(appId);
+			if (overwriteApplication) {
+				actuator.setAppId(appId);
+				actuator.setActuatorType("DISPLAY" + user.getMyId());
+			}
+			else if (actuator.getAppId() == null
+				|| actuator.getAppId().trim().isEmpty()
+				|| actuator.getActuatorType() == null
+				|| actuator.getActuatorType().trim().isEmpty()) {
+				throw new IllegalStateException(
+					"Mobile actuator application and type cannot be empty");
+			}
 			actuator.setGatewayDeviceId(user.getId());
-			actuator.setLatency(1.0);
-			actuator.setActuatorType("DISPLAY" + user.getMyId());
+			actuator.setLatency(profile.getActuatorLatencyMillis());
 		}
+	}
+
+	private static MobileApplicationProfile profileFor(MobileDevice user,
+		String applicationId) {
+		for (int applicationIndex = 0;
+			applicationIndex < user.getApplicationsPerUser(); applicationIndex++) {
+			MobileApplicationDescriptor descriptor =
+				MobileApplicationDescriptor.forUser(user.getMyId(), user.getName(),
+					applicationIndex);
+			if (descriptor.getApplicationId().equals(applicationId)) {
+				return user.getApplicationProfile(applicationIndex);
+			}
+		}
+		throw new IllegalStateException("No application profile is configured for "
+			+ applicationId + " on user " + user.getName());
 	}
 
 	public static void submitVm(FogBroker broker, MobileDevice user) {
@@ -94,21 +142,24 @@ public final class MobileUserRegistration {
 			throw new IllegalStateException("Cannot register user " + user.getName()
 				+ " with inconsistent network associations");
 		}
-		if (user.getVmMobileDevice() == null) {
+		if (user.getVmMobileDevices().isEmpty()) {
 			throw new IllegalStateException("Cannot register user " + user.getName()
 				+ " without a VM");
 		}
-		if (user.getVmMobileDevice().getUserId() != broker.getId()) {
-			throw new IllegalStateException("Cannot register user " + user.getName()
-				+ " with a VM owned by another broker");
+		for (org.cloudbus.cloudsim.Vm virtualMachine
+			: user.getVmMobileDevices()) {
+			if (virtualMachine.getUserId() != broker.getId()) {
+				throw new IllegalStateException("Cannot register user " + user.getName()
+					+ " with a VM owned by another broker");
+			}
 		}
-		broker.submitVmList(Collections.singletonList(user.getVmMobileDevice()));
+		broker.submitVmList(user.getVmMobileDevices());
 	}
 
 	public static void activatePeripherals(MobileDevice user) {
 		validateUserAndPeripherals(user);
 		validateNetworkAssociation(user);
-		if (user.getVmMobileDevice() == null) {
+		if (user.getVmMobileDevices().isEmpty()) {
 			throw new IllegalStateException("Cannot activate user " + user.getName()
 				+ " without a VM");
 		}

@@ -54,6 +54,8 @@ import org.fog.vmmigration.MyStatistics;
 import org.fog.vmmigration.NextStep;
 import org.fog.vmmobile.LogMobile;
 import org.fog.vmmobile.FogDeviceIndex;
+import org.fog.vmmobile.MobileApplicationDescriptor;
+import org.fog.vmmobile.MobileApplicationProfile;
 import org.fog.vmmobile.MobileUserApplicationFactory;
 import org.fog.vmmobile.MobileUserRegistration;
 import org.fog.vmmobile.SimulationBuildException;
@@ -578,7 +580,7 @@ public class MobileController extends SimEntity {
 			+ " connected to access point " + sourceAp.getName()
 			+ " and server cloudlet "
 			+ mobileDevice.getSourceServerCloudlet().getName());
-		boolean registrationRequired = mobileDevice.getVmMobileDevice() == null;
+		boolean registrationRequired = mobileDevice.getVmMobileDevices().isEmpty();
 		MobileUserRegistrationTransaction registration = null;
 		try {
 			if (registrationRequired) {
@@ -634,28 +636,35 @@ public class MobileController extends SimEntity {
 	}
 
 	void retireApplication(MobileDevice mobileDevice) {
-		String applicationId = "MyApp_vr_game" + mobileDevice.getMyId();
-		Vm vm = mobileDevice.getVmMobileDevice();
+		List<Vm> virtualMachines =
+			new ArrayList<Vm>(mobileDevice.getVmMobileDevices());
+		List<MobileApplicationDescriptor> descriptors =
+			applicationDescriptors(mobileDevice);
 		for (SimEntity entity : CloudSim.getEntityList()) {
 			if (!(entity instanceof FogDevice)) {
 				continue;
 			}
 			FogDevice fogDevice = (FogDevice) entity;
-			releaseVmFromHost(fogDevice, vm);
+			for (Vm virtualMachine : virtualMachines) {
+				releaseVmFromHost(fogDevice, virtualMachine);
+			}
 			fogDevice.unregisterHostedMobileVm(mobileDevice);
-			fogDevice.removeApplication(applicationId);
+			for (MobileApplicationDescriptor descriptor : descriptors) {
+				fogDevice.removeApplication(descriptor.getApplicationId());
+			}
 		}
 		if (getModuleMapping() != null) {
-			getModuleMapping().removeModule(
-				"AppModuleVm_" + mobileDevice.getName());
+			for (MobileApplicationDescriptor descriptor : descriptors) {
+				getModuleMapping().removeModule(descriptor.getVmName());
+			}
 			getModuleMapping().removeDevice(mobileDevice.getName());
 		}
 		FogBroker broker = brokersByMobileId.get(mobileDevice.getMyId());
-		if (broker != null && vm != null) {
-			broker.getVmList().remove(vm);
-			broker.getVmsCreatedList().remove(vm);
+		if (broker != null) {
+			broker.getVmList().removeAll(virtualMachines);
+			broker.getVmsCreatedList().removeAll(virtualMachines);
 		}
-		mobileDevice.setVmMobileDevice(null);
+		mobileDevice.setVmMobileDevices(Collections.<Vm>emptyList());
 		mobileDevice.setVmLocalServerCloudlet(null);
 		mobileDevice.setDestinationServerCloudlet(null);
 		mobileDevice.setServerCloudletToVmMigrate(null);
@@ -682,6 +691,19 @@ public class MobileController extends SimEntity {
 		while (host.getVmList().contains(vm)) {
 			host.vmDestroy(vm);
 		}
+	}
+
+	private static List<MobileApplicationDescriptor> applicationDescriptors(
+		MobileDevice mobileDevice) {
+		List<MobileApplicationDescriptor> descriptors =
+			new ArrayList<MobileApplicationDescriptor>();
+		for (int applicationIndex = 0;
+			applicationIndex < mobileDevice.getApplicationsPerUser();
+			applicationIndex++) {
+			descriptors.add(MobileApplicationDescriptor.forUser(
+				mobileDevice.getMyId(), mobileDevice.getName(), applicationIndex));
+		}
+		return descriptors;
 	}
 
 	private MobileUserRegistrationTransaction registerMobileUser(
@@ -715,14 +737,16 @@ public class MobileController extends SimEntity {
 		private final Map<String, Integer> appLaunchDelaysBefore;
 		private final Map<Integer, Double> cpuLoadBefore;
 		private final Map<String, Integer> activeSensorApplicationsBefore;
-		private final boolean applicationCoverageExisted;
-		private final GeoCoverage applicationCoverageBefore;
+		private final Map<String, Boolean> applicationCoverageExisted;
+		private final Map<String, GeoCoverage> applicationCoverageBefore;
 		private final List<SensorRegistrationState> sensorStates;
 		private final List<ActuatorRegistrationState> actuatorStates;
 		private final CloudSim.EntityRegistrationCheckpoint entitiesBefore;
 		private FogBroker broker;
-		private AppModule vm;
-		private Application application;
+		private final List<AppModule> virtualMachines =
+			new ArrayList<AppModule>();
+		private final List<Application> registeredApplications =
+			new ArrayList<Application>();
 		private boolean committed;
 		private boolean rolledBack;
 
@@ -737,10 +761,18 @@ public class MobileController extends SimEntity {
 				new HashMap<Integer, Double>(globalCurrentCpuLoad);
 			this.activeSensorApplicationsBefore =
 				new HashMap<String, Integer>(activeSensorApplications);
-			this.applicationCoverageExisted = FogUtils.getApplicationCoverage()
-				.containsKey(plan.getApplicationId());
-			this.applicationCoverageBefore = FogUtils.getApplicationCoverage()
-				.get(plan.getApplicationId());
+			this.applicationCoverageExisted =
+				new HashMap<String, Boolean>();
+			this.applicationCoverageBefore =
+				new HashMap<String, GeoCoverage>();
+			for (MobileApplicationDescriptor descriptor
+				: plan.getApplicationDescriptors()) {
+				String applicationId = descriptor.getApplicationId();
+				applicationCoverageExisted.put(applicationId,
+					FogUtils.getApplicationCoverage().containsKey(applicationId));
+				applicationCoverageBefore.put(applicationId,
+					FogUtils.getApplicationCoverage().get(applicationId));
+			}
 			this.sensorStates = captureSensorStates(plan.getMobileDevice());
 			this.actuatorStates = captureActuatorStates(plan.getMobileDevice());
 			this.entitiesBefore = CloudSim.checkpointEntityRegistrations();
@@ -754,19 +786,31 @@ public class MobileController extends SimEntity {
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.BROKER_REGISTERED);
 
-				CloudletScheduler scheduler = new TupleScheduler(500, 1);
-				long vmSize = 128;
-				vm = new AppModule(mobileDevice.getMyId(), plan.getVmName(),
-					plan.getApplicationId(), broker.getId(), 281, 128, 1000,
-					vmSize, "Vm_" + mobileDevice.getName(), scheduler,
-					new HashMap<Pair<String, String>, SelectivityModel>());
-				mobileDevice.setVmMobileDevice(vm);
-				if (!plan.getServerCloudlet().getHost().vmCreate(vm)) {
-					throw new SimulationBuildException(
-						"Could not allocate VM for entering user "
-							+ mobileDevice.getName() + " on "
-							+ plan.getServerCloudlet().getName());
+				for (int applicationIndex = 0;
+					applicationIndex < plan.getApplicationDescriptors().size();
+					applicationIndex++) {
+					MobileApplicationDescriptor descriptor =
+						plan.getApplicationDescriptors().get(applicationIndex);
+					MobileApplicationProfile profile =
+						mobileDevice.getApplicationProfile(applicationIndex);
+					CloudletScheduler scheduler = new TupleScheduler(500, 1);
+					AppModule virtualMachine = new AppModule(
+						descriptor.getVmId(), descriptor.getVmName(),
+						descriptor.getApplicationId(), broker.getId(),
+						profile.getVmMips(), profile.getVmRamMebibytes(),
+						profile.getVmBandwidth(), profile.getVmSizeMebibytes(),
+						descriptor.getVmMonitorName(), scheduler,
+						new HashMap<Pair<String, String>, SelectivityModel>());
+					virtualMachines.add(virtualMachine);
+					if (!plan.getServerCloudlet().getHost().vmCreate(virtualMachine)) {
+						throw new SimulationBuildException(
+							"Could not allocate VM for entering user "
+								+ mobileDevice.getName() + " application "
+								+ descriptor.getApplicationIndex() + " on "
+								+ plan.getServerCloudlet().getName());
+					}
 				}
+				mobileDevice.setVmMobileDevices(virtualMachines);
 				onRegistrationStep(mobileDevice, RegistrationStep.VM_ALLOCATED);
 
 				mobileDevice.setVmLocalServerCloudlet(plan.getServerCloudlet());
@@ -777,24 +821,37 @@ public class MobileController extends SimEntity {
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.VM_REGISTRATION_PUBLISHED);
 
-				application = MobileUserApplicationFactory.create(
-					plan.getApplicationId(), broker.getId(), mobileDevice.getMyId(), vm);
-				MobileUserRegistration.configurePeripherals(mobileDevice, broker,
-					plan.getApplicationId());
+				for (int applicationIndex = 0;
+					applicationIndex < plan.getApplicationDescriptors().size();
+					applicationIndex++) {
+					registeredApplications.add(
+						MobileUserApplicationFactory.create(
+							plan.getApplicationDescriptors().get(applicationIndex),
+							broker.getId(), virtualMachines.get(applicationIndex),
+							mobileDevice.getApplicationProfile(applicationIndex)));
+				}
+				MobileUserRegistration.configurePeripherals(mobileDevice, broker);
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.PERIPHERALS_CONFIGURED);
 
-				getModuleMapping().addModuleToDevice(plan.getVmName(),
-					plan.getServerCloudlet().getName(), 1);
-				getModuleMapping().addModuleToDevice(plan.getClientModuleName(),
-					mobileDevice.getName(), 1);
+				for (MobileApplicationDescriptor descriptor
+					: plan.getApplicationDescriptors()) {
+					getModuleMapping().addModuleToDevice(descriptor.getVmName(),
+						plan.getServerCloudlet().getName(), 1);
+					getModuleMapping().addModuleToDevice(
+						descriptor.getClientModuleName(), mobileDevice.getName(), 1);
+				}
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.MODULE_MAPPINGS_ADDED);
 
-				submitApplication(application, 0);
+				for (Application application : registeredApplications) {
+					submitApplication(application, 0);
+				}
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.APPLICATION_SUBMITTED);
-				processAppSubmit(application);
+				for (Application application : registeredApplications) {
+					processAppSubmit(application);
+				}
 				onRegistrationStep(mobileDevice,
 					RegistrationStep.APPLICATION_DEPLOYED);
 			}
@@ -830,9 +887,18 @@ public class MobileController extends SimEntity {
 					continue;
 				}
 				FogDevice fogDevice = (FogDevice) entity;
-				releaseApplicationVms(fogDevice, plan.getApplicationId(), vm);
+				for (int applicationIndex = 0;
+					applicationIndex < plan.getApplicationDescriptors().size();
+					applicationIndex++) {
+					Vm virtualMachine = applicationIndex < virtualMachines.size()
+						? virtualMachines.get(applicationIndex) : null;
+					String applicationId = plan.getApplicationDescriptors()
+						.get(applicationIndex).getApplicationId();
+					releaseApplicationVms(fogDevice, applicationId,
+						virtualMachine);
+					fogDevice.removeApplication(applicationId);
+				}
 				fogDevice.unregisterHostedMobileVm(mobileDevice);
-				fogDevice.removeApplication(plan.getApplicationId());
 			}
 			getModuleMapping().setModuleMapping(moduleMappingBefore);
 			setApplications(applicationsBefore);
@@ -840,12 +906,17 @@ public class MobileController extends SimEntity {
 			setGlobalCurrentCpuLoad(cpuLoadBefore);
 			activeSensorApplications.clear();
 			activeSensorApplications.putAll(activeSensorApplicationsBefore);
-			if (applicationCoverageExisted) {
-				FogUtils.registerApplicationCoverage(plan.getApplicationId(),
-					applicationCoverageBefore);
-			}
-			else {
-				FogUtils.unregisterApplicationCoverage(plan.getApplicationId());
+			for (MobileApplicationDescriptor descriptor
+				: plan.getApplicationDescriptors()) {
+				String applicationId = descriptor.getApplicationId();
+				if (Boolean.TRUE.equals(
+					applicationCoverageExisted.get(applicationId))) {
+					FogUtils.registerApplicationCoverage(applicationId,
+						applicationCoverageBefore.get(applicationId));
+				}
+				else {
+					FogUtils.unregisterApplicationCoverage(applicationId);
+				}
 			}
 			if (broker != null) {
 				broker.getVmList().clear();
@@ -853,7 +924,7 @@ public class MobileController extends SimEntity {
 				removeBrokerFor(mobileDevice, broker);
 			}
 			CloudSim.restoreEntityRegistrations(entitiesBefore);
-			mobileDevice.setVmMobileDevice(null);
+			mobileDevice.setVmMobileDevices(Collections.<Vm>emptyList());
 			mobileDevice.setVmLocalServerCloudlet(null);
 			mobileDevice.setDestinationServerCloudlet(null);
 			mobileDevice.setServerCloudletToVmMigrate(null);
@@ -1051,13 +1122,16 @@ public class MobileController extends SimEntity {
 											migrationCoordinator.remainingLiveMigrationBytes(
 												st, baselineBandwidth, CloudSim.clock());
 										if (remainingTransferBytes == 0.0) {
+											long usedRam = 0L;
+											for (Vm virtualMachine : st.getVmMobileDevices()) {
+												usedRam += virtualMachine.getRam();
+											}
 											remainingTransferBytes = MigrationTransferSpec
-												.mebibytesToBytes(st.getVmMobileDevice().getHost()
-													.getRamProvisioner().getUsedRam());
+												.mebibytesToBytes(usedRam);
 										}
 										double delayProcess = st.getVmLocalServerCloudlet()
-											.getCharacteristics().getCpuTime((st.getVmMobileDevice()
-												.getSize() * 1024 * 1024 * 8) * 0.7, 0.0);
+											.getCharacteristics().getCpuTime((st.getTotalVmSize()
+												* 1024 * 1024 * 8) * 0.7, 0.0);
 										st.setTimeFinishDeliveryVm(-1.0);
 										MyStatistics.getInstance().startWithoutVmTime(
 											st.getMyId(), CloudSim.clock());

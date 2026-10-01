@@ -337,7 +337,7 @@ public final class MigrationCoordinator {
 				mobileDevice.getVmLocalServerCloudlet(),
 				mobileDevice.getDestinationServerCloudlet(), mobileDevice,
 				DataSize.ofBytes(mobileDevice.getMigrationTechnique()
-					.getTransferSizeBytes(mobileDevice.getVmMobileDevice().getSize())),
+					.getTransferSizeBytes(mobileDevice.getTotalVmSize())),
 				SimulationDuration.ofMilliseconds(mobileDevice
 					.getMigrationTechnique().getFixedDelayMillis(mobileDevice)),
 				SimulationDuration.ofMilliseconds(preparationDelay), EntityId.of(
@@ -359,8 +359,10 @@ public final class MigrationCoordinator {
 		}
 		for (MobileDevice mobileDevice : mobileDevices) {
 			FogDevice accessServer = mobileDevice.getSourceServerCloudlet();
-			DecisionMigration strategy = accessServer == null
-				? null : accessServer.getMigrationStrategy();
+			DecisionMigration strategy = mobileDevice.getMigrationStrategy();
+			if (strategy == null && accessServer != null) {
+				strategy = accessServer.getMigrationStrategy();
+			}
 			if (mobileDevice.getSourceAp() == null
 				|| accessServer == null
 				|| mobileDevice.isLockedToMigration()
@@ -611,7 +613,7 @@ public final class MigrationCoordinator {
 		double copiedBytes = baselineBandwidthBitsPerSecond * elapsedMillis
 			/ (8.0 * 1000.0);
 		double totalBytes = mobileDevice.getMigrationTechnique()
-			.getTransferSizeBytes(mobileDevice.getVmMobileDevice().getSize());
+			.getTransferSizeBytes(mobileDevice.getTotalVmSize());
 		return Math.max(0.0, totalBytes - copiedBytes);
 	}
 

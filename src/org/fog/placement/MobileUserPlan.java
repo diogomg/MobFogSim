@@ -1,5 +1,9 @@
 package org.fog.placement;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.fog.application.Application;
@@ -9,23 +13,21 @@ import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
 import org.fog.entities.MobileDeviceLifecycle;
 import org.fog.entities.MobileSensor;
+import org.fog.vmmobile.MobileApplicationDescriptor;
 import org.fog.vmmobile.SimulationBuildException;
 
 /** Immutable, validated inputs for one delayed mobile-user registration. */
 public final class MobileUserPlan {
 	private final MobileDevice mobileDevice;
 	private final FogDevice serverCloudlet;
-	private final String applicationId;
-	private final String vmName;
-	private final String clientModuleName;
+	private final List<MobileApplicationDescriptor> applicationDescriptors;
 
 	private MobileUserPlan(MobileDevice mobileDevice, FogDevice serverCloudlet,
-		String applicationId, String vmName, String clientModuleName) {
+		List<MobileApplicationDescriptor> applicationDescriptors) {
 		this.mobileDevice = mobileDevice;
 		this.serverCloudlet = serverCloudlet;
-		this.applicationId = applicationId;
-		this.vmName = vmName;
-		this.clientModuleName = clientModuleName;
+		this.applicationDescriptors = Collections.unmodifiableList(
+			new ArrayList<MobileApplicationDescriptor>(applicationDescriptors));
 	}
 
 	public static MobileUserPlan create(MobileDevice mobileDevice,
@@ -68,23 +70,63 @@ public final class MobileUserPlan {
 		}
 		validatePeripherals(mobileDevice);
 
-		String applicationId = "MyApp_vr_game" + mobileDevice.getMyId();
-		String vmName = "AppModuleVm_" + mobileDevice.getName();
-		String clientModuleName = "client" + mobileDevice.getMyId();
-		if (applications.containsKey(applicationId)) {
-			throw new SimulationBuildException("Application " + applicationId
-				+ " is already registered");
+		List<MobileApplicationDescriptor> descriptors =
+			new ArrayList<MobileApplicationDescriptor>();
+		for (int applicationIndex = 0;
+			applicationIndex < mobileDevice.getApplicationsPerUser();
+			applicationIndex++) {
+			MobileApplicationDescriptor descriptor =
+				MobileApplicationDescriptor.forUser(mobileDevice.getMyId(),
+					mobileDevice.getName(), applicationIndex);
+			if (applications.containsKey(descriptor.getApplicationId())) {
+				throw new SimulationBuildException("Application "
+					+ descriptor.getApplicationId() + " is already registered");
+			}
+			for (Map<String, Integer> modules
+				: moduleMapping.getModuleMapping().values()) {
+				if (modules.containsKey(descriptor.getVmName())
+					|| modules.containsKey(descriptor.getClientModuleName())) {
+					throw new SimulationBuildException("Module mapping for "
+						+ mobileDevice.getName() + " application "
+						+ applicationIndex + " already exists");
+				}
+			}
+			descriptors.add(descriptor);
 		}
-		for (Map<String, Integer> modules
-			: moduleMapping.getModuleMapping().values()) {
-			if (modules.containsKey(vmName)
-				|| modules.containsKey(clientModuleName)) {
-				throw new SimulationBuildException("Module mapping for "
-					+ mobileDevice.getName() + " already exists");
+		validatePeripheralApplications(mobileDevice, descriptors);
+		return new MobileUserPlan(mobileDevice, serverCloudlet, descriptors);
+	}
+
+	private static void validatePeripheralApplications(MobileDevice mobileDevice,
+		List<MobileApplicationDescriptor> descriptors) {
+		Map<String, Integer> sensorCounts = new HashMap<String, Integer>();
+		Map<String, Integer> actuatorCounts = new HashMap<String, Integer>();
+		for (MobileSensor sensor : mobileDevice.getSensors()) {
+			increment(sensorCounts, sensor.getAppId());
+		}
+		for (MobileActuator actuator : mobileDevice.getActuators()) {
+			increment(actuatorCounts, actuator.getAppId());
+		}
+		for (MobileApplicationDescriptor descriptor : descriptors) {
+			String applicationId = descriptor.getApplicationId();
+			if (!Integer.valueOf(1).equals(sensorCounts.get(applicationId))
+				|| !Integer.valueOf(1).equals(actuatorCounts.get(applicationId))) {
+				throw new SimulationBuildException("Mobile user "
+					+ mobileDevice.getName() + " requires exactly one sensor and "
+					+ "one actuator for application " + applicationId);
 			}
 		}
-		return new MobileUserPlan(mobileDevice, serverCloudlet, applicationId,
-			vmName, clientModuleName);
+		if (sensorCounts.size() != descriptors.size()
+			|| actuatorCounts.size() != descriptors.size()) {
+			throw new SimulationBuildException("Mobile user "
+				+ mobileDevice.getName()
+				+ " has peripherals for an unconfigured application");
+		}
+	}
+
+	private static void increment(Map<String, Integer> counts, String key) {
+		Integer count = counts.get(key);
+		counts.put(key, count == null ? 1 : count + 1);
 	}
 
 	private static void validatePeripherals(MobileDevice mobileDevice) {
@@ -117,14 +159,18 @@ public final class MobileUserPlan {
 	}
 
 	public String getApplicationId() {
-		return applicationId;
+		return applicationDescriptors.get(0).getApplicationId();
 	}
 
 	public String getVmName() {
-		return vmName;
+		return applicationDescriptors.get(0).getVmName();
 	}
 
 	public String getClientModuleName() {
-		return clientModuleName;
+		return applicationDescriptors.get(0).getClientModuleName();
+	}
+
+	public List<MobileApplicationDescriptor> getApplicationDescriptors() {
+		return applicationDescriptors;
 	}
 }

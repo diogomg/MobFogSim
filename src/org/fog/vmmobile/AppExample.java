@@ -4,107 +4,61 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
-import org.cloudbus.cloudsim.Host;
-import org.cloudbus.cloudsim.Pe;
-import org.cloudbus.cloudsim.Storage;
-import org.cloudbus.cloudsim.core.CloudSim;
-import org.cloudbus.cloudsim.power.PowerHost;
-import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
-import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
-import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
 import org.cloudbus.cloudsim.util.RunOutputMode;
-import org.fog.application.AppEdge;
-import org.fog.application.AppLoop;
 import org.fog.application.Application;
-import org.fog.application.selectivity.FractionalSelectivity;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
-import org.fog.entities.FogDeviceCharacteristics;
-import org.fog.entities.MobileActuator;
 import org.fog.entities.MobileDevice;
-import org.fog.entities.MobileSensor;
-import org.fog.entities.Tuple;
 import org.fog.localization.Coordinate;
-import org.fog.localization.GridGenerator;
-import org.fog.localization.GridPosition;
 import org.fog.localization.MapBounds;
-import org.fog.policy.AppModuleAllocationPolicy;
-import org.fog.scheduler.StreamOperatorScheduler;
-import org.fog.utils.FogLinearPowerModel;
-import org.fog.utils.FogUtils;
-
-import org.fog.utils.distribution.DeterministicDistribution;
-import org.fog.vmmigration.BeforeMigration;
-import org.fog.vmmigration.CompleteVM;
-import org.fog.vmmigration.ContainerVM;
-import org.fog.vmmigration.DecisionMigration;
-import org.fog.vmmigration.LiveMigration;
-import org.fog.vmmigration.LowestDistBwSmartThingAP;
-import org.fog.vmmigration.LowestDistBwSmartThingServerCloudlet;
-import org.fog.vmmigration.LowestLatency;
-import org.fog.vmmigration.PrepareCompleteVM;
-import org.fog.vmmigration.PrepareContainerVM;
-import org.fog.vmmigration.PrepareLiveMigration;
-import org.fog.vmmigration.Service;
-import org.fog.vmmigration.VmMigrationTechnique;
-import org.fog.vmmobile.constants.MaxAndMin;
-import org.fog.vmmobile.constants.Policies;
 import org.fog.vmmobile.policy.LocationPolicy;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
 import org.fog.vmmobile.policy.MigrationStrategyPolicy;
 import org.fog.vmmobile.policy.MigrationTechniquePolicy;
-import org.fog.vmmobile.policy.MovementDirection;
-import org.fog.vmmobile.policy.ServiceType;
 
+/** Entry point and legacy compatibility facade for the original example. */
 public class AppExample {
-	private static int stepPolicy; // Quantity of steps in the nextStep Function
-	private static List<MobileDevice> smartThings = new ArrayList<MobileDevice>();
-	private static List<FogDevice> serverCloudlets = new ArrayList<>();
-	private static List<ApDevice> apDevices = new ArrayList<>();
-	private static List<FogBroker> brokerList = new ArrayList<>();
-	private static List<String> appIdList = new ArrayList<>();
-	private static List<Application> applicationList = new ArrayList<>();
-
+	private static int stepPolicy;
+	private static List<MobileDevice> smartThings =
+		new ArrayList<MobileDevice>();
+	private static List<FogDevice> serverCloudlets =
+		new ArrayList<FogDevice>();
+	private static List<ApDevice> apDevices = new ArrayList<ApDevice>();
+	private static List<FogBroker> brokerList = new ArrayList<FogBroker>();
+	private static List<String> appIdList = new ArrayList<String>();
+	private static List<Application> applicationList =
+		new ArrayList<Application>();
 	private static boolean migrationAble;
-
-	private static MigrationPointPolicy migPointPolicy = MigrationPointPolicy.FIXED;
+	private static MigrationPointPolicy migPointPolicy =
+		MigrationPointPolicy.FIXED;
 	private static MigrationStrategyPolicy migStrategyPolicy =
 		MigrationStrategyPolicy.LOWEST_LATENCY;
 	private static LocationPolicy positionApPolicy = LocationPolicy.FIXED;
 	private static LocationPolicy positionScPolicy = LocationPolicy.FIXED;
 	private static MigrationTechniquePolicy policyReplicaVM =
 		MigrationTechniquePolicy.COMPLETE_VM;
-	private static int travelPredictionTimeForST; // in seconds
-	private static int mobilityPredictionError;// in meters
+	private static int travelPredictionTimeForST;
+	private static int mobilityPredictionError;
 	private static double latencyBetweenCloudlets;
 	private static int maxBandwidth;
 	private static int maxSmartThings;
 	private static Path mobilityDirectory = Paths.get("input");
-	private static Path mobilityOrderManifest = mobilityDirectory.resolve("inputOrder.csv");
+	private static Path mobilityOrderManifest =
+		mobilityDirectory.resolve("inputOrder.csv");
 	private static Path outputDirectory = Paths.get("runs", "unconfigured");
 	private static RunOutputMode outputMode = RunOutputMode.SUMMARY;
 	private static Coordinate coordDevices;
 	private static int seed;
 	private static Random rand;
-	static final boolean CLOUD = true;
 
-	static final int numOfDepts = 1;
-	static final int numOfMobilesPerDept = 4;
-	static final double EEG_TRANSMISSION_TIME = 10;
-
-	/**
-	 * @param args
-	 * @author Marcio Moraes Lopes
-	 * @author Diogo M Gonçalves
-	 * @throws Exception
-	 */
+	/** Application workloads created for each user in this example. */
+	public static final List<MobileApplicationProfile> APPLICATION_PROFILES =
+		Collections.singletonList(MobileApplicationProfile.standard());
+	public static final int APPLICATIONS_PER_USER = APPLICATION_PROFILES.size();
 
 	public static void main(String[] args) throws Exception {
 		run(args);
@@ -118,7 +72,7 @@ public class AppExample {
 	/** Runs one already validated configuration for an embedded caller. */
 	public static SimulationRunResult run(SimulationConfig configuration)
 		throws Exception {
-		return new SimulationRunner().run(configuration);
+		return new SimulationRunner().run(configuration, APPLICATION_PROFILES);
 	}
 
 	static void configureSimulationParameters(String[] args) {
@@ -155,553 +109,84 @@ public class AppExample {
 		rand = null;
 	}
 
-	static void addApDevicesFixed(List<ApDevice> apDevices,
-		Coordinate coordDevices) {
-		addApDevicesFixed(apDevices, coordDevices, MapBounds.defaults());
+	static void addApDevicesFixed(List<ApDevice> accessPoints,
+		Coordinate coordinateSpace) {
+		addApDevicesFixed(accessPoints, coordinateSpace, MapBounds.defaults());
 	}
 
-	static void addApDevicesFixed(List<ApDevice> apDevices,
-		Coordinate coordDevices, MapBounds bounds) {
-		int i = 0;
-		GridGenerator grid = new GridGenerator(bounds);
-		for (GridPosition position : grid.fixedPositions(
-			GridGenerator.spacingForCoverage(MaxAndMin.AP_COVERAGE))) {
-			ApDevice ap = new ApDevice("AccessPoint" + Integer.toString(i), // name
-				position.getX(), position.getY(), i// ap.set//id
-				, 100 * 1024 * 1024// downLinkBandwidth - 100Mbits
-				, 200// engergyConsuption
-				, MaxAndMin.MAX_ST_IN_AP// maxSmartThing
-				, 100 * 1024 * 1024// upLinkBandwidth - 100Mbits
-				, 4// upLinkLatency
-			);
-			apDevices.add(i, ap);
-			i++;
-		}
-		LogMobile.debug("AppExample.java", "Total of accessPoints: " + i);
-
+	static void addApDevicesFixed(List<ApDevice> accessPoints,
+		Coordinate coordinateSpace, MapBounds bounds) {
+		ExampleDeviceFactory.addFixedAccessPoints(accessPoints, coordinateSpace,
+			bounds);
 	}
 
-	static void addApDevicesRandom(List<ApDevice> apDevices,
-		Coordinate coordDevices, int i) {
-		addApDevicesRandom(apDevices, coordDevices, i, MapBounds.defaults());
+	static void addApDevicesRandom(List<ApDevice> accessPoints,
+		Coordinate coordinateSpace, int index) {
+		addApDevicesRandom(accessPoints, coordinateSpace, index,
+			MapBounds.defaults());
 	}
 
 	/** @deprecated Use {@link #addApDevicesRandom(List, Coordinate, int)}. */
 	@Deprecated
-	static void addApDevicesRandon(List<ApDevice> apDevices,
-		Coordinate coordDevices, int i) {
-		addApDevicesRandom(apDevices, coordDevices, i);
+	static void addApDevicesRandon(List<ApDevice> accessPoints,
+		Coordinate coordinateSpace, int index) {
+		addApDevicesRandom(accessPoints, coordinateSpace, index);
 	}
 
-	static void addApDevicesRandom(List<ApDevice> apDevices,
-		Coordinate coordDevices, int i, MapBounds bounds) {
-		GridPosition position = new GridGenerator(bounds).randomPosition(getRand());
-		ApDevice ap = new ApDevice("AccessPoint" + Integer.toString(i), // name
-			position.getX(), position.getY(), i// id
-			, 100 * 1024 * 1024// downLinkBandwidth - 100 Mbits
-			, 200// engergyConsuption
-			, MaxAndMin.MAX_ST_IN_AP// maxSmartThing
-			, 100 * 1024 * 1024// upLinkBandwidth 100 Mbits
-			, 4// upLinkLatency
-		);
-		apDevices.add(i, ap);
+	static void addApDevicesRandom(List<ApDevice> accessPoints,
+		Coordinate coordinateSpace, int index, MapBounds bounds) {
+		ExampleDeviceFactory.addRandomAccessPoint(accessPoints, coordinateSpace,
+			index, bounds);
 	}
 
-	public static void addSmartThing(List<MobileDevice> smartThing,
-		Coordinate coordDevices, int i) {
-		int listSizeBefore = smartThing.size();
-		CloudSim.EntityRegistrationCheckpoint checkpoint =
-			CloudSim.checkpointEntityRegistrations();
-		try {
-			buildSmartThing(smartThing, coordDevices, i);
-		}
-		catch (RuntimeException error) {
-			truncateList(smartThing, listSizeBefore);
-			CloudSim.restoreEntityRegistrations(checkpoint);
-			throw error;
-		}
+	public static void addSmartThing(List<MobileDevice> mobileDevices,
+		Coordinate coordinateSpace, int index) {
+		addSmartThing(mobileDevices, coordinateSpace, index,
+			APPLICATION_PROFILES);
 	}
 
-	private static void buildSmartThing(List<MobileDevice> smartThing,
-		Coordinate coordDevices, int i) {
+	public static void addSmartThing(List<MobileDevice> mobileDevices,
+		Coordinate coordinateSpace, int index, int applicationsPerUser) {
+		addSmartThing(mobileDevices, coordinateSpace, index,
+			MobileApplicationProfile.standardProfiles(applicationsPerUser));
+	}
 
-		int coordX = 0, coordY = 0;
-		MovementDirection direction;
-		int speed;
-		direction = MovementDirection.fromLegacy(
-			getRand().nextInt(MaxAndMin.MAX_DIRECTION - 1) + 1);
-		speed = getRand().nextInt(MaxAndMin.MAX_SPEED - 1) + 1;
-		/*************** Start set of Mobile Sensors ****************/
-		VmMigrationTechnique migrationTechnique = null;
-		BeforeMigration beforeMigration = null;
-
-		if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
-			migrationTechnique = new CompleteVM(getMigrationPointPolicy());
-			beforeMigration = new PrepareCompleteVM();
-		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
-			migrationTechnique = new ContainerVM(getMigrationPointPolicy());
-			beforeMigration = new PrepareContainerVM();
-		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
-			migrationTechnique = new LiveMigration(getMigrationPointPolicy());
-			beforeMigration = new PrepareLiveMigration();
-		}
-
-		DeterministicDistribution distribution0 = new DeterministicDistribution(
-			EEG_TRANSMISSION_TIME);// +(i*getRand().nextDouble()));
-
-		Set<MobileSensor> sensors = new HashSet<>();
-
-		MobileSensor sensor = new MobileSensor("Sensor" + i // Tuple's name
-		, "EEG" + i // Tuple's type
-		, i // User Id
-			, "MyApp_vr_game" + i // app's name
-			, distribution0);
-		sensors.add(sensor);
-
-		/*************** End set of Mobile Sensors ****************/
-
-		/*************** Start set of Mobile Actuators ****************/
-
-		MobileActuator actuator0 = new MobileActuator("Actuator" + i, i,
-			"MyApp_vr_game" + i, "DISPLAY" + i);
-
-		Set<MobileActuator> actuators = new HashSet<>();
-		actuators.add(actuator0);
-
-		/*************** End set of Mobile Actuators ****************/
-
-		/*************** Start MobileDevice Configurations ****************/
-
-		FogLinearPowerModel powerModel = new FogLinearPowerModel(87.53d,
-			82.44d);// 10//maxPower
-
-		List<Pe> peList = new ArrayList<>();
-		int mips = 46533;
-		// 3. Create PEs and add these into a list.
-		// need to storage Pe id and MIPS Rating - to CloudSim
-		peList.add(new Pe(0, new PeProvisionerOverbooking(mips)));
-
-		int hostId = FogUtils.generateEntityId();
-		long storage = 512 * 1024;
-		// host storage
-		int bw = 1000 * 1024 * 1024;
-		int ram = 1024 * 16;
-		// To the hardware's characteristics (MobileDevice) - to CloudSim
-		PowerHost host = new PowerHost(
-			hostId, new RamProvisionerSimple(ram),
-			new BwProvisionerOverbooking(bw), storage, peList,
-			new StreamOperatorScheduler(peList), powerModel);
-
-		List<Host> hostList = new ArrayList<Host>();
-		hostList.add(host);
-
-		String arch = "x86"; // system architecture
-		String os = "Android"; // operating system
-		String vmm = "empty";// Empty
-		double vmSize = 4;
-		double time_zone = 10.0; // time zone this resource located
-		double cost = 1.0; // the cost of using processing in this resource
-		double costPerMem = 0.005; // the cost of using memory in this resource
-		double costPerStorage = 0.0001; // the cost of using storage in this resource
-		double costPerBw = 0.001; // the cost of using bw in this resource
-		// we are not adding SAN devices by now
-		LinkedList<Storage> storageList = new LinkedList<Storage>();
-
-		FogDeviceCharacteristics characteristics = new FogDeviceCharacteristics(
-			arch, os, vmm, host, time_zone, cost, costPerMem,
-			costPerStorage, costPerBw);
-
-		AppModuleAllocationPolicy vmAllocationPolicy = new AppModuleAllocationPolicy(
-			hostList);
-
-		MobileDevice st = null;
-
-		float maxServiceValue = getRand().nextFloat() * 100;
-		try {
-			st = new MobileDevice("SmartThing" + Integer.toString(i),
-				characteristics, vmAllocationPolicy
-				, storageList, 2// schedulingInterval
-				, 1 * 1024 * 1024// uplinkBandwidth - 1 Mbit
-				, 2 * 1024 * 1024// downlinkBandwidth - 2 Mbits
-				, 2// uplinkLatency
-				, 0.01// mipsPer..
-				, coordX, coordY, i// id
-				, direction, speed, maxServiceValue, vmSize,
-				migrationTechnique);
-			st.setTempSimulation(0);
-			st.setTimeFinishDeliveryVm(-1);
-			st.setTimeFinishHandoff(0);
-			st.setMigrationTechniquePolicy(getMigrationTechniquePolicy());
-			st.setBeforeMigrate(beforeMigration);
-			st.setSensors(sensors);
-			st.setActuators(actuators);
-			st.setTravelPredictionTime(getTravelPredictionTimeForST());
-			st.setMobilityPredictionError(getMobilityPredictionError());
-			smartThing.add(i, st);
-		} catch (Exception e) {
-			throw new SimulationBuildException("Could not create mobile user " + i,
-				e);
-		}
+	public static void addSmartThing(List<MobileDevice> mobileDevices,
+		Coordinate coordinateSpace, int index,
+		List<MobileApplicationProfile> applicationProfiles) {
+		ExampleDeviceFactory.addMobileDevice(mobileDevices, coordinateSpace,
+			index, applicationProfiles);
 	}
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
-		Coordinate coordDevices, int i) {
-		addServerCloudlet(serverCloudlets, coordDevices, i, MapBounds.defaults());
+		Coordinate coordinateSpace, int index) {
+		addServerCloudlet(serverCloudlets, coordinateSpace, index,
+			MapBounds.defaults());
 	}
 
 	static void addServerCloudlet(List<FogDevice> serverCloudlets,
-		Coordinate coordDevices, int i, MapBounds bounds) {
-		int listSizeBefore = serverCloudlets.size();
-		CloudSim.EntityRegistrationCheckpoint checkpoint =
-			CloudSim.checkpointEntityRegistrations();
-		try {
-			buildRandomServerCloudlet(serverCloudlets, coordDevices, i, bounds);
-		}
-		catch (RuntimeException error) {
-			truncateList(serverCloudlets, listSizeBefore);
-			CloudSim.restoreEntityRegistrations(checkpoint);
-			throw error;
-		}
-	}
-
-	private static void buildRandomServerCloudlet(
-		List<FogDevice> serverCloudlets, Coordinate coordDevices, int i,
-		MapBounds bounds) {
-
-		DecisionMigration migrationStrategy;
-		if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
-			migrationStrategy = new LowestLatency(getServerCloudlets(),
-				getApDevices(), getMigrationPointPolicy(), getMigrationTechniquePolicy());
-		} else if (getMigrationStrategyPolicy()
-			== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
-			migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
-				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
-				getMigrationTechniquePolicy());
-		} else { // Policies.LOWEST_DIST_BW_SMART_THING_AP
-			migrationStrategy = new LowestDistBwSmartThingAP(
-				getServerCloudlets(), getApDevices(), getMigrationPointPolicy(),
-				getMigrationTechniquePolicy());
-		}
-
-		BeforeMigration beforeMigration = null;
-		if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
-			beforeMigration = new PrepareCompleteVM();
-		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
-			beforeMigration = new PrepareContainerVM();
-		} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
-			beforeMigration = new PrepareLiveMigration();
-		}
-
-		FogLinearPowerModel powerModel = new FogLinearPowerModel(107.339d, 83.433d);
-
-		// CloudSim Pe (Processing Element) class represents CPU unit, defined in terms of Millions Instructions Per Second (MIPS) rating
-		List<Pe> peList = new ArrayList<>();
-		int mips = 3234;
-		// 3. Create PEs and add these into a list.
-		// need to store Pe id and MIPS Rating - to CloudSim
-		peList.add(new Pe(0, new PeProvisionerOverbooking(mips)));
-
-		int hostId = FogUtils.generateEntityId();
-		long storage = 16 * 1024 * 1024;// host storage
-		int bw = 1000 * 1024 * 1024;
-		int ram = 1024;// host memory (MB)
-		// To the hardware's characteristics (MobileDevice) - to CloudSim
-		PowerHost host = new PowerHost(hostId, new RamProvisionerSimple(ram),
-			new BwProvisionerOverbooking(bw), storage, peList,
-			new StreamOperatorScheduler(peList), powerModel);
-
-		List<Host> hostList = new ArrayList<Host>();
-		hostList.add(host);
-
-		String arch = "x86"; // system architecture
-		String os = "Linux"; // operating system
-		String vmm = "Empty";// Empty
-		double time_zone = 10.0; // time zone this resource located
-		double cost = 3.0; // the cost of using processing in this resource
-		double costPerMem = 0.05; // the cost of using memory in this resource
-		double costPerStorage = 0.001; // the cost of using storage in this resource
-		double costPerBw = 0.0; // the cost of using bw in this resource
-		// we are not adding SAN devices by now
-		LinkedList<Storage> storageList = new LinkedList<Storage>();
-		FogDeviceCharacteristics characteristics = new FogDeviceCharacteristics(
-			arch, os, vmm, host, time_zone, cost, costPerMem, costPerStorage, costPerBw);
-
-		AppModuleAllocationPolicy vmAllocationPolicy = new AppModuleAllocationPolicy(hostList);
-		FogDevice sc = null;
-		Service serviceOffer = new Service();
-		serviceOffer.setType(getRand().nextInt(10000) % MaxAndMin.MAX_SERVICES);
-		if (serviceOffer.getServiceType() == ServiceType.HYBRID
-			|| serviceOffer.getServiceType() == ServiceType.PUBLIC) {
-			serviceOffer.setValue(getRand().nextFloat() * 10);
-		} else {
-			serviceOffer.setValue(0);
-		}
-		try {
-			GridPosition position = new GridGenerator(bounds)
-				.randomPosition(getRand());
-			double maxBandwidth = getMaxBandwidth() * 1024.0 * 1024.0;
-			double minBandwidth = (getMaxBandwidth() - 1) * 1024.0 * 1024.0;
-			double upLinkRandom = minBandwidth
-				+ (maxBandwidth - minBandwidth) * getRand().nextDouble();
-			double downLinkRandom = minBandwidth
-				+ (maxBandwidth - minBandwidth) * getRand().nextDouble();
-
-			sc = new FogDevice("ServerCloudlet" + Integer.toString(i) // name
-			, characteristics, vmAllocationPolicy// vmAllocationPolicy
-				, storageList, 10// schedulingInterval
-				, upLinkRandom// uplinkBandwidth
-				, downLinkRandom// downlinkBandwidth
-				, 4// rand.nextDouble()//uplinkLatency
-				, 0.01// mipsPer..
-				, position.getX(), position.getY(), i, serviceOffer, migrationStrategy,
-				getMigrationTechniquePolicy(), beforeMigration);
-			serverCloudlets.add(i, sc);
-		} catch (Exception e) {
-			throw new SimulationBuildException(
-				"Could not create random server cloudlet " + i, e);
-		}
+		Coordinate coordinateSpace, int index, MapBounds bounds) {
+		ExampleDeviceFactory.addRandomServerCloudlet(serverCloudlets,
+			coordinateSpace, index, bounds);
 	}
 
 	public static void addServerCloudlet(List<FogDevice> serverCloudlets,
-		Coordinate coordDevices) {
-		addServerCloudlet(serverCloudlets, coordDevices, MapBounds.defaults());
+		Coordinate coordinateSpace) {
+		addServerCloudlet(serverCloudlets, coordinateSpace, MapBounds.defaults());
 	}
 
 	static void addServerCloudlet(List<FogDevice> serverCloudlets,
-		Coordinate coordDevices, MapBounds bounds) {
-		int listSizeBefore = serverCloudlets.size();
-		CloudSim.EntityRegistrationCheckpoint checkpoint =
-			CloudSim.checkpointEntityRegistrations();
-		try {
-			buildFixedServerCloudlets(serverCloudlets, coordDevices, bounds);
-		}
-		catch (RuntimeException error) {
-			truncateList(serverCloudlets, listSizeBefore);
-			CloudSim.restoreEntityRegistrations(checkpoint);
-			throw error;
-		}
-	}
-
-	private static void buildFixedServerCloudlets(
-		List<FogDevice> serverCloudlets, Coordinate coordDevices,
-		MapBounds bounds) {
-		int i = 0;
-		GridGenerator grid = new GridGenerator(bounds);
-
-		for (GridPosition position : grid.fixedPositions(
-			GridGenerator.spacingForCoverage(MaxAndMin.CLOUDLET_COVERAGE))) {
-				int coordX = position.getX();
-				int coordY = position.getY();
-				DecisionMigration migrationStrategy;
-				if (getMigrationStrategyPolicy() == MigrationStrategyPolicy.LOWEST_LATENCY) {
-					migrationStrategy = new LowestLatency(getServerCloudlets(),
-						getApDevices(), getMigrationPointPolicy(), getMigrationTechniquePolicy());
-				} else if (getMigrationStrategyPolicy()
-					== MigrationStrategyPolicy.LOWEST_DISTANCE_TO_SERVER_CLOUDLET) {
-					migrationStrategy = new LowestDistBwSmartThingServerCloudlet(
-						getServerCloudlets(), getApDevices(),
-						getMigrationPointPolicy(), getMigrationTechniquePolicy());
-				} else { // LOWEST_DIST_BW_SMART_THING_AP
-					migrationStrategy = new LowestDistBwSmartThingAP(
-						getServerCloudlets(), getApDevices(),
-						getMigrationPointPolicy(), getMigrationTechniquePolicy());
-				}
-
-				BeforeMigration beforeMigration = null;
-				if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.COMPLETE_VM) {
-					beforeMigration = new PrepareCompleteVM();
-				} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.CONTAINER_VM) {
-					beforeMigration = new PrepareContainerVM();
-				} else if (getMigrationTechniquePolicy() == MigrationTechniquePolicy.LIVE_MIGRATION) {
-					beforeMigration = new PrepareLiveMigration();
-				}
-
-				FogLinearPowerModel powerModel = new FogLinearPowerModel(107.339d, 83.433d);
-
-				// CloudSim Pe (Processing Element) class represents CPU unit,
-				// defined in terms of Millions Instructions Per Second (MIPS) rating
-				List<Pe> peList = new ArrayList<>();
-				int mips = 3234;
-				// 3. Create PEs and add these into a list.
-				// need to store Pe id and MIPS Rating - to CloudSim
-				peList.add(new Pe(0, new PeProvisionerOverbooking(mips)));
-
-				int hostId = FogUtils.generateEntityId();
-				long storage = 16 * 1024 * 1024;// host storage
-				int bw = 1000 * 1024 * 1024;
-				int ram = 1024;// host memory (MB)
-				// To the hardware's characteristics (MobileDevice) - to CloudSim
-				PowerHost host = new PowerHost(hostId, new RamProvisionerSimple(ram),
-					new BwProvisionerOverbooking(bw), storage, peList,
-					new StreamOperatorScheduler(peList), powerModel);
-
-				List<Host> hostList = new ArrayList<Host>();
-				hostList.add(host);
-
-				String arch = "x86"; // system architecture
-				String os = "Linux"; // operating system
-				String vmm = "Empty";// Empty
-				double time_zone = 10.0; // time zone this resource located
-				double cost = 3.0; // the cost of using processing in this resource
-				double costPerMem = 0.05; // the cost of using memory in this resource
-				double costPerStorage = 0.001; // the cost of using storage in this resource
-				double costPerBw = 0.0; // the cost of using bw in this resource
-				// we are not adding SAN devices by now
-				LinkedList<Storage> storageList = new LinkedList<Storage>();
-				FogDeviceCharacteristics characteristics = new FogDeviceCharacteristics(
-					arch, os, vmm, host, time_zone, cost, costPerMem, costPerStorage, costPerBw);
-
-				AppModuleAllocationPolicy vmAllocationPolicy = new AppModuleAllocationPolicy(hostList);
-				FogDevice sc = null;
-				Service serviceOffer = new Service();
-				serviceOffer.setType(getRand().nextInt(10000) % MaxAndMin.MAX_SERVICES);
-				if (serviceOffer.getServiceType() == ServiceType.HYBRID
-					|| serviceOffer.getServiceType() == ServiceType.PUBLIC) {
-					serviceOffer.setValue(getRand().nextFloat() * 10);
-				} else {
-					serviceOffer.setValue(0);
-				}
-				try {
-					double maxBandwidth = getMaxBandwidth() * 1024.0 * 1024.0;
-					double minBandwidth = (getMaxBandwidth() - 1) * 1024.0 * 1024.0;
-					double upLinkRandom = minBandwidth + (maxBandwidth - minBandwidth)
-						* getRand().nextDouble();
-					double downLinkRandom = minBandwidth + (maxBandwidth - minBandwidth)
-						* getRand().nextDouble();
-					sc = new FogDevice("ServerCloudlet" + Integer.toString(i) // name
-					, characteristics, vmAllocationPolicy// vmAllocationPolicy
-						, storageList, 10// schedulingInterval
-						, upLinkRandom// uplinkBandwidth
-						, downLinkRandom// downlinkBandwidth
-						, 4//uplinkLatency
-						, 0.01// mipsPer..
-						, coordX, coordY, i, serviceOffer,
-						migrationStrategy, getMigrationTechniquePolicy(),
-						beforeMigration);
-					serverCloudlets.add(i, sc);
-					sc.setParentId(-1);
-				} catch (Exception e) {
-					throw new SimulationBuildException(
-						"Could not create fixed server cloudlet " + i
-							+ " at (" + coordX + ", " + coordY + ")", e);
-				}
-				i++;
-		}
-		LogMobile.debug("AppExample.java", "Total of serverCloudlets: " + i);
-	}
-
-	private static <T> void truncateList(List<T> values, int targetSize) {
-		while (values.size() > targetSize) {
-			values.remove(values.size() - 1);
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private static Application createApplication(String appId, int userId, int myId) {
-
-		// creates an empty application model (empty directed graph)
-		Application application = Application.createApplication(appId, userId);
-		// adding module Client to the application model
-		application.addAppModule("client" + myId, 10);
-		// adding module Concentration Calculator to the application model
-		application.addAppModule("concentration_calculator" + myId, 10);
-		// adding module Connector to the application model
-		application.addAppModule("connector" + myId, 10);
-
-		/*
-		 * Connecting the application modules (vertices) in the application
-		 * model (directed graph) with edges
-		 */
-		if (EEG_TRANSMISSION_TIME == 10)
-			// adding edge from EEG (sensor) to Client module carrying tuples of type EEG
-			application.addAppEdge("EEG" + myId, "client" + myId, 2000, 500,
-				"EEG" + myId, Tuple.UP, AppEdge.SENSOR);
-		else
-			application.addAppEdge("EEG" + myId, "client" + myId, 3000, 500,
-				"EEG" + myId, Tuple.UP, AppEdge.SENSOR);
-
-		// adding edge from Client to Concentration Calculator module carrying
-		// tuples of type _SENSOR
-		application.addAppEdge("client" + myId, "concentration_calculator" + myId,
-			3500, 500, "_SENSOR", Tuple.UP, AppEdge.MODULE);
-		// adding periodic edge (period=1000ms) from Concentration Calculator to
-		//Connector module carrying tuples of type PLAYER_GAME_STATE
-		application.addAppEdge("concentration_calculator" + myId, "connector" + myId,
-			1000, 1000, 1000, "PLAYER_GAME_STATE", Tuple.UP, AppEdge.MODULE);
-
-		// adding edge from Concentration Calculator to Client module carrying 
-		// tuples of type CONCENTRATION
-		application.addAppEdge("concentration_calculator" + myId, "client" + myId,
-			14, 500, "CONCENTRATION", Tuple.DOWN, AppEdge.MODULE);
-		// adding periodic edge (period=1000ms) from Connector to Client module
-		// carrying tuples of type GLOBAL_GAME_STATE
-		application.addAppEdge("connector" + myId, "client" + myId, 1000, 28,
-			1000, "GLOBAL_GAME_STATE", Tuple.DOWN, AppEdge.MODULE);
-		// adding edge from Client module to Display (actuator) carrying tuples
-		// of type SELF_STATE_UPDATE
-		application.addAppEdge("client" + myId, "DISPLAY" + myId, 1000, 500,
-			"SELF_STATE_UPDATE", Tuple.DOWN, AppEdge.ACTUATOR); 
-		// adding edge from Client module to Display (actuator) carrying tuples
-		// of type GLOBAL_STATE_UPDATE
-		application.addAppEdge("client" + myId, "DISPLAY" + myId, 1000, 500,
-			"GLOBAL_STATE_UPDATE", Tuple.DOWN, AppEdge.ACTUATOR);
-
-		/*
-		 * Defining the input-output relationships (represented by selectivity)
-		 * of the application modules.
-		 */
-		// 0.9 tuples of type _SENSOR are emitted by Client module per incoming
-		// tuple of type EEG
-		application.addTupleMapping("client" + myId, "EEG" + myId, "_SENSOR",
-			new FractionalSelectivity(0.9));
-		// 1.0 tuples of type SELF_STATE_UPDATE are emitted by Client module per
-		// incoming tuple of type CONCENTRATION
-		application.addTupleMapping("client" + myId, "CONCENTRATION",
-			"SELF_STATE_UPDATE", new FractionalSelectivity(1.0));
-		 // 1.0 tuples of type CONCENTRATION are emitted by Concentration
-		// Calculator module per incoming tuple of type _SENSOR
-		application.addTupleMapping("concentration_calculator" + myId,
-			"_SENSOR", "CONCENTRATION", new FractionalSelectivity(1.0));
-		// 1.0 tuples of type GLOBAL_STATE_UPDATE are emitted by Client module
-		// per incoming tuple of type GLOBAL_GAME_STATE
-		application.addTupleMapping("client" + myId, "GLOBAL_GAME_STATE",
-			"GLOBAL_STATE_UPDATE", new FractionalSelectivity(1.0)); 
-
-		/*
-		 * Defining application loops to monitor the latency of. Here, we add
-		 * only one loop for monitoring : EEG(sensor) -> Client -> Concentration
-		 * Calculator -> Client -> DISPLAY (actuator)
-		 */
-		final String client = "client" + myId;
-		final String concentration = "concentration_calculator" + myId;
-		final String eeg = "EEG" + myId;
-		final String display = "DISPLAY" + myId;
-		final AppLoop loop1 = new AppLoop(new ArrayList<String>() {
-			{
-				add(eeg);
-				add(client);
-				add(concentration);
-				add(client);
-				add(display);
-			}
-		});
-		List<AppLoop> loops = new ArrayList<AppLoop>() {
-			{
-				add(loop1);
-			}
-		};
-		application.setLoops(loops);
-
-		return application;
+		Coordinate coordinateSpace, MapBounds bounds) {
+		ExampleDeviceFactory.addFixedServerCloudlets(serverCloudlets,
+			coordinateSpace, bounds);
 	}
 
 	public static int getPolicyReplicaVM() {
 		return policyReplicaVM.legacyValue();
 	}
 
-	public static void setPolicyReplicaVM(int policyReplicaVM) {
-		setMigrationTechniquePolicy(
-			MigrationTechniquePolicy.fromLegacy(policyReplicaVM));
+	public static void setPolicyReplicaVM(int policy) {
+		setMigrationTechniquePolicy(MigrationTechniquePolicy.fromLegacy(policy));
 	}
 
 	public static MigrationTechniquePolicy getMigrationTechniquePolicy() {
@@ -709,22 +194,23 @@ public class AppExample {
 	}
 
 	public static void setMigrationTechniquePolicy(
-		MigrationTechniquePolicy policyReplicaVM) {
-		if (policyReplicaVM == null) {
+		MigrationTechniquePolicy policy) {
+		if (policy == null) {
 			throw new IllegalArgumentException("Migration technique cannot be null");
 		}
-		AppExample.policyReplicaVM = policyReplicaVM;
+		policyReplicaVM = policy;
 	}
 
 	public static int getTravelPredictionTimeForST() {
 		return travelPredictionTimeForST;
 	}
 
-	public static void setTravelPredictionTimeForST(int travelPredictionTimeForST) {
-		if (travelPredictionTimeForST < 0) {
-			throw new IllegalArgumentException("Travel prediction time cannot be negative");
+	public static void setTravelPredictionTimeForST(int predictionTime) {
+		if (predictionTime < 0) {
+			throw new IllegalArgumentException(
+				"Travel prediction time cannot be negative");
 		}
-		AppExample.travelPredictionTimeForST = travelPredictionTimeForST;
+		travelPredictionTimeForST = predictionTime;
 	}
 
 	/** @deprecated Use {@link #getTravelPredictionTimeForST()}. */
@@ -735,8 +221,8 @@ public class AppExample {
 
 	/** @deprecated Use {@link #setTravelPredictionTimeForST(int)}. */
 	@Deprecated
-	public static void setTravelPredicTimeForST(int travelPredictionTimeForST) {
-		setTravelPredictionTimeForST(travelPredictionTimeForST);
+	public static void setTravelPredicTimeForST(int predictionTime) {
+		setTravelPredictionTimeForST(predictionTime);
 	}
 
 	public static int getMobilityPredictionError() {
@@ -749,86 +235,84 @@ public class AppExample {
 		return getMobilityPredictionError();
 	}
 
-	public static void setMobilityPredictionError(int mobilityPredictionError) {
-		if (mobilityPredictionError < 0) {
-			throw new IllegalArgumentException("Mobility prediction error cannot be negative");
+	public static void setMobilityPredictionError(int predictionError) {
+		if (predictionError < 0) {
+			throw new IllegalArgumentException(
+				"Mobility prediction error cannot be negative");
 		}
-		AppExample.mobilityPredictionError = mobilityPredictionError;
+		mobilityPredictionError = predictionError;
 	}
 
 	public static double getLatencyBetweenCloudlets() {
 		return latencyBetweenCloudlets;
 	}
 
-	public static void setLatencyBetweenCloudlets(double latencyBetweenCloudlets) {
-		if (!Double.isFinite(latencyBetweenCloudlets)
-			|| latencyBetweenCloudlets <= 0.0) {
+	public static void setLatencyBetweenCloudlets(double latency) {
+		if (!Double.isFinite(latency) || latency <= 0.0) {
 			throw new IllegalArgumentException(
 				"Cloudlet latency must be finite and positive");
 		}
-		AppExample.latencyBetweenCloudlets = latencyBetweenCloudlets;
+		latencyBetweenCloudlets = latency;
 	}
 
 	public static int getStepPolicy() {
 		return stepPolicy;
 	}
 
-	public static void setStepPolicy(int stepPolicy) {
-		AppExample.stepPolicy = stepPolicy;
+	public static void setStepPolicy(int policy) {
+		stepPolicy = policy;
 	}
 
 	public static List<MobileDevice> getSmartThings() {
 		return Collections.unmodifiableList(smartThings);
 	}
 
-	public static void setSmartThings(List<MobileDevice> smartThings) {
-		AppExample.smartThings = requireList(smartThings, "Mobile device list");
+	public static void setSmartThings(List<MobileDevice> mobileDevices) {
+		smartThings = requireList(mobileDevices, "Mobile device list");
 	}
 
 	public static List<FogDevice> getServerCloudlets() {
 		return Collections.unmodifiableList(serverCloudlets);
 	}
 
-	public static void setServerCloudlets(List<FogDevice> serverCloudlets) {
-		AppExample.serverCloudlets = requireList(serverCloudlets,
-			"Server cloudlet list");
+	public static void setServerCloudlets(List<FogDevice> cloudlets) {
+		serverCloudlets = requireList(cloudlets, "Server cloudlet list");
 	}
 
 	public static List<ApDevice> getApDevices() {
 		return Collections.unmodifiableList(apDevices);
 	}
 
-	public static void setApDevices(List<ApDevice> apDevices) {
-		AppExample.apDevices = requireList(apDevices, "Access point list");
+	public static void setApDevices(List<ApDevice> accessPoints) {
+		apDevices = requireList(accessPoints, "Access point list");
 	}
 
 	public static int getMigPointPolicy() {
 		return migPointPolicy.legacyValue();
 	}
 
-	public static void setMigPointPolicy(int migPointPolicy) {
-		setMigrationPointPolicy(MigrationPointPolicy.fromLegacy(migPointPolicy));
+	public static void setMigPointPolicy(int policy) {
+		setMigrationPointPolicy(MigrationPointPolicy.fromLegacy(policy));
 	}
 
 	public static MigrationPointPolicy getMigrationPointPolicy() {
 		return migPointPolicy;
 	}
 
-	public static void setMigrationPointPolicy(
-		MigrationPointPolicy migPointPolicy) {
-		if (migPointPolicy == null) {
-			throw new IllegalArgumentException("Migration point policy cannot be null");
+	public static void setMigrationPointPolicy(MigrationPointPolicy policy) {
+		if (policy == null) {
+			throw new IllegalArgumentException(
+				"Migration point policy cannot be null");
 		}
-		AppExample.migPointPolicy = migPointPolicy;
+		migPointPolicy = policy;
 	}
 
 	public static int getMigStrategyPolicy() {
 		return migStrategyPolicy.legacyValue();
 	}
 
-	public static void setMigStrategyPolicy(int migStrategyPolicy) {
-		setMigrationStrategyPolicy(
-			MigrationStrategyPolicy.fromLegacy(migStrategyPolicy));
+	public static void setMigStrategyPolicy(int policy) {
+		setMigrationStrategyPolicy(MigrationStrategyPolicy.fromLegacy(policy));
 	}
 
 	public static MigrationStrategyPolicy getMigrationStrategyPolicy() {
@@ -836,19 +320,20 @@ public class AppExample {
 	}
 
 	public static void setMigrationStrategyPolicy(
-		MigrationStrategyPolicy migStrategyPolicy) {
-		if (migStrategyPolicy == null) {
-			throw new IllegalArgumentException("Migration strategy cannot be null");
+		MigrationStrategyPolicy policy) {
+		if (policy == null) {
+			throw new IllegalArgumentException(
+				"Migration strategy cannot be null");
 		}
-		AppExample.migStrategyPolicy = migStrategyPolicy;
+		migStrategyPolicy = policy;
 	}
 
 	public static int getPositionApPolicy() {
 		return positionApPolicy.legacyValue();
 	}
 
-	public static void setPositionApPolicy(int positionApPolicy) {
-		setAccessPointLocationPolicy(LocationPolicy.fromLegacy(positionApPolicy));
+	public static void setPositionApPolicy(int policy) {
+		setAccessPointLocationPolicy(LocationPolicy.fromLegacy(policy));
 	}
 
 	public static LocationPolicy getAccessPointLocationPolicy() {
@@ -857,42 +342,42 @@ public class AppExample {
 
 	public static void setAccessPointLocationPolicy(LocationPolicy policy) {
 		if (policy == null) {
-			throw new IllegalArgumentException("Access-point location policy cannot be null");
+			throw new IllegalArgumentException(
+				"Access-point location policy cannot be null");
 		}
-		AppExample.positionApPolicy = policy;
+		positionApPolicy = policy;
 	}
 
 	public static Coordinate getCoordDevices() {
 		return coordDevices;
 	}
 
-	public static void setCoordDevices(Coordinate coordDevices) {
-		AppExample.coordDevices = coordDevices;
+	public static void setCoordDevices(Coordinate coordinateSpace) {
+		coordDevices = coordinateSpace;
 	}
 
 	public static List<FogBroker> getBrokerList() {
 		return Collections.unmodifiableList(brokerList);
 	}
 
-	public static void setBrokerList(List<FogBroker> brokerList) {
-		AppExample.brokerList = requireList(brokerList, "Broker list");
+	public static void setBrokerList(List<FogBroker> brokers) {
+		brokerList = requireList(brokers, "Broker list");
 	}
 
 	public static List<String> getAppIdList() {
 		return Collections.unmodifiableList(appIdList);
 	}
 
-	public static void setAppIdList(List<String> appIdList) {
-		AppExample.appIdList = requireList(appIdList, "Application ID list");
+	public static void setAppIdList(List<String> applicationIds) {
+		appIdList = requireList(applicationIds, "Application ID list");
 	}
 
 	public static List<Application> getApplicationList() {
 		return Collections.unmodifiableList(applicationList);
 	}
 
-	public static void setApplicationList(List<Application> applicationList) {
-		AppExample.applicationList = requireList(applicationList,
-			"Application list");
+	public static void setApplicationList(List<Application> applications) {
+		applicationList = requireList(applications, "Application list");
 	}
 
 	private static <T> List<T> requireList(List<T> values, String description) {
@@ -906,19 +391,19 @@ public class AppExample {
 		return seed;
 	}
 
-	public static void setSeed(int seed) {
-		if (seed <= 0) {
+	public static void setSeed(int value) {
+		if (value <= 0) {
 			throw new IllegalArgumentException("Seed must be positive");
 		}
-		AppExample.seed = seed;
+		seed = value;
 	}
 
 	public static int getPositionScPolicy() {
 		return positionScPolicy.legacyValue();
 	}
 
-	public static void setPositionScPolicy(int positionScPolicy) {
-		setServerCloudletLocationPolicy(LocationPolicy.fromLegacy(positionScPolicy));
+	public static void setPositionScPolicy(int policy) {
+		setServerCloudletLocationPolicy(LocationPolicy.fromLegacy(policy));
 	}
 
 	public static LocationPolicy getServerCloudletLocationPolicy() {
@@ -927,95 +412,99 @@ public class AppExample {
 
 	public static void setServerCloudletLocationPolicy(LocationPolicy policy) {
 		if (policy == null) {
-			throw new IllegalArgumentException("Server-cloudlet location policy cannot be null");
+			throw new IllegalArgumentException(
+				"Server-cloudlet location policy cannot be null");
 		}
-		AppExample.positionScPolicy = policy;
+		positionScPolicy = policy;
 	}
 
 	public static int getMaxSmartThings() {
 		return maxSmartThings;
 	}
 
-	public static void setMaxSmartThings(int maxSmartThings) {
-		if (maxSmartThings <= 0) {
+	public static void setMaxSmartThings(int maximumUsers) {
+		if (maximumUsers <= 0) {
 			throw new IllegalArgumentException("Number of users must be positive");
 		}
-		AppExample.maxSmartThings = maxSmartThings;
+		maxSmartThings = maximumUsers;
 	}
 
 	public static Path getMobilityDirectory() {
 		return mobilityDirectory;
 	}
 
-	public static void setMobilityDirectory(Path mobilityDirectory) {
-		if (mobilityDirectory == null) {
-			throw new IllegalArgumentException("Mobility directory cannot be null");
+	public static void setMobilityDirectory(Path directory) {
+		if (directory == null) {
+			throw new IllegalArgumentException(
+				"Mobility directory cannot be null");
 		}
-		AppExample.mobilityDirectory = mobilityDirectory;
+		mobilityDirectory = directory;
 	}
 
 	public static Path getMobilityOrderManifest() {
 		return mobilityOrderManifest;
 	}
 
-	public static void setMobilityOrderManifest(Path mobilityOrderManifest) {
-		if (mobilityOrderManifest == null) {
+	public static void setMobilityOrderManifest(Path manifest) {
+		if (manifest == null) {
 			throw new IllegalArgumentException(
 				"Mobility order manifest cannot be null");
 		}
-		AppExample.mobilityOrderManifest = mobilityOrderManifest;
+		mobilityOrderManifest = manifest;
 	}
 
 	public static Path getOutputDirectory() {
 		return outputDirectory;
 	}
 
-	public static void setOutputDirectory(Path outputDirectory) {
-		if (outputDirectory == null) {
-			throw new IllegalArgumentException("Run output directory cannot be null");
+	public static void setOutputDirectory(Path directory) {
+		if (directory == null) {
+			throw new IllegalArgumentException(
+				"Run output directory cannot be null");
 		}
-		AppExample.outputDirectory = outputDirectory;
+		outputDirectory = directory;
 	}
 
 	public static RunOutputMode getOutputMode() {
 		return outputMode;
 	}
 
-	public static void setOutputMode(RunOutputMode outputMode) {
-		if (outputMode == null) {
+	public static void setOutputMode(RunOutputMode mode) {
+		if (mode == null) {
 			throw new IllegalArgumentException("Run output mode cannot be null");
 		}
-		AppExample.outputMode = outputMode;
+		outputMode = mode;
 	}
 
 	public static Random getRand() {
 		return rand;
 	}
 
-	public static void setRand(Random rand) {
-		if (rand == null) {
-			throw new IllegalArgumentException("Random generator cannot be null");
+	public static void setRand(Random random) {
+		if (random == null) {
+			throw new IllegalArgumentException(
+				"Random generator cannot be null");
 		}
-		AppExample.rand = rand;
+		rand = random;
 	}
 
 	public static int getMaxBandwidth() {
 		return maxBandwidth;
 	}
 
-	public static void setMaxBandwidth(int maxBandwidth) {
-		if (maxBandwidth <= 0) {
-			throw new IllegalArgumentException("Network bandwidth must be positive");
+	public static void setMaxBandwidth(int bandwidth) {
+		if (bandwidth <= 0) {
+			throw new IllegalArgumentException(
+				"Network bandwidth must be positive");
 		}
-		AppExample.maxBandwidth = maxBandwidth;
+		maxBandwidth = bandwidth;
 	}
 
 	public static boolean isMigrationAble() {
 		return migrationAble;
 	}
 
-	public static void setMigrationAble(boolean migrationAble) {
-		AppExample.migrationAble = migrationAble;
+	public static void setMigrationAble(boolean enabled) {
+		migrationAble = enabled;
 	}
-
 }

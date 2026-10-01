@@ -108,13 +108,16 @@ public final class TupleRoutingService {
 			return null;
 		}
 		for (MobileDevice mobileDevice : mobileDevices) {
-			if (!(mobileDevice.getVmMobileDevice() instanceof AppModule)) {
-				continue;
-			}
-			AppModule module = (AppModule) mobileDevice.getVmMobileDevice();
-			if (tuple.getAppId().equals(module.getAppId())
-				&& tuple.getDestModuleName().equals(module.getName())) {
-				return mobileDevice.getVmLocalServerCloudlet();
+			for (org.cloudbus.cloudsim.Vm virtualMachine
+				: mobileDevice.getVmMobileDevices()) {
+				if (!(virtualMachine instanceof AppModule)) {
+					continue;
+				}
+				AppModule module = (AppModule) virtualMachine;
+				if (tuple.getAppId().equals(module.getAppId())
+					&& tuple.getDestModuleName().equals(module.getName())) {
+					return mobileDevice.getVmLocalServerCloudlet();
+				}
 			}
 		}
 		return null;
@@ -135,10 +138,14 @@ public final class TupleRoutingService {
 				continue;
 			}
 			MobileDevice mobileDevice = (MobileDevice) entity;
-			if (mobileDevice.getVmMobileDevice() instanceof AppModule
-				&& tuple.getAppId().equals(
-					((AppModule) mobileDevice.getVmMobileDevice()).getAppId())) {
-				matches.add(childId);
+			for (org.cloudbus.cloudsim.Vm virtualMachine
+				: mobileDevice.getVmMobileDevices()) {
+				if (virtualMachine instanceof AppModule
+					&& tuple.getAppId().equals(
+						((AppModule) virtualMachine).getAppId())) {
+					matches.add(childId);
+					break;
+				}
 			}
 		}
 		return Collections.unmodifiableList(matches);

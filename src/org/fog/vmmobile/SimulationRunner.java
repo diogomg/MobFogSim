@@ -1,6 +1,8 @@
 package org.fog.vmmobile;
 
 import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.cloudbus.cloudsim.Log;
@@ -20,13 +22,31 @@ public final class SimulationRunner {
 
 	public SimulationRunResult run(SimulationConfig configuration)
 		throws Exception {
+		return run(configuration, AppExample.APPLICATION_PROFILES);
+	}
+
+	public SimulationRunResult run(SimulationConfig configuration,
+		int applicationsPerUser) throws Exception {
+		return run(configuration,
+			MobileApplicationProfile.standardProfiles(applicationsPerUser));
+	}
+
+	public SimulationRunResult run(SimulationConfig configuration,
+		List<MobileApplicationProfile> applicationProfiles) throws Exception {
 		if (configuration == null) {
 			throw new IllegalArgumentException(
 				"Simulation configuration cannot be null");
 		}
+		if (applicationProfiles == null || applicationProfiles.isEmpty()
+			|| applicationProfiles.contains(null)) {
+			throw new IllegalArgumentException(
+				"At least one non-null application profile is required");
+		}
+		List<MobileApplicationProfile> profiles = Collections.unmodifiableList(
+			new ArrayList<MobileApplicationProfile>(applicationProfiles));
 		try (SimulationContext context = SimulationContext.open(configuration)) {
 			try {
-				execute(context, configuration);
+				execute(context, configuration, profiles);
 				context.publishResults();
 				return context.result();
 			}
@@ -43,6 +63,17 @@ public final class SimulationRunner {
 
 	void execute(SimulationContext context, SimulationConfig configuration)
 		throws Exception {
+		execute(context, configuration, AppExample.APPLICATION_PROFILES);
+	}
+
+	void execute(SimulationContext context, SimulationConfig configuration,
+		int applicationsPerUser) throws Exception {
+		execute(context, configuration,
+			MobileApplicationProfile.standardProfiles(applicationsPerUser));
+	}
+
+	void execute(SimulationContext context, SimulationConfig configuration,
+		List<MobileApplicationProfile> applicationProfiles) throws Exception {
 		Log.disable();
 		SimulationEventSink events = context.getEventSink();
 		events.summary(configuration::toSummaryLine);
@@ -52,7 +83,7 @@ public final class SimulationRunner {
 			new ExampleSimulationConfiguration(configuration,
 				context.random("application"));
 		example.activateLegacyCompatibility();
-		new ExampleTopologyPlan(context, example).build();
+		new ExampleTopologyPlan(context, example, applicationProfiles).build();
 
 		SimulationTopology topology = context.getTopology();
 		List<FogDevice> serverCloudlets = topology.serverCloudletRegistry();
