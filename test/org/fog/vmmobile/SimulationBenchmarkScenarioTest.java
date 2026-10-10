@@ -217,6 +217,17 @@ public class SimulationBenchmarkScenarioTest {
 			SimulationBenchmark.formatSliceBandwidth(bandwidth));
 	}
 
+	@Test
+	public void sliceCountsUseStableCompactBenchmarkEncoding() {
+		Map<Integer, Long> counts = new LinkedHashMap<Integer, Long>();
+		counts.put(2, 3L);
+		counts.put(0, 5L);
+		counts.put(1, 0L);
+
+		assertEquals("0=5,1=0,2=3",
+			SimulationBenchmark.formatSliceCounts(counts));
+	}
+
 	private static Set<String> parameterValues(List<String> names, int index,
 		String requiredUserCount) {
 		Set<String> found = new HashSet<String>();

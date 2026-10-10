@@ -28,7 +28,7 @@ import org.fog.placement.SimulationMetricsSnapshot.Statistics;
  */
 public final class SimulationSemanticSnapshot {
 
-	public static final int SCHEMA_VERSION = 6;
+	public static final int SCHEMA_VERSION = 8;
 	private static final int DECIMAL_PLACES = 9;
 
 	private final Map<String, String> values;
@@ -117,10 +117,59 @@ public final class SimulationSemanticSnapshot {
 			metrics.getMigrationTransferredBytes());
 		put(values, "network.migration_transfer_duration_ms",
 			metrics.getMigrationTransferDurationMilliseconds());
+		addLongMap(values, "network_slicing.wireless_tuple_transfers_by_slice",
+			metrics.getWirelessTupleTransfersBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_transferred_bytes_by_slice",
+			metrics.getTupleTransferredBytesBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_queue_duration_ms_by_slice",
+			metrics.getTupleQueueDurationBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_transfer_duration_ms_by_slice",
+			metrics.getTupleTransferDurationBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_propagation_duration_ms_by_slice",
+			metrics.getTuplePropagationDurationBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_network_delay_total_ms_by_slice",
+			metrics.getTupleNetworkDelayTotalBySlice());
+		addDoubleMap(values,
+			"network_slicing.wireless_tuple_network_delay_average_ms_by_slice",
+			metrics.getTupleNetworkDelayAverageBySlice());
+		addLongMap(values, "network_slicing.migration_transfers_by_slice",
+			metrics.getMigrationTransfersBySlice());
+		addDoubleMap(values,
+			"network_slicing.migration_transferred_bytes_by_slice",
+			metrics.getMigrationTransferredBytesBySlice());
+		addDoubleMap(values,
+			"network_slicing.migration_transfer_duration_ms_by_slice",
+			metrics.getMigrationTransferDurationBySlice());
+		addDoubleMap(values, "network_slicing.migration_usage_byte_ms_by_slice",
+			metrics.getMigrationUsageBySlice());
+		addDoubleMap(values,
+			"network_slicing.migration_usage_mean_byte_ms_by_slice",
+			metrics.getMigrationUsageMeanBySlice());
+		addLongMap(values, "network_slicing.migrations_by_slice",
+			metrics.getCompletedMigrationsBySlice());
+		addDoubleMap(values,
+			"network_slicing.migration_time_average_ms_by_slice",
+			metrics.getMigrationTimeAverageBySlice());
+		addDoubleMap(values,
+			"network_slicing.migration_time_maximum_ms_by_slice",
+			metrics.getMigrationTimeMaximumBySlice());
+		addDoubleMap(values, "network_slicing.downtime_average_ms_by_slice",
+			metrics.getDowntimeAverageBySlice());
+		addDoubleMap(values, "network_slicing.downtime_maximum_ms_by_slice",
+			metrics.getDowntimeMaximumBySlice());
 		put(values, "network_slicing.reconfigurations",
 			metrics.getSliceReconfigurationCount());
+		addLongMap(values, "network_slicing.reconfigurations_by_slice",
+			metrics.getSliceReconfigurationCountBySlice());
 		put(values, "network_slicing.outage_seconds",
 			metrics.getSliceOutageSeconds());
+		addDoubleMap(values, "network_slicing.outage_seconds_by_slice",
+			metrics.getSliceOutageSecondsBySlice());
 		addDoubleMap(values,
 			"network_slicing.received_bandwidth_bits_per_second_sum",
 			metrics.getReceivedBandwidthBySlice());
@@ -218,6 +267,17 @@ public final class SimulationSemanticSnapshot {
 			String item = prefix + "." + index(index++);
 			put(values, item + ".key", entry.getKey().intValue());
 			put(values, item + ".value", entry.getValue().doubleValue());
+		}
+	}
+
+	private static void addLongMap(Map<String, String> values, String prefix,
+		Map<Integer, Long> source) {
+		put(values, prefix + ".count", source.size());
+		int index = 0;
+		for (Map.Entry<Integer, Long> entry : source.entrySet()) {
+			String item = prefix + "." + index(index++);
+			put(values, item + ".key", entry.getKey().intValue());
+			put(values, item + ".value", entry.getValue().longValue());
 		}
 	}
 

@@ -158,6 +158,9 @@ public final class NetworkSlicing {
 		private Scope scope;
 		private double reallocationDelayMillis;
 		private final SliceReconfigurationMetrics reconfigurationMetrics;
+		private final SliceTrafficMetrics trafficMetrics;
+		private final SliceBandwidthTimeSeries transportBandwidthTimeSeries;
+		private final SliceBandwidthTimeSeries wirelessBandwidthTimeSeries;
 		private final Map<Integer, MigrationTransferMetadata> migrationTransfers =
 			new HashMap<Integer, MigrationTransferMetadata>();
 		private MigrationTransferScheduler migrationScheduler;
@@ -183,12 +186,19 @@ public final class NetworkSlicing {
 				.toMilliseconds();
 			reconfigurationMetrics =
 				new SliceReconfigurationMetrics(percentages.length);
+			trafficMetrics = new SliceTrafficMetrics(percentages.length);
+			transportBandwidthTimeSeries =
+				new SliceBandwidthTimeSeries(percentages.length);
+			wirelessBandwidthTimeSeries =
+				new SliceBandwidthTimeSeries(percentages.length);
 			migrationScheduler = new MigrationTransferScheduler(percentages,
 				scope.coversTransportNetwork(), mode.allowsDynamicBorrowing(),
-				reallocationDelayMillis, reconfigurationMetrics);
+				reallocationDelayMillis, reconfigurationMetrics,
+				transportBandwidthTimeSeries);
 			wirelessScheduler = new AccessPointTransferScheduler(percentages,
 				scope.coversWirelessNetwork(), mode.allowsDynamicBorrowing(),
-				reallocationDelayMillis, reconfigurationMetrics);
+				reallocationDelayMillis, reconfigurationMetrics,
+				wirelessBandwidthTimeSeries);
 		}
 
 		private static RuntimeState defaults() {
@@ -196,6 +206,33 @@ public final class NetworkSlicing {
 				new double[] { 100.0 }, Scope.END_TO_END, Mode.DYNAMIC,
 				SimulationDuration.ofSeconds(
 					DEFAULT_REALLOCATION_DELAY_SECONDS)));
+		}
+	}
+
+	/** Effective sliced capacity at one whole simulation second. */
+	public static final class SliceBandwidthSample {
+		private final long elapsedSecond;
+		private final double[] wirelessBandwidthBySlice;
+		private final double[] transportBandwidthBySlice;
+
+		private SliceBandwidthSample(long elapsedSecond,
+			double[] wirelessBandwidthBySlice,
+			double[] transportBandwidthBySlice) {
+			this.elapsedSecond = elapsedSecond;
+			this.wirelessBandwidthBySlice = wirelessBandwidthBySlice.clone();
+			this.transportBandwidthBySlice = transportBandwidthBySlice.clone();
+		}
+
+		public long getElapsedSecond() {
+			return elapsedSecond;
+		}
+
+		public double[] getWirelessBandwidthBySlice() {
+			return wirelessBandwidthBySlice.clone();
+		}
+
+		public double[] getTransportBandwidthBySlice() {
+			return transportBandwidthBySlice.clone();
 		}
 	}
 
@@ -688,9 +725,25 @@ public final class NetworkSlicing {
 		return state().reconfigurationMetrics.getReconfigurationCount();
 	}
 
+	/** Per-slice participation counts across dynamic reconfigurations. */
+	public static synchronized long[] getReconfigurationCountBySlice() {
+		return state().reconfigurationMetrics.getReconfigurationCountBySlice();
+	}
+
 	/** Aggregate configured outage across all reconfigurations, in seconds. */
 	public static synchronized double getSliceOutageSeconds() {
 		return getReconfigurationCount() * getReallocationDelaySeconds();
+	}
+
+	/** Per-slice reconfiguration participation multiplied by the delay. */
+	public static synchronized double[] getSliceOutageSecondsBySlice() {
+		long[] counts = getReconfigurationCountBySlice();
+		double[] outageSeconds = new double[counts.length];
+		double delaySeconds = getReallocationDelaySeconds();
+		for (int sliceId = 0; sliceId < counts.length; sliceId++) {
+			outageSeconds[sliceId] = counts[sliceId] * delaySeconds;
+		}
+		return outageSeconds;
 	}
 
 	/**
@@ -699,6 +752,112 @@ public final class NetworkSlicing {
 	 */
 	public static synchronized double[] getReceivedBandwidthBySlice() {
 		return state().reconfigurationMetrics.getReceivedBandwidthBySlice();
+	}
+
+	/**
+	 * Effective per-slice allocations sampled at whole simulation seconds.
+	 * Each network class is aggregated across its concurrently active sliced
+	 * resources.
+	 */
+	public static synchronized List<SliceBandwidthSample> getBandwidthTimeSeries(
+		double simulationEndMillis) {
+		List<SliceBandwidthTimeSeries.Sample> wireless =
+			state().wirelessBandwidthTimeSeries.snapshot(simulationEndMillis);
+		List<SliceBandwidthTimeSeries.Sample> transport =
+			state().transportBandwidthTimeSeries.snapshot(simulationEndMillis);
+		if (wireless.size() != transport.size()) {
+			throw new IllegalStateException(
+				"Slice bandwidth sample clocks are inconsistent");
+		}
+		List<SliceBandwidthSample> result =
+			new java.util.ArrayList<SliceBandwidthSample>(wireless.size());
+		for (int index = 0; index < wireless.size(); index++) {
+			SliceBandwidthTimeSeries.Sample wirelessSample = wireless.get(index);
+			SliceBandwidthTimeSeries.Sample transportSample = transport.get(index);
+			if (wirelessSample.getElapsedSecond()
+				!= transportSample.getElapsedSecond()) {
+				throw new IllegalStateException(
+					"Slice bandwidth sample clocks are inconsistent");
+			}
+			result.add(new SliceBandwidthSample(
+				wirelessSample.getElapsedSecond(),
+				wirelessSample.getBandwidthBySlice(),
+				transportSample.getBandwidthBySlice()));
+		}
+		return java.util.Collections.unmodifiableList(result);
+	}
+
+	/** Number of completed wireless tuple hops in each slice. */
+	public static synchronized long[] getWirelessTupleTransfersBySlice() {
+		return state().trafficMetrics.getWirelessTupleTransferCount();
+	}
+
+	public static synchronized double[] getTupleTransferredBytesBySlice() {
+		return state().trafficMetrics.getTupleTransferredBytes();
+	}
+
+	public static synchronized double[] getTupleQueueDurationBySlice() {
+		return state().trafficMetrics.getTupleQueueDurationMilliseconds();
+	}
+
+	public static synchronized double[] getTupleTransferDurationBySlice() {
+		return state().trafficMetrics.getTupleTransferDurationMilliseconds();
+	}
+
+	public static synchronized double[] getTuplePropagationDurationBySlice() {
+		return state().trafficMetrics.getTuplePropagationDurationMilliseconds();
+	}
+
+	/** Total queue, serialization/contention, and propagation delay by slice. */
+	public static synchronized double[] getTupleNetworkDelayTotalBySlice() {
+		return state().trafficMetrics.getTupleNetworkDelayTotalMilliseconds();
+	}
+
+	/** Mean completed wireless tuple-hop delay by slice. */
+	public static synchronized double[] getTupleNetworkDelayAverageBySlice() {
+		return state().trafficMetrics.getTupleNetworkDelayAverageMilliseconds();
+	}
+
+	/** Number of completed VM byte-transfer phases in each slice. */
+	public static synchronized long[] getMigrationTransfersBySlice() {
+		return state().trafficMetrics.getMigrationTransferCount();
+	}
+
+	public static synchronized double[] getMigrationTransferredBytesBySlice() {
+		return state().trafficMetrics.getMigrationTransferredBytes();
+	}
+
+	public static synchronized double[] getMigrationTransferDurationBySlice() {
+		return state().trafficMetrics.getMigrationTransferDurationMilliseconds();
+	}
+
+	public static synchronized double[] getMigrationUsageBySlice() {
+		return state().trafficMetrics.getMigrationUsageByteMilliseconds();
+	}
+
+	public static synchronized double[] getMigrationUsageMeanBySlice() {
+		return state().trafficMetrics.getMigrationUsageMeanByteMilliseconds();
+	}
+
+	/** Number of fully installed VM migrations in each slice. */
+	public static synchronized long[] getCompletedMigrationsBySlice() {
+		return state().trafficMetrics.getCompletedMigrationCount();
+	}
+
+	public static synchronized double[] getMigrationTimeAverageBySlice() {
+		return state().trafficMetrics.getMigrationTimeAverageMilliseconds();
+	}
+
+	public static synchronized double[] getMigrationTimeMaximumBySlice() {
+		return state().trafficMetrics.getMigrationTimeMaximumMilliseconds();
+	}
+
+	public static synchronized double[] getDowntimeAverageBySlice() {
+		return state().trafficMetrics.getDowntimeAverageMilliseconds();
+	}
+
+	public static synchronized double[] getDowntimeMaximumBySlice() {
+		return state().trafficMetrics.getDowntimeMaximumMilliseconds();
 	}
 
 	public static boolean coversTransportNetwork() {
@@ -911,14 +1070,17 @@ public final class NetworkSlicing {
 			return null;
 		}
 		state().activeWirelessTransfers.remove(metadata.mobileDirectionKey);
-		NetworkUsageMonitor.recordCompletedTuple(new NetworkTransferUsage(
+		NetworkTransferUsage usage = new NetworkTransferUsage(
 			DataSize.ofBytes(metadata.tuple.getCloudletFileSize()),
 			SimulationDuration.ofMilliseconds(
 				metadata.getQueueDurationMillis()),
 			SimulationDuration.ofMilliseconds(
 				schedulerCompletion.getDurationMillis()),
 			SimulationDuration.ofMilliseconds(
-				metadata.propagationDelay.toMilliseconds())));
+				metadata.propagationDelay.toMilliseconds()));
+		NetworkUsageMonitor.recordCompletedTuple(usage);
+		state().trafficMetrics.recordWirelessTuple(
+			metadata.mobileDevice.getNetworkSliceId(), usage);
 		WirelessTransferResult result = new WirelessTransferResult(metadata,
 			schedulerCompletion);
 
@@ -1047,8 +1209,25 @@ public final class NetworkSlicing {
 		NetworkUsageMonitor.recordCompletedMigration(
 			transferResult.getTransferredData(),
 			transferResult.getDataTransferDuration());
+		state().trafficMetrics.recordMigrationTransfer(
+			transferResult.getMobileDevice().getNetworkSliceId(),
+			transferResult.getTransferredData(),
+			transferResult.getDataTransferDuration());
 		applySchedules(result.getSchedules());
 		return transferResult;
+	}
+
+	/** Records one VM installation after all migration phases complete. */
+	public static synchronized void recordCompletedMigration(
+		MobileDevice mobileDevice, double migrationTimeMillis,
+		double downtimeMillis) {
+		if (mobileDevice == null) {
+			throw new IllegalArgumentException(
+				"Completed migration requires a mobile device");
+		}
+		state().trafficMetrics.recordCompletedMigration(
+			validateSliceId(mobileDevice.getNetworkSliceId()),
+			migrationTimeMillis, downtimeMillis);
 	}
 
 	/** Returns whether a mobile device currently owns a timed transfer. */
@@ -1300,17 +1479,22 @@ public final class NetworkSlicing {
 		}
 		state().migrationTransfers.clear();
 		state().reconfigurationMetrics.reset(state().percentages.length);
+		state().trafficMetrics.reset(state().percentages.length);
+		state().transportBandwidthTimeSeries.reset(state().percentages.length);
+		state().wirelessBandwidthTimeSeries.reset(state().percentages.length);
 		state().migrationScheduler = new MigrationTransferScheduler(
 			state().percentages, coversTransportNetwork(),
 			state().mode.allowsDynamicBorrowing(),
-			state().reallocationDelayMillis, state().reconfigurationMetrics);
+			state().reallocationDelayMillis, state().reconfigurationMetrics,
+			state().transportBandwidthTimeSeries);
 		state().wirelessTransfers.clear();
 		state().activeWirelessTransfers.clear();
 		state().queuedWirelessTransfers.clear();
 		state().wirelessScheduler = new AccessPointTransferScheduler(
 			state().percentages, coversWirelessNetwork(),
 			state().mode.allowsDynamicBorrowing(),
-			state().reallocationDelayMillis, state().reconfigurationMetrics);
+			state().reallocationDelayMillis, state().reconfigurationMetrics,
+			state().wirelessBandwidthTimeSeries);
 		state().nextWirelessTransferId = 1L;
 		state().queuedWirelessTransferCount = 0L;
 		state().maximumQueuedWirelessTransferCount = 0L;

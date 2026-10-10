@@ -182,6 +182,41 @@ public final class SimulationResultsService {
 		line("Mean bytes in flight over simulation horizon (bytes) = "
 			+ metrics.perSimulationMillisecond(
 				metrics.getTotalUsageByteMilliseconds()));
+		for (Entry<Integer, Long> slice
+			: metrics.getWirelessTupleTransfersBySlice().entrySet()) {
+			Integer sliceId = slice.getKey();
+			line("Slice " + sliceId + " completed wireless tuple hops = "
+				+ slice.getValue());
+			line("Slice " + sliceId + " wireless tuple bytes = "
+				+ metrics.getTupleTransferredBytesBySlice().get(sliceId));
+			line("Slice " + sliceId + " wireless tuple queue duration (ms) = "
+				+ metrics.getTupleQueueDurationBySlice().get(sliceId));
+			line("Slice " + sliceId + " wireless tuple transfer duration (ms) = "
+				+ metrics.getTupleTransferDurationBySlice().get(sliceId));
+			line("Slice " + sliceId
+				+ " wireless tuple propagation duration (ms) = "
+				+ metrics.getTuplePropagationDurationBySlice().get(sliceId));
+			line("Slice " + sliceId
+				+ " wireless tuple network delay total (ms) = "
+				+ metrics.getTupleNetworkDelayTotalBySlice().get(sliceId));
+			line("Slice " + sliceId
+				+ " wireless tuple network delay average (ms) = "
+				+ metrics.getTupleNetworkDelayAverageBySlice().get(sliceId));
+		}
+		for (Entry<Integer, Long> slice
+			: metrics.getMigrationTransfersBySlice().entrySet()) {
+			Integer sliceId = slice.getKey();
+			line("Slice " + sliceId + " completed migration transfers = "
+				+ slice.getValue());
+			line("Slice " + sliceId + " migration bytes = "
+				+ metrics.getMigrationTransferredBytesBySlice().get(sliceId));
+			line("Slice " + sliceId + " migration transfer duration (ms) = "
+				+ metrics.getMigrationTransferDurationBySlice().get(sliceId));
+			line("Slice " + sliceId + " migration usage (byte-ms) = "
+				+ metrics.getMigrationUsageBySlice().get(sliceId));
+			line("Slice " + sliceId + " mean migration usage (byte-ms) = "
+				+ metrics.getMigrationUsageMeanBySlice().get(sliceId));
+		}
 	}
 
 	private void writeSliceReconfiguration(SimulationMetricsSnapshot metrics) {
@@ -192,6 +227,13 @@ public final class SimulationResultsService {
 			+ metrics.getSliceReconfigurationCount());
 		line("Slice outage (seconds): "
 			+ metrics.getSliceOutageSeconds());
+		for (Entry<Integer, Long> slice
+			: metrics.getSliceReconfigurationCountBySlice().entrySet()) {
+			line("Slice " + slice.getKey() + " reconfigurations: "
+				+ slice.getValue());
+			line("Slice " + slice.getKey() + " outage (seconds): "
+				+ metrics.getSliceOutageSecondsBySlice().get(slice.getKey()));
+		}
 		for (Entry<Integer, Double> slice
 			: metrics.getReceivedBandwidthBySlice().entrySet()) {
 			line("Slice " + slice.getKey()
@@ -215,6 +257,20 @@ public final class SimulationResultsService {
 		line("==============MIGRATIONS=================");
 		line("=========================================");
 		line("Total of migrations: " + statistics.getTotalMigrations());
+		for (Entry<Integer, Long> slice
+			: metrics.getCompletedMigrationsBySlice().entrySet()) {
+			Integer sliceId = slice.getKey();
+			line("Slice " + sliceId + " completed migrations: "
+				+ slice.getValue());
+			line("Slice " + sliceId + " average migration time (ms): "
+				+ metrics.getMigrationTimeAverageBySlice().get(sliceId));
+			line("Slice " + sliceId + " maximum migration time (ms): "
+				+ metrics.getMigrationTimeMaximumBySlice().get(sliceId));
+			line("Slice " + sliceId + " average downtime (ms): "
+				+ metrics.getDowntimeAverageBySlice().get(sliceId));
+			line("Slice " + sliceId + " maximum downtime (ms): "
+				+ metrics.getDowntimeMaximumBySlice().get(sliceId));
+		}
 		line("Total of handoff: " + statistics.getTotalHandoffs());
 		writeObservation("without connection", statistics.getWithoutConnection());
 		writeObservation("without Vm", statistics.getWithoutVm());

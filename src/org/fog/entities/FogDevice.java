@@ -1024,20 +1024,23 @@ public class FogDevice extends PowerDatacenter {
 				MobileEvents.UNLOCKED_MIGRATION,
 				migrationCoordinator.event(smartThing, MigrationEvent.Stage.UNLOCK));
 			MyStatistics.getInstance().countMigration();
+			double migrationTime = smartThing.getMigTime();
 			MyStatistics.getInstance().observeMigrationTime(smartThing.getMyId(),
-				smartThing.getMigTime());
+				migrationTime);
+			double migrationDowntime = 0.0;
 			if (smartThing.getMigrationTechnique() instanceof CompleteVM) {
-				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
-					smartThing.getMigTime());
+				migrationDowntime = migrationTime;
 			}
 			else if (smartThing.getMigrationTechnique() instanceof ContainerVM) {
-				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
-					smartThing.getMigTime());
+				migrationDowntime = migrationTime;
 			}
 			else if (smartThing.getMigrationTechnique() instanceof LiveMigration) {
-				MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
-					smartThing.getMigTime() * 0.15);
+				migrationDowntime = migrationTime * 0.15;
 			}
+			MyStatistics.getInstance().observeDowntime(smartThing.getMyId(),
+				migrationDowntime);
+			NetworkSlicing.recordCompletedMigration(smartThing, migrationTime,
+				migrationDowntime);
 			smartThing.setTimeFinishDeliveryVm(CloudSim.clock());
 		}
 		else {

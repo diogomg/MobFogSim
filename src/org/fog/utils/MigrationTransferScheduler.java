@@ -147,6 +147,7 @@ final class MigrationTransferScheduler {
 	private final boolean dynamicBorrowing;
 	private final double reallocationDelayMillis;
 	private final SliceReconfigurationMetrics reconfigurationMetrics;
+	private final SliceBandwidthTimeSeries bandwidthTimeSeries;
 	private final Map<TransportLinkId, LinkState> links =
 		new HashMap<TransportLinkId, LinkState>();
 	private final Map<Integer, Transfer> transfers = new HashMap<Integer, Transfer>();
@@ -161,25 +162,36 @@ final class MigrationTransferScheduler {
 		boolean dynamicBorrowing, double reallocationDelayMillis) {
 		this(percentages, slicingEnabled, dynamicBorrowing,
 			reallocationDelayMillis,
-			new SliceReconfigurationMetrics(percentages.length));
+			new SliceReconfigurationMetrics(percentages.length),
+			new SliceBandwidthTimeSeries(percentages.length));
 	}
 
 	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
 		boolean dynamicBorrowing, double reallocationDelayMillis,
 		SliceReconfigurationMetrics reconfigurationMetrics) {
+		this(percentages, slicingEnabled, dynamicBorrowing,
+			reallocationDelayMillis, reconfigurationMetrics,
+			new SliceBandwidthTimeSeries(percentages.length));
+	}
+
+	MigrationTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis,
+		SliceReconfigurationMetrics reconfigurationMetrics,
+		SliceBandwidthTimeSeries bandwidthTimeSeries) {
 		if (!isFinite(reallocationDelayMillis) || reallocationDelayMillis < 0.0) {
 			throw new IllegalArgumentException(
 				"Reallocation delay must be finite and non-negative");
 		}
-		if (reconfigurationMetrics == null) {
+		if (reconfigurationMetrics == null || bandwidthTimeSeries == null) {
 			throw new IllegalArgumentException(
-				"Slice reconfiguration metrics cannot be null");
+				"Slice metrics cannot be null");
 		}
 		this.percentages = percentages.clone();
 		this.slicingEnabled = slicingEnabled;
 		this.dynamicBorrowing = dynamicBorrowing;
 		this.reallocationDelayMillis = reallocationDelayMillis;
 		this.reconfigurationMetrics = reconfigurationMetrics;
+		this.bandwidthTimeSeries = bandwidthTimeSeries;
 	}
 
 	List<Schedule> start(int transferId, TransportLinkId link, int sliceId,
@@ -274,14 +286,21 @@ final class MigrationTransferScheduler {
 			Set<Integer> newActiveSlices = activeSlices(activeBySlice);
 			boolean reconfiguration = isSliceReconfiguration(
 				linkState.activeSlices, newActiveSlices);
+			Set<Integer> affectedSlices = affectedSlices(
+				linkState.activeSlices, newActiveSlices);
 			if (reconfiguration && !linkState.transfers.isEmpty()) {
 				linkState.allocationStartsAt = now + reallocationDelayMillis;
 			}
 			linkState.activeSlices.clear();
 			linkState.activeSlices.addAll(newActiveSlices);
 			if (linkState.transfers.isEmpty()) {
+				if (slicingEnabled) {
+					bandwidthTimeSeries.update(link, now,
+						new double[percentages.length]);
+				}
 				if (reconfiguration) {
-					reconfigurationMetrics.record(new double[percentages.length]);
+					reconfigurationMetrics.record(affectedSlices,
+						new double[percentages.length]);
 				}
 				links.remove(link);
 				continue;
@@ -310,11 +329,21 @@ final class MigrationTransferScheduler {
 				schedules.add(new Schedule(transfer.id, transfer.generation, delay,
 					transfer.bandwidth, now - transfer.startedAt));
 			}
+			if (slicingEnabled) {
+				bandwidthTimeSeries.update(link, now, receivedBandwidth);
+			}
 			if (reconfiguration) {
-				reconfigurationMetrics.record(receivedBandwidth);
+				reconfigurationMetrics.record(affectedSlices, receivedBandwidth);
 			}
 		}
 		return schedules;
+	}
+
+	private static Set<Integer> affectedSlices(Set<Integer> previous,
+		Set<Integer> current) {
+		Set<Integer> affected = new LinkedHashSet<Integer>(previous);
+		affected.addAll(current);
+		return affected;
 	}
 
 	private double allocatedBandwidth(double physicalBandwidth,

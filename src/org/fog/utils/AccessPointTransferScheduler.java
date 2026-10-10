@@ -128,6 +128,7 @@ final class AccessPointTransferScheduler {
 	private final boolean dynamicBorrowing;
 	private final double reallocationDelayMillis;
 	private final SliceReconfigurationMetrics reconfigurationMetrics;
+	private final SliceBandwidthTimeSeries bandwidthTimeSeries;
 	private final Map<String, ChannelState> channels =
 		new LinkedHashMap<String, ChannelState>();
 	private final Map<Long, Transfer> transfers =
@@ -143,26 +144,37 @@ final class AccessPointTransferScheduler {
 		boolean dynamicBorrowing, double reallocationDelayMillis) {
 		this(percentages, slicingEnabled, dynamicBorrowing,
 			reallocationDelayMillis,
-			new SliceReconfigurationMetrics(percentages.length));
+			new SliceReconfigurationMetrics(percentages.length),
+			new SliceBandwidthTimeSeries(percentages.length));
 	}
 
 	AccessPointTransferScheduler(double[] percentages, boolean slicingEnabled,
 		boolean dynamicBorrowing, double reallocationDelayMillis,
 		SliceReconfigurationMetrics reconfigurationMetrics) {
+		this(percentages, slicingEnabled, dynamicBorrowing,
+			reallocationDelayMillis, reconfigurationMetrics,
+			new SliceBandwidthTimeSeries(percentages.length));
+	}
+
+	AccessPointTransferScheduler(double[] percentages, boolean slicingEnabled,
+		boolean dynamicBorrowing, double reallocationDelayMillis,
+		SliceReconfigurationMetrics reconfigurationMetrics,
+		SliceBandwidthTimeSeries bandwidthTimeSeries) {
 		if (!Double.isFinite(reallocationDelayMillis)
 			|| reallocationDelayMillis < 0.0) {
 			throw new IllegalArgumentException(
 				"Reallocation delay must be finite and non-negative");
 		}
-		if (reconfigurationMetrics == null) {
+		if (reconfigurationMetrics == null || bandwidthTimeSeries == null) {
 			throw new IllegalArgumentException(
-				"Slice reconfiguration metrics cannot be null");
+				"Slice metrics cannot be null");
 		}
 		this.percentages = percentages.clone();
 		this.slicingEnabled = slicingEnabled;
 		this.dynamicBorrowing = dynamicBorrowing;
 		this.reallocationDelayMillis = reallocationDelayMillis;
 		this.reconfigurationMetrics = reconfigurationMetrics;
+		this.bandwidthTimeSeries = bandwidthTimeSeries;
 	}
 
 	List<Schedule> start(long transferId, String channel, int sliceId,
@@ -284,14 +296,21 @@ final class AccessPointTransferScheduler {
 		Set<Integer> newActiveSlices = activeSlices(channelState);
 		boolean reconfiguration = isSliceReconfiguration(
 			channelState.activeSlices, newActiveSlices);
+		Set<Integer> affectedSlices = affectedSlices(
+			channelState.activeSlices, newActiveSlices);
 		if (reconfiguration && !channelState.transfers.isEmpty()) {
 			channelState.allocationStartsAt = now + reallocationDelayMillis;
 		}
 		channelState.activeSlices.clear();
 		channelState.activeSlices.addAll(newActiveSlices);
 		if (channelState.transfers.isEmpty()) {
+			if (slicingEnabled) {
+				bandwidthTimeSeries.update(channel, now,
+					new double[percentages.length]);
+			}
 			if (reconfiguration) {
-				reconfigurationMetrics.record(new double[percentages.length]);
+				reconfigurationMetrics.record(affectedSlices,
+					new double[percentages.length]);
 			}
 			channels.remove(channel);
 			return schedules;
@@ -319,10 +338,20 @@ final class AccessPointTransferScheduler {
 			schedules.add(new Schedule(transfer.id, transfer.generation,
 				delay, transfer.bandwidth));
 		}
+		if (slicingEnabled) {
+			bandwidthTimeSeries.update(channel, now, receivedBandwidth);
+		}
 		if (reconfiguration) {
-			reconfigurationMetrics.record(receivedBandwidth);
+			reconfigurationMetrics.record(affectedSlices, receivedBandwidth);
 		}
 		return schedules;
+	}
+
+	private static Set<Integer> affectedSlices(Set<Integer> previous,
+		Set<Integer> current) {
+		Set<Integer> affected = new LinkedHashSet<Integer>(previous);
+		affected.addAll(current);
+		return affected;
 	}
 
 	private static Set<Integer> activeSlices(ChannelState channelState) {

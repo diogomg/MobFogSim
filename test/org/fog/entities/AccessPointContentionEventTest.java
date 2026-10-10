@@ -119,6 +119,10 @@ public class AccessPointContentionEventTest {
 			NetworkUsageMonitor.getTupleUsageByteMilliseconds(), DELTA);
 		assertEquals(4L, NetworkSlicing.getReconfigurationCount());
 		assertEquals(0.0, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		assertEquals(3L,
+			NetworkSlicing.getReconfigurationCountBySlice()[0]);
+		assertEquals(3L,
+			NetworkSlicing.getReconfigurationCountBySlice()[1]);
 		double[] receivedBandwidth =
 			NetworkSlicing.getReceivedBandwidthBySlice();
 		assertEquals(13600.0, receivedBandwidth[0], DELTA);
@@ -142,8 +146,33 @@ public class AccessPointContentionEventTest {
 		assertEquals(2010.0, server.arrivalTime(1), DELTA);
 		assertEquals(2L, NetworkSlicing.getReconfigurationCount());
 		assertEquals(2.0, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		assertEquals(2L,
+			NetworkSlicing.getReconfigurationCountBySlice()[0]);
+		assertEquals(0L,
+			NetworkSlicing.getReconfigurationCountBySlice()[1]);
+		assertEquals(2.0,
+			NetworkSlicing.getSliceOutageSecondsBySlice()[0], DELTA);
+		assertEquals(0.0,
+			NetworkSlicing.getSliceOutageSecondsBySlice()[1], DELTA);
+		assertEquals(1L,
+			NetworkSlicing.getWirelessTupleTransfersBySlice()[0]);
+		assertEquals(0L,
+			NetworkSlicing.getWirelessTupleTransfersBySlice()[1]);
+		assertEquals(2010.0,
+			NetworkSlicing.getTupleNetworkDelayTotalBySlice()[0], DELTA);
+		assertEquals(2010.0,
+			NetworkSlicing.getTupleNetworkDelayAverageBySlice()[0], DELTA);
 		assertEquals(BANDWIDTH_BITS_PER_SECOND,
 			NetworkSlicing.getReceivedBandwidthBySlice()[0], DELTA);
+		List<NetworkSlicing.SliceBandwidthSample> samples =
+			NetworkSlicing.getBandwidthTimeSeries(2500.0);
+		assertEquals(3, samples.size());
+		assertEquals(BANDWIDTH_BITS_PER_SECOND,
+			samples.get(0).getWirelessBandwidthBySlice()[0], DELTA);
+		assertEquals(BANDWIDTH_BITS_PER_SECOND,
+			samples.get(1).getWirelessBandwidthBySlice()[0], DELTA);
+		assertEquals(0.0,
+			samples.get(2).getWirelessBandwidthBySlice()[0], DELTA);
 	}
 
 	@Test

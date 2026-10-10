@@ -68,7 +68,23 @@ public class SimulationMetricsSnapshotTest {
 			snapshot.getStatistics().getLostTuplePercentage(), DELTA);
 		assertEquals(0L, snapshot.getSliceReconfigurationCount());
 		assertEquals(0.0, snapshot.getSliceOutageSeconds(), DELTA);
+		assertEquals(Long.valueOf(0L),
+			snapshot.getSliceReconfigurationCountBySlice().get(0));
+		assertEquals(0.0,
+			snapshot.getSliceOutageSecondsBySlice().get(0), DELTA);
 		assertEquals(0.0, snapshot.getReceivedBandwidthBySlice().get(0), DELTA);
+		assertEquals(Long.valueOf(0L),
+			snapshot.getWirelessTupleTransfersBySlice().get(0));
+		assertEquals(0.0,
+			snapshot.getTupleNetworkDelayAverageBySlice().get(0), DELTA);
+		assertEquals(Long.valueOf(0L),
+			snapshot.getMigrationTransfersBySlice().get(0));
+		assertEquals(Long.valueOf(0L),
+			snapshot.getCompletedMigrationsBySlice().get(0));
+		assertEquals(0.0,
+			snapshot.getMigrationTimeAverageBySlice().get(0), DELTA);
+		assertEquals(0.0,
+			snapshot.getDowntimeAverageBySlice().get(0), DELTA);
 		assertEquals(NetworkSlicing.DEFAULT_MAXIMUM_WIRELESS_QUEUE_SIZE,
 			snapshot.getMaximumWirelessQueueSize());
 		assertEquals(0L, snapshot.getQueuedWirelessTransferCount());

@@ -26,6 +26,10 @@ Theory* (2020).
 
 An example application is provided in
 [`src/org/fog/vmmobile/AppExample.java`](src/org/fog/vmmobile/AppExample.java).
+The separate
+[`src/org/fog/vmmobile/AppExampleMultipleApplications.java`](src/org/fog/vmmobile/AppExampleMultipleApplications.java)
+entry point extends the example so that each user can own multiple independent
+application/VM pairs.
 
 ### Running from the command line
 
@@ -121,6 +125,41 @@ preceding parameters must be supplied when setting a later one.
 | 15 | Reallocation delay | Optional finite non-negative number (`>= 0`), in seconds; default `2` | Sets how long traffic pauses while a dynamic slice allocation is applied. The delay affects all active transfers sharing the reallocated transport link and/or wireless AP direction, according to parameter 11. It is ignored in static mode and on network portions outside the slice scope. |
 | 16 | VM destination type | Optional integer: `0` edge servers only, `1` end devices only, `2` hybrid; default `2` | Restricts the eligible nodes that may host a migrated VM. Hybrid mode considers both server cloudlets and connected mobile devices with sufficient resources. |
 | 17 | Output mode | Optional, case-insensitive text: `summary`, `full`, or `none`; default `summary` | Controls whether a run writes bounded aggregate results, aggregate results plus detailed event records, or no result files. |
+
+Applications are configured in source code rather than through command-line
+parameters. `AppExample.APPLICATION_PROFILES` contains the original single
+workload. `AppExampleMultipleApplications.APPLICATION_PROFILES` contains two
+independent hardcoded profiles:
+
+- `latency-critical` is the traditional EEG/VR application. It retains the
+  original `MyApp_vr_game<user>` namespace and uses small tuples, lower
+  sensor/actuator access latency, more VM MIPS, and the lowest-latency
+  migration strategy.
+- `traffic-intensive` is the additional `_app1` application. It emits every
+  2 ms, uses 8 KiB uplink and 4 KiB downlink tuples, and reserves more VM
+  bandwidth.
+
+The original EEG/VR workload is latency-oriented rather than traffic-intensive:
+its tuples are small, while its interactive EEG-to-processing-to-display loop
+benefits directly from low response time.
+
+Add, remove, reorder, or tune `MobileApplicationProfile.builder(...)` entries
+in the example class and recompile. The application count is derived from the
+profile list. Builder settings cover sensor frequency, tuple CPU and network
+sizes, periodic update intervals, selectivity, peripheral latency, VM MIPS,
+RAM, bandwidth and image size, plus latency and live-migration requirements.
+
+The simulator currently migrates all VMs belonging to a user as one atomic
+bundle. Consequently, QoS requirements are combined: any latency-critical app
+selects lowest-latency placement for the bundle. Both example classes accept
+the same 10–17 command-line parameters shown above.
+
+For example, run the two-profile multiple-application entry point with the
+normal arguments:
+
+```text
+java -Xmx10g -Dfile.encoding=UTF-8 -classpath 'build/classes:jars/*:jars/commons-math3-3.5/*' org.fog.vmmobile.AppExampleMultipleApplications 1 290538 0 0 1 61 0 11 0 0 2 100 100 1 2 2 summary
+```
 
 ### Example
 
@@ -234,30 +273,54 @@ directory. The selected mode determines which files are written:
 
 | Mode | Output behaviour |
 | --- | --- |
-| `summary` | Default. Publishes `report/summary.csv` and `report/manifest.json`, containing the versioned configuration, units, end-of-run averages, totals, network usage, slice, queue, migration, and tuple-loss statistics. |
+| `summary` | Default. Publishes `report/summary.csv`, `report/slice-bandwidth-timeseries.csv`, and `report/manifest.json`, containing the versioned configuration, units, end-of-run metrics, and periodic slice allocations. |
 | `full` | Publishes the same report after closing all detailed latency, route, mobility, handoff, migration, module-creation, loop-delay, lost-tuple, and console-trace records. |
 | `none` | Disables every output file. The configured run root may still be created, but it remains empty. |
 
 The report is first written and verified in a temporary directory, then
 published with one same-filesystem rename. A successful manifest records the
 report schema version, status, complete configuration, seed, units, output
-mode, summary checksum, and detailed-output status. If a run fails, its report
-contains only a `manifest.json` with `status` set to `failed`; full-mode event
+mode, summary and slice-bandwidth checksums, and detailed-output status. If a
+run fails, its report contains only a `manifest.json` with `status` set to
+`failed`; full-mode event
 output is explicitly marked `incomplete` and no success summary is published.
 
 ### Slice reconfiguration metrics
 
-Dynamic slicing with multiple configured slices reports three additional
-metrics. **Number of slice reconfigurations** counts active-slice set changes
-on sliced transport links and wireless AP directions, including transitions to
-or from an entirely idle resource. **Slice outage** is that count multiplied by the configured
-reallocation delay and is reported in seconds. **Received bandwidth** is
-reported for each slice as the sum of its actual allocations at every
-reconfiguration, in bits per second; transport and wireless allocations are
-combined when end-to-end scope is selected.
+Dynamic slicing with multiple configured slices reports global and per-slice
+reconfiguration metrics. **Number of slice reconfigurations** counts
+active-slice set changes on sliced transport links and wireless AP directions,
+including transitions to or from an entirely idle resource. The
+`slice_reconfigurations_by_slice` map counts each event for every affected
+slice: the union of slices active before and after the change. **Slice outage**
+is each count multiplied by the configured reallocation delay and is reported
+globally and in the `slice_outage_s_by_slice` map. Because one event can affect
+several slices, the per-slice counts and outages need not sum to their global
+values. **Received bandwidth** is reported for each slice as the sum of its
+actual allocations at every reconfiguration, in bits per second; transport and
+wireless allocations are combined when end-to-end scope is selected.
 
-Summary and full output modes write these values as named columns in
-`report/summary.csv`, including the per-slice received-bandwidth map.
+Summary and full output modes write the global values and all three per-slice
+maps as named columns in `report/summary.csv`.
+
+They also write `report/slice-bandwidth-timeseries.csv`. It contains one row
+per slice at simulation seconds 0, 1, 2, and so on through the last whole
+second. Each row reports the effective wireless, transport, and combined
+allocation in bits per second, aggregated across the concurrently active
+sliced AP directions and directed transport links. Network portions outside
+the configured slice scope contribute zero. An idle slice remains present with
+zero allocation. These are scheduler allocations after fixed-share or dynamic
+borrowing rules are applied; they are not the configured percentage itself.
+
+Completed wireless tuple hops also report per-slice transfer counts, bytes,
+queue duration, serialization/contention duration, propagation duration, and
+total and average network delay. The delay is the sum of those three phases for
+the completed wireless hop; it is not end-to-end application-loop latency.
+
+Migration metrics are attributed to the mobile device's slice. Per-slice
+output includes completed byte-transfer phases, transferred bytes, transfer
+duration, total and mean byte-millisecond usage, completed VM installations,
+average and maximum migration time, and average and maximum downtime.
 Wireless queues are hard-limited to 10,000 waiting tuples per user and AP
 direction. The summary also records the fixed limit, final aggregate queue
 size, maximum aggregate queue size, maximum single-direction depth, and number

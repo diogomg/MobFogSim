@@ -80,6 +80,34 @@ public final class SimulationMetricsSnapshot {
 		}
 	}
 
+	/** Effective network-slice allocation at one whole simulation second. */
+	public static final class SliceBandwidthSample {
+		private final long elapsedSecond;
+		private final Map<Integer, Double> wirelessBandwidthBySlice;
+		private final Map<Integer, Double> transportBandwidthBySlice;
+
+		private SliceBandwidthSample(
+			NetworkSlicing.SliceBandwidthSample sample) {
+			this.elapsedSecond = sample.getElapsedSecond();
+			this.wirelessBandwidthBySlice = indexedDoubleMap(
+				sample.getWirelessBandwidthBySlice());
+			this.transportBandwidthBySlice = indexedDoubleMap(
+				sample.getTransportBandwidthBySlice());
+		}
+
+		public long getElapsedSecond() {
+			return elapsedSecond;
+		}
+
+		public Map<Integer, Double> getWirelessBandwidthBySlice() {
+			return wirelessBandwidthBySlice;
+		}
+
+		public Map<Integer, Double> getTransportBandwidthBySlice() {
+			return transportBandwidthBySlice;
+		}
+	}
+
 	/** Latest and maximum per-user observations plus their all-sample mean. */
 	public static final class MetricSeries {
 		private final Map<Integer, Double> latestByUserId;
@@ -231,9 +259,29 @@ public final class SimulationMetricsSnapshot {
 	private final double averageMaximumLoopDelay;
 	private final Map<String, Double> tupleCpuTimes;
 	private final NetworkUsageMonitor.Snapshot networkUsage;
+	private final Map<Integer, Long> wirelessTupleTransfersBySlice;
+	private final Map<Integer, Double> tupleTransferredBytesBySlice;
+	private final Map<Integer, Double> tupleQueueDurationBySlice;
+	private final Map<Integer, Double> tupleTransferDurationBySlice;
+	private final Map<Integer, Double> tuplePropagationDurationBySlice;
+	private final Map<Integer, Double> tupleNetworkDelayTotalBySlice;
+	private final Map<Integer, Double> tupleNetworkDelayAverageBySlice;
+	private final Map<Integer, Long> migrationTransfersBySlice;
+	private final Map<Integer, Double> migrationTransferredBytesBySlice;
+	private final Map<Integer, Double> migrationTransferDurationBySlice;
+	private final Map<Integer, Double> migrationUsageBySlice;
+	private final Map<Integer, Double> migrationUsageMeanBySlice;
+	private final Map<Integer, Long> completedMigrationsBySlice;
+	private final Map<Integer, Double> migrationTimeAverageBySlice;
+	private final Map<Integer, Double> migrationTimeMaximumBySlice;
+	private final Map<Integer, Double> downtimeAverageBySlice;
+	private final Map<Integer, Double> downtimeMaximumBySlice;
 	private final long sliceReconfigurationCount;
+	private final Map<Integer, Long> sliceReconfigurationCountBySlice;
 	private final double sliceOutageSeconds;
+	private final Map<Integer, Double> sliceOutageSecondsBySlice;
 	private final Map<Integer, Double> receivedBandwidthBySlice;
+	private final List<SliceBandwidthSample> sliceBandwidthTimeSeries;
 	private final int maximumWirelessQueueSize;
 	private final long queuedWirelessTransferCount;
 	private final long maximumQueuedWirelessTransferCount;
@@ -264,11 +312,51 @@ public final class SimulationMetricsSnapshot {
 		this.tupleCpuTimes = immutableStringDoubleMap(
 			timeKeeper.getTupleTypeToAverageCpuTime());
 		this.networkUsage = NetworkUsageMonitor.snapshot();
+		this.wirelessTupleTransfersBySlice = indexedLongMap(
+			NetworkSlicing.getWirelessTupleTransfersBySlice());
+		this.tupleTransferredBytesBySlice = indexedDoubleMap(
+			NetworkSlicing.getTupleTransferredBytesBySlice());
+		this.tupleQueueDurationBySlice = indexedDoubleMap(
+			NetworkSlicing.getTupleQueueDurationBySlice());
+		this.tupleTransferDurationBySlice = indexedDoubleMap(
+			NetworkSlicing.getTupleTransferDurationBySlice());
+		this.tuplePropagationDurationBySlice = indexedDoubleMap(
+			NetworkSlicing.getTuplePropagationDurationBySlice());
+		this.tupleNetworkDelayTotalBySlice = indexedDoubleMap(
+			NetworkSlicing.getTupleNetworkDelayTotalBySlice());
+		this.tupleNetworkDelayAverageBySlice = indexedDoubleMap(
+			NetworkSlicing.getTupleNetworkDelayAverageBySlice());
+		this.migrationTransfersBySlice = indexedLongMap(
+			NetworkSlicing.getMigrationTransfersBySlice());
+		this.migrationTransferredBytesBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationTransferredBytesBySlice());
+		this.migrationTransferDurationBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationTransferDurationBySlice());
+		this.migrationUsageBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationUsageBySlice());
+		this.migrationUsageMeanBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationUsageMeanBySlice());
+		this.completedMigrationsBySlice = indexedLongMap(
+			NetworkSlicing.getCompletedMigrationsBySlice());
+		this.migrationTimeAverageBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationTimeAverageBySlice());
+		this.migrationTimeMaximumBySlice = indexedDoubleMap(
+			NetworkSlicing.getMigrationTimeMaximumBySlice());
+		this.downtimeAverageBySlice = indexedDoubleMap(
+			NetworkSlicing.getDowntimeAverageBySlice());
+		this.downtimeMaximumBySlice = indexedDoubleMap(
+			NetworkSlicing.getDowntimeMaximumBySlice());
 		this.sliceReconfigurationCount = NetworkSlicing.getReconfigurationCount();
+		this.sliceReconfigurationCountBySlice = indexedLongMap(
+			NetworkSlicing.getReconfigurationCountBySlice());
 		this.sliceOutageSeconds = finiteOrZero(
 			NetworkSlicing.getSliceOutageSeconds());
+		this.sliceOutageSecondsBySlice = indexedDoubleMap(
+			NetworkSlicing.getSliceOutageSecondsBySlice());
 		this.receivedBandwidthBySlice = indexedDoubleMap(
 			NetworkSlicing.getReceivedBandwidthBySlice());
+		this.sliceBandwidthTimeSeries = bandwidthTimeSeries(
+			NetworkSlicing.getBandwidthTimeSeries(this.simulationTimeMillis));
 		this.maximumWirelessQueueSize =
 			NetworkSlicing.getMaximumWirelessQueueSize();
 		this.queuedWirelessTransferCount =
@@ -429,12 +517,88 @@ public final class SimulationMetricsSnapshot {
 			: getMigrationUsageByteMilliseconds() / statistics.totalMigrations;
 	}
 
+	public Map<Integer, Long> getWirelessTupleTransfersBySlice() {
+		return wirelessTupleTransfersBySlice;
+	}
+
+	public Map<Integer, Double> getTupleTransferredBytesBySlice() {
+		return tupleTransferredBytesBySlice;
+	}
+
+	public Map<Integer, Double> getTupleQueueDurationBySlice() {
+		return tupleQueueDurationBySlice;
+	}
+
+	public Map<Integer, Double> getTupleTransferDurationBySlice() {
+		return tupleTransferDurationBySlice;
+	}
+
+	public Map<Integer, Double> getTuplePropagationDurationBySlice() {
+		return tuplePropagationDurationBySlice;
+	}
+
+	public Map<Integer, Double> getTupleNetworkDelayTotalBySlice() {
+		return tupleNetworkDelayTotalBySlice;
+	}
+
+	public Map<Integer, Double> getTupleNetworkDelayAverageBySlice() {
+		return tupleNetworkDelayAverageBySlice;
+	}
+
+	public Map<Integer, Long> getMigrationTransfersBySlice() {
+		return migrationTransfersBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationTransferredBytesBySlice() {
+		return migrationTransferredBytesBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationTransferDurationBySlice() {
+		return migrationTransferDurationBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationUsageBySlice() {
+		return migrationUsageBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationUsageMeanBySlice() {
+		return migrationUsageMeanBySlice;
+	}
+
+	public Map<Integer, Long> getCompletedMigrationsBySlice() {
+		return completedMigrationsBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationTimeAverageBySlice() {
+		return migrationTimeAverageBySlice;
+	}
+
+	public Map<Integer, Double> getMigrationTimeMaximumBySlice() {
+		return migrationTimeMaximumBySlice;
+	}
+
+	public Map<Integer, Double> getDowntimeAverageBySlice() {
+		return downtimeAverageBySlice;
+	}
+
+	public Map<Integer, Double> getDowntimeMaximumBySlice() {
+		return downtimeMaximumBySlice;
+	}
+
 	public long getSliceReconfigurationCount() {
 		return sliceReconfigurationCount;
 	}
 
+	public Map<Integer, Long> getSliceReconfigurationCountBySlice() {
+		return sliceReconfigurationCountBySlice;
+	}
+
 	public double getSliceOutageSeconds() {
 		return sliceOutageSeconds;
+	}
+
+	public Map<Integer, Double> getSliceOutageSecondsBySlice() {
+		return sliceOutageSecondsBySlice;
 	}
 
 	public int getMaximumWirelessQueueSize() {
@@ -460,6 +624,11 @@ public final class SimulationMetricsSnapshot {
 	/** Per-slice cumulative allocation sampled at reconfigurations, in bit/s. */
 	public Map<Integer, Double> getReceivedBandwidthBySlice() {
 		return receivedBandwidthBySlice;
+	}
+
+	/** One sample per whole second from zero through the simulation end. */
+	public List<SliceBandwidthSample> getSliceBandwidthTimeSeries() {
+		return sliceBandwidthTimeSeries;
 	}
 
 	public double perSimulationMillisecond(double value) {
@@ -534,6 +703,24 @@ public final class SimulationMetricsSnapshot {
 			indexed.put(index, source[index]);
 		}
 		return Collections.unmodifiableMap(indexed);
+	}
+
+	private static Map<Integer, Long> indexedLongMap(long[] source) {
+		Map<Integer, Long> indexed = new TreeMap<Integer, Long>();
+		for (int index = 0; index < source.length; index++) {
+			indexed.put(index, source[index]);
+		}
+		return Collections.unmodifiableMap(indexed);
+	}
+
+	private static List<SliceBandwidthSample> bandwidthTimeSeries(
+		List<NetworkSlicing.SliceBandwidthSample> source) {
+		List<SliceBandwidthSample> result =
+			new ArrayList<SliceBandwidthSample>(source.size());
+		for (NetworkSlicing.SliceBandwidthSample sample : source) {
+			result.add(new SliceBandwidthSample(sample));
+		}
+		return Collections.unmodifiableList(result);
 	}
 
 	private static Map<String, Double> immutableStringDoubleMap(

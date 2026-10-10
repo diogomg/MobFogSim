@@ -28,7 +28,7 @@ import org.cloudbus.cloudsim.core.SimulationEventCounters;
 
 /** Process-isolated entry point used by the reproducible performance baseline. */
 public final class SimulationBenchmark {
-	static final int BENCHMARK_SCHEMA_VERSION = 11;
+	static final int BENCHMARK_SCHEMA_VERSION = 13;
 
 	private SimulationBenchmark() {
 	}
@@ -126,11 +126,67 @@ public final class SimulationBenchmark {
 		values.put("run_output_bytes", Long.toString(output.byteCount));
 		values.put("slice_reconfigurations",
 			Long.toString(result.getMetrics().getSliceReconfigurationCount()));
+		values.put("slice_reconfigurations_by_slice",
+			formatSliceCounts(
+				result.getMetrics().getSliceReconfigurationCountBySlice()));
 		values.put("slice_outage_seconds",
 			Double.toString(result.getMetrics().getSliceOutageSeconds()));
+		values.put("slice_outage_seconds_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getSliceOutageSecondsBySlice()));
 		values.put("slice_received_bandwidth_bits_per_second_sum",
 			formatSliceBandwidth(
 				result.getMetrics().getReceivedBandwidthBySlice()));
+		values.put("wireless_tuple_transfers_by_slice",
+			formatSliceCounts(
+				result.getMetrics().getWirelessTupleTransfersBySlice()));
+		values.put("wireless_tuple_transferred_bytes_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTupleTransferredBytesBySlice()));
+		values.put("wireless_tuple_queue_duration_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTupleQueueDurationBySlice()));
+		values.put("wireless_tuple_transfer_duration_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTupleTransferDurationBySlice()));
+		values.put("wireless_tuple_propagation_duration_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTuplePropagationDurationBySlice()));
+		values.put("wireless_tuple_network_delay_total_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTupleNetworkDelayTotalBySlice()));
+		values.put("wireless_tuple_network_delay_average_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getTupleNetworkDelayAverageBySlice()));
+		values.put("migration_transfers_by_slice",
+			formatSliceCounts(
+				result.getMetrics().getMigrationTransfersBySlice()));
+		values.put("migration_transferred_bytes_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getMigrationTransferredBytesBySlice()));
+		values.put("migration_transfer_duration_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getMigrationTransferDurationBySlice()));
+		values.put("migration_usage_byte_ms_by_slice",
+			formatSliceBandwidth(result.getMetrics().getMigrationUsageBySlice()));
+		values.put("migration_usage_mean_byte_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getMigrationUsageMeanBySlice()));
+		values.put("migrations_by_slice",
+			formatSliceCounts(
+				result.getMetrics().getCompletedMigrationsBySlice()));
+		values.put("migration_time_average_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getMigrationTimeAverageBySlice()));
+		values.put("migration_time_maximum_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getMigrationTimeMaximumBySlice()));
+		values.put("downtime_average_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getDowntimeAverageBySlice()));
+		values.put("downtime_maximum_ms_by_slice",
+			formatSliceBandwidth(
+				result.getMetrics().getDowntimeMaximumBySlice()));
 		values.put("wireless_queue_limit",
 			Integer.toString(result.getMetrics().getMaximumWirelessQueueSize()));
 		values.put("wireless_queue_final",
@@ -181,6 +237,22 @@ public final class SimulationBenchmark {
 		StringBuilder text = new StringBuilder();
 		for (Map.Entry<Integer, Double> entry
 			: new TreeMap<Integer, Double>(bandwidthBySlice).entrySet()) {
+			if (text.length() > 0) {
+				text.append(',');
+			}
+			text.append(entry.getKey()).append('=').append(entry.getValue());
+		}
+		return text.toString();
+	}
+
+	static String formatSliceCounts(Map<Integer, Long> countsBySlice) {
+		if (countsBySlice == null) {
+			throw new IllegalArgumentException(
+				"Slice reconfiguration counts cannot be null");
+		}
+		StringBuilder text = new StringBuilder();
+		for (Map.Entry<Integer, Long> entry
+			: new TreeMap<Integer, Long>(countsBySlice).entrySet()) {
 			if (text.length() > 0) {
 				text.append(',');
 			}

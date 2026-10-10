@@ -15,7 +15,7 @@ import org.fog.vmmobile.SimulationConfig;
 /** Immutable, typed summary of one completed simulation run. */
 public final class RunReport {
 
-	public static final int SCHEMA_VERSION = 1;
+	public static final int SCHEMA_VERSION = 4;
 
 	/** Configuration and publication policy needed by success/failure manifests. */
 	public static final class Metadata {
@@ -234,6 +234,23 @@ public final class RunReport {
 			metrics.getTuplePropagationUsageByteMilliseconds());
 		add(result, "tuple_usage_byte_ms", "byte-ms",
 			metrics.getTupleUsageByteMilliseconds());
+		addIndexedCounts(result, "wireless_tuple_transfers_by_slice",
+			metrics.getWirelessTupleTransfersBySlice());
+		addIndexedSeries(result, "wireless_tuple_transferred_bytes_by_slice", "byte",
+			metrics.getTupleTransferredBytesBySlice());
+		addIndexedSeries(result, "wireless_tuple_queue_duration_ms_by_slice", "ms",
+			metrics.getTupleQueueDurationBySlice());
+		addIndexedSeries(result, "wireless_tuple_transfer_duration_ms_by_slice", "ms",
+			metrics.getTupleTransferDurationBySlice());
+		addIndexedSeries(result, "wireless_tuple_propagation_duration_ms_by_slice",
+			"ms",
+			metrics.getTuplePropagationDurationBySlice());
+		addIndexedSeries(result, "wireless_tuple_network_delay_total_ms_by_slice",
+			"ms",
+			metrics.getTupleNetworkDelayTotalBySlice());
+		addIndexedSeries(result, "wireless_tuple_network_delay_average_ms_by_slice",
+			"ms",
+			metrics.getTupleNetworkDelayAverageBySlice());
 		add(result, "migration_transferred_bytes", "byte",
 			metrics.getMigrationTransferredBytes());
 		add(result, "migration_transfer_duration_ms", "ms",
@@ -242,11 +259,25 @@ public final class RunReport {
 			metrics.getMigrationUsageByteMilliseconds());
 		add(result, "migration_usage_mean_byte_ms", "byte-ms",
 			metrics.getMeanMigrationUsageByteMilliseconds());
+		addIndexedCounts(result, "migration_transfers_by_slice",
+			metrics.getMigrationTransfersBySlice());
+		addIndexedSeries(result, "migration_transferred_bytes_by_slice", "byte",
+			metrics.getMigrationTransferredBytesBySlice());
+		addIndexedSeries(result, "migration_transfer_duration_ms_by_slice", "ms",
+			metrics.getMigrationTransferDurationBySlice());
+		addIndexedSeries(result, "migration_usage_byte_ms_by_slice", "byte-ms",
+			metrics.getMigrationUsageBySlice());
+		addIndexedSeries(result, "migration_usage_mean_byte_ms_by_slice",
+			"byte-ms", metrics.getMigrationUsageMeanBySlice());
 		add(result, "total_network_usage_byte_ms", "byte-ms",
 			metrics.getTotalUsageByteMilliseconds());
 		add(result, "slice_reconfigurations",
 			metrics.getSliceReconfigurationCount());
+		addIndexedCounts(result, "slice_reconfigurations_by_slice",
+			metrics.getSliceReconfigurationCountBySlice());
 		add(result, "slice_outage_s", "s", metrics.getSliceOutageSeconds());
+		addIndexedSeries(result, "slice_outage_s_by_slice", "s",
+			metrics.getSliceOutageSecondsBySlice());
 		addIndexedSeries(result, "slice_received_bandwidth_by_slice",
 			"bit/s", metrics.getReceivedBandwidthBySlice());
 		add(result, "wireless_queue_limit",
@@ -261,6 +292,16 @@ public final class RunReport {
 			metrics.getDroppedWirelessTupleCount());
 		SimulationMetricsSnapshot.Statistics statistics = metrics.getStatistics();
 		add(result, "migrations", statistics.getTotalMigrations());
+		addIndexedCounts(result, "migrations_by_slice",
+			metrics.getCompletedMigrationsBySlice());
+		addIndexedSeries(result, "migration_time_average_ms_by_slice", "ms",
+			metrics.getMigrationTimeAverageBySlice());
+		addIndexedSeries(result, "migration_time_maximum_ms_by_slice", "ms",
+			metrics.getMigrationTimeMaximumBySlice());
+		addIndexedSeries(result, "downtime_average_ms_by_slice", "ms",
+			metrics.getDowntimeAverageBySlice());
+		addIndexedSeries(result, "downtime_maximum_ms_by_slice", "ms",
+			metrics.getDowntimeMaximumBySlice());
 		add(result, "handoffs", statistics.getTotalHandoffs());
 		add(result, "tuples_lost", statistics.getLostTuples());
 		add(result, "tuples_total", statistics.getTotalTuples());
@@ -289,6 +330,12 @@ public final class RunReport {
 		String unit, Map<Integer, Double> values) {
 		fields.add(new Field(name, "map<integer,number>", unit,
 			indexedValues(values)));
+	}
+
+	private static void addIndexedCounts(List<Field> fields, String name,
+		Map<Integer, Long> values) {
+		fields.add(new Field(name, "map<integer,integer>", "count",
+			indexedLongValues(values)));
 	}
 
 	private static void add(List<Field> fields, String name, long value) {
@@ -357,11 +404,22 @@ public final class RunReport {
 		return result.toString();
 	}
 
+	private static String indexedLongValues(Map<Integer, Long> values) {
+		StringBuilder result = new StringBuilder();
+		for (Map.Entry<Integer, Long> entry : values.entrySet()) {
+			if (result.length() > 0) {
+				result.append(';');
+			}
+			result.append(entry.getKey()).append('=').append(entry.getValue());
+		}
+		return result.toString();
+	}
+
 	private static String path(Path value) {
 		return value.toAbsolutePath().normalize().toString();
 	}
 
-	private static String number(double value) {
+	static String number(double value) {
 		return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
 	}
 }

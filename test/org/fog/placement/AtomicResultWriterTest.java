@@ -57,12 +57,23 @@ public class AtomicResultWriterTest {
 
 		assertTrue(Files.isRegularFile(reportFile(root,
 			AtomicResultWriter.SUMMARY_FILE)));
+		Path bandwidthFile = reportFile(root,
+			AtomicResultWriter.SLICE_BANDWIDTH_FILE);
+		assertTrue(Files.isRegularFile(bandwidthFile));
+		assertEquals(
+			"time_s,slice_id,wireless_allocated_bandwidth_bit_per_s,"
+				+ "transport_allocated_bandwidth_bit_per_s,"
+				+ "total_allocated_bandwidth_bit_per_s\n0,0,0,0,0\n",
+			read(bandwidthFile));
 		String manifest = read(reportFile(root, AtomicResultWriter.MANIFEST_FILE));
 		assertTrue(JSONValue.parse(manifest) instanceof JSONObject);
 		assertTrue(manifest.contains("\"status\": \"success\""));
 		assertTrue(manifest.contains(
 			"\"detailed_output_status\": \"not_requested\""));
 		assertTrue(manifest.contains("\"total_network_usage_byte_ms\""));
+		assertTrue(manifest.contains("\"slice_bandwidth_file\": \""
+			+ AtomicResultWriter.SLICE_BANDWIDTH_FILE + "\""));
+		assertTrue(manifest.contains("\"slice_bandwidth_sha256\""));
 		assertFalse(Files.exists(root.resolve("results.txt")));
 	}
 
@@ -116,12 +127,38 @@ public class AtomicResultWriterTest {
 		String manifest = read(reportFile(root, AtomicResultWriter.MANIFEST_FILE));
 		assertTrue(JSONValue.parse(manifest) instanceof JSONObject);
 		assertTrue(manifest.contains("\"status\": \"failed\""));
-		assertTrue(manifest.contains("\"schema_version\": 1"));
+		assertTrue(manifest.contains("\"schema_version\": 4"));
 		assertTrue(manifest.contains("\"seed\": 7"));
 		assertTrue(manifest.contains("\"configuration\""));
 		assertTrue(manifest.contains("\"units\""));
 		assertTrue(manifest.contains(
 			"\"detailed_output_status\": \"incomplete\""));
+		assertNoStagingDirectories(root);
+	}
+
+	@Test
+	public void failingBandwidthWriterRemovesEverySuccessArtifact()
+		throws Exception {
+		Path root = temporaryDirectory.resolve("failed-bandwidth");
+		RunOutputManager output = RunOutputManager.initialize(root,
+			RunOutputMode.SUMMARY);
+		AtomicResultWriter writer = new AtomicResultWriter(output,
+			new FailsNthWriterFactory(2));
+
+		try {
+			writer.write(report(RunOutputMode.SUMMARY));
+			fail("Expected the injected bandwidth write failure");
+		}
+		catch (IOException expected) {
+			assertTrue(expected.getMessage().contains("injected write failure"));
+		}
+
+		assertFalse(Files.exists(reportFile(root,
+			AtomicResultWriter.SUMMARY_FILE)));
+		assertFalse(Files.exists(reportFile(root,
+			AtomicResultWriter.SLICE_BANDWIDTH_FILE)));
+		String manifest = read(reportFile(root, AtomicResultWriter.MANIFEST_FILE));
+		assertTrue(manifest.contains("\"status\": \"failed\""));
 		assertNoStagingDirectories(root);
 	}
 
@@ -212,6 +249,37 @@ public class AtomicResultWriterTest {
 		public Writer open(Path path) throws IOException {
 			if (first) {
 				first = false;
+				return new Writer() {
+					@Override
+					public void write(char[] buffer, int offset, int length)
+						throws IOException {
+						throw new IOException("injected write failure");
+					}
+
+					@Override
+					public void flush() {}
+
+					@Override
+					public void close() {}
+				};
+			}
+			return Files.newBufferedWriter(path, StandardCharsets.UTF_8);
+		}
+	}
+
+	private static final class FailsNthWriterFactory
+		implements AtomicResultWriter.WriterFactory {
+		private final int failingWrite;
+		private int writeCount;
+
+		private FailsNthWriterFactory(int failingWrite) {
+			this.failingWrite = failingWrite;
+		}
+
+		@Override
+		public Writer open(Path path) throws IOException {
+			writeCount++;
+			if (writeCount == failingWrite) {
 				return new Writer() {
 					@Override
 					public void write(char[] buffer, int offset, int length)

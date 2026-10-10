@@ -23,6 +23,8 @@ public final class AtomicResultWriter implements ResultWriter {
 
 	public static final String REPORT_DIRECTORY = "report";
 	public static final String SUMMARY_FILE = "summary.csv";
+	public static final String SLICE_BANDWIDTH_FILE =
+		"slice-bandwidth-timeseries.csv";
 	public static final String MANIFEST_FILE = "manifest.json";
 
 	/** Injectable checked-writer factory used by failure-path tests. */
@@ -69,7 +71,10 @@ public final class AtomicResultWriter implements ResultWriter {
 		try {
 			String summary = summaryCsv(report);
 			writeAndVerify(staging.resolve(SUMMARY_FILE), summary);
-			String manifest = successManifest(report, sha256(summary));
+			String sliceBandwidth = sliceBandwidthCsv(report);
+			writeAndVerify(staging.resolve(SLICE_BANDWIDTH_FILE), sliceBandwidth);
+			String manifest = successManifest(report, sha256(summary),
+				sha256(sliceBandwidth));
 			writeAndVerify(staging.resolve(MANIFEST_FILE), manifest);
 			publish(staging);
 			terminal = true;
@@ -188,10 +193,38 @@ public final class AtomicResultWriter implements ResultWriter {
 		return header.append('\n').append(row).append('\n').toString();
 	}
 
-	private String successManifest(RunReport report, String summaryHash) {
+	private static String sliceBandwidthCsv(RunReport report) {
+		StringBuilder csv = new StringBuilder();
+		csv.append("time_s,slice_id,wireless_allocated_bandwidth_bit_per_s,")
+			.append("transport_allocated_bandwidth_bit_per_s,")
+			.append("total_allocated_bandwidth_bit_per_s\n");
+		for (SimulationMetricsSnapshot.SliceBandwidthSample sample
+			: report.getMetrics().getSliceBandwidthTimeSeries()) {
+			for (Map.Entry<Integer, Double> entry
+				: sample.getWirelessBandwidthBySlice().entrySet()) {
+				int sliceId = entry.getKey().intValue();
+				double wireless = entry.getValue().doubleValue();
+				Double transportValue = sample.getTransportBandwidthBySlice().get(
+					Integer.valueOf(sliceId));
+				double transport = transportValue == null ? 0.0
+					: transportValue.doubleValue();
+				csv.append(sample.getElapsedSecond()).append(',')
+					.append(sliceId).append(',')
+					.append(RunReport.number(wireless)).append(',')
+					.append(RunReport.number(transport)).append(',')
+					.append(RunReport.number(wireless + transport)).append('\n');
+			}
+		}
+		return csv.toString();
+	}
+
+	private String successManifest(RunReport report, String summaryHash,
+		String sliceBandwidthHash) {
 		StringBuilder json = manifestStart("success", report.getMetadata());
 		property(json, "summary_file", SUMMARY_FILE, true);
 		property(json, "summary_sha256", summaryHash, true);
+		property(json, "slice_bandwidth_file", SLICE_BANDWIDTH_FILE, true);
+		property(json, "slice_bandwidth_sha256", sliceBandwidthHash, true);
 		property(json, "detailed_output_status",
 			detailedStatus(report.getMetadata().getOutputMode(), true), true);
 		appendUnits(json, report);

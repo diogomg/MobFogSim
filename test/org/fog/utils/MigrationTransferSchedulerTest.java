@@ -184,6 +184,20 @@ public class MigrationTransferSchedulerTest {
 		assertEquals(100.0, schedule.getDelay(), DELTA);
 	}
 
+	@Test
+	public void slicedSchedulerPublishesItsAllocationToTheTimeSeries() {
+		SliceBandwidthTimeSeries series = new SliceBandwidthTimeSeries(2);
+		MigrationTransferScheduler scheduler = new MigrationTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, false, 0.0,
+			new SliceReconfigurationMetrics(2), series);
+
+		scheduler.start(1, LINK, 0, 7.0, 800.0, 0.0);
+
+		double[] sample = series.snapshot(0.0).get(0).getBandwidthBySlice();
+		assertEquals(560.0, sample[0], DELTA);
+		assertEquals(0.0, sample[1], DELTA);
+	}
+
 	private static MigrationTransferScheduler dynamicScheduler() {
 		return new MigrationTransferScheduler(new double[] { 70.0, 30.0 }, true, true);
 	}

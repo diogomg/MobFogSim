@@ -146,6 +146,20 @@ public class AccessPointTransferSchedulerTest {
 			schedule(completion.getSchedules(), 2L).getDelayMillis(), DELTA);
 	}
 
+	@Test
+	public void slicedSchedulerPublishesItsAllocationToTheTimeSeries() {
+		SliceBandwidthTimeSeries series = new SliceBandwidthTimeSeries(2);
+		AccessPointTransferScheduler scheduler = new AccessPointTransferScheduler(
+			new double[] { 70.0, 30.0 }, true, false, 0.0,
+			new SliceReconfigurationMetrics(2), series);
+
+		scheduler.start(1L, UPLINK, 1, 1000.0, 8000.0, 8000.0, 0.0);
+
+		double[] sample = series.snapshot(0.0).get(0).getBandwidthBySlice();
+		assertEquals(0.0, sample[0], DELTA);
+		assertEquals(2400.0, sample[1], DELTA);
+	}
+
 	private static AccessPointTransferScheduler scheduler(boolean slicing,
 		boolean dynamic) {
 		return new AccessPointTransferScheduler(new double[] { 70.0, 30.0 },

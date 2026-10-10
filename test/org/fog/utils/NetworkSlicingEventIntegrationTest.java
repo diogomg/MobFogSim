@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.cloudbus.cloudsim.Log;
@@ -109,10 +110,51 @@ public class NetworkSlicingEventIntegrationTest {
 			NetworkUsageMonitor.getMigrationUsageByteMilliseconds(), DELTA);
 		assertEquals(2L, NetworkSlicing.getReconfigurationCount());
 		assertEquals(0.2, NetworkSlicing.getSliceOutageSeconds(), DELTA);
+		assertEquals(2L,
+			NetworkSlicing.getReconfigurationCountBySlice()[0]);
+		assertEquals(0L,
+			NetworkSlicing.getReconfigurationCountBySlice()[1]);
+		assertEquals(0.2,
+			NetworkSlicing.getSliceOutageSecondsBySlice()[0], DELTA);
+		assertEquals(0.0,
+			NetworkSlicing.getSliceOutageSecondsBySlice()[1], DELTA);
+		assertEquals(1L, NetworkSlicing.getMigrationTransfersBySlice()[0]);
+		assertEquals(0L, NetworkSlicing.getMigrationTransfersBySlice()[1]);
+		assertEquals(TRANSFER_BYTES,
+			NetworkSlicing.getMigrationTransferredBytesBySlice()[0], DELTA);
+		assertEquals(70.0,
+			NetworkSlicing.getMigrationTransferDurationBySlice()[0], DELTA);
+		assertEquals(TRANSFER_BYTES * 70.0,
+			NetworkSlicing.getMigrationUsageBySlice()[0], DELTA);
 		assertEquals(800.0,
 			NetworkSlicing.getReceivedBandwidthBySlice()[0], DELTA);
 		assertEquals(0.0,
 			NetworkSlicing.getReceivedBandwidthBySlice()[1], DELTA);
+		List<NetworkSlicing.SliceBandwidthSample> samples =
+			NetworkSlicing.getBandwidthTimeSeries(220.0);
+		assertEquals(1, samples.size());
+		assertEquals(800.0,
+			samples.get(0).getTransportBandwidthBySlice()[0], DELTA);
+		assertEquals(0.0,
+			samples.get(0).getWirelessBandwidthBySlice()[0], DELTA);
+	}
+
+	@Test
+	public void completedMigrationTimingIsAttributedToItsSlice() {
+		second.setNetworkSliceId(1);
+		NetworkSlicing.recordCompletedMigration(first, 10.0, 2.0);
+		NetworkSlicing.recordCompletedMigration(second, 30.0, 6.0);
+
+		assertEquals(1L, NetworkSlicing.getCompletedMigrationsBySlice()[0]);
+		assertEquals(1L, NetworkSlicing.getCompletedMigrationsBySlice()[1]);
+		assertEquals(10.0,
+			NetworkSlicing.getMigrationTimeAverageBySlice()[0], DELTA);
+		assertEquals(30.0,
+			NetworkSlicing.getMigrationTimeMaximumBySlice()[1], DELTA);
+		assertEquals(2.0,
+			NetworkSlicing.getDowntimeAverageBySlice()[0], DELTA);
+		assertEquals(6.0,
+			NetworkSlicing.getDowntimeMaximumBySlice()[1], DELTA);
 	}
 
 	private static final class TransferHarness extends SimEntity {
