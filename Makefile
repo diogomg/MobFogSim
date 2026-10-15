@@ -9,7 +9,7 @@ TEST_CLASSPATH := $(TEST_CLASSES):$(MAIN_CLASSPATH)
 FOG_LINT_CLASSES := $(BUILD_DIR)/lint-classes
 FOG_SOURCE_LIST := $(BUILD_DIR)/fog-sources.list
 P0_REGRESSION_SUITES := org.fog.placement.P0CorrectnessRegressionTest
-RUN_ARGS ?= 1 290538 0 0 80 61 0 11 0 0 0 60,40 70,30 1 2 0 summary
+RUN_ARGS ?= 1 290538 0 0 100 61 0 11 0 0 0 60,40 70,30 1 2 0 summary
 JACOCO_VERSION := 0.8.15
 JACOCO_DIR := $(BUILD_DIR)/tools/jacoco
 JACOCO_AGENT := $(JACOCO_DIR)/org.jacoco.agent-$(JACOCO_VERSION)-runtime.jar
@@ -24,7 +24,8 @@ BENCHMARK_OUTPUT ?=
 BENCHMARK_JAVA_OPTS ?= -Xms256m -Xmx14g -Dfile.encoding=UTF-8 -Duser.language=en -Duser.country=GB -Duser.timezone=UTC
 
 .PHONY: compile compile-tests discover-tests list-tests run test lint coverage \
-	coverage-tools benchmark benchmark-matrix list-benchmark-fixtures \
+	coverage-tools benchmark benchmark-matrix benchmark-user-scaling \
+	list-benchmark-fixtures \
 	demonstrate-p0-defects clean
 
 compile:
@@ -112,6 +113,9 @@ benchmark: compile-tests
 
 benchmark-matrix: BENCHMARK_FIXTURES := matrix
 benchmark-matrix: benchmark
+
+benchmark-user-scaling: BENCHMARK_FIXTURES := user-scaling
+benchmark-user-scaling: benchmark
 
 list-benchmark-fixtures: compile-tests
 	java -classpath '$(TEST_CLASSPATH)' org.fog.vmmobile.SimulationBenchmark \

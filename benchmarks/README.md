@@ -21,6 +21,19 @@ make list-benchmark-fixtures BENCHMARK_FIXTURES=37-users
 make benchmark BENCHMARK_FIXTURES=37-users
 ```
 
+Run every established scenario at 1, 10, 100, and 200 users with:
+
+```text
+make list-benchmark-fixtures BENCHMARK_FIXTURES=user-scaling
+make benchmark-user-scaling
+```
+
+This is equivalent to:
+
+```text
+make benchmark BENCHMARK_FIXTURES=user-scaling
+```
+
 Compilation happens before measurement. Each fixture then starts in a fresh
 JVM with a 256 MiB initial heap, a 14 GiB maximum heap, UTC, British English,
 seed `290538`, output mode `none`, no warm-up, and one measured trial. Override
@@ -56,6 +69,15 @@ may require additional heap and substantially more execution time.
 | `reference` | 1 | Enabled | Live container | Exact live-migration semantic golden configuration. |
 | `large` | 10 | Disabled | Complete VM (inactive) | Multi-user scaling workload that reaches normal completion. |
 | `large-migration` | 10 | Enabled | Live container | Optional multi-user hand-off and migration stress workload. |
+
+The `user-scaling` group contains 67 fixtures in four ordered blocks: all 13
+established `u1-*` scenarios, followed by all 18 scenarios for each of `u10-*`,
+`u100-*`, and `u200-*`. This is equivalent to selecting `1-users 10-users
+100-users 200-users`; overlapping selections are de-duplicated. The u1 block
+retains its historical single-slice scenarios, while u100 and u200 clone the
+complete two- and three-slice-capable u10 block with only the user count
+changed. This is not a quick suite: as a rough planning reference, the
+historical 18-scenario u200 run took about 19 hours on its recorded host.
 
 All fixtures retain the simulator's fixed infrastructure of 144 server
 cloudlets and 144 access points. The initial physical graph contains 288 nodes

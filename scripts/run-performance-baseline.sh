@@ -122,6 +122,16 @@ for fixture in "${fixtures[@]}"; do
 		org.fog.vmmobile.SimulationBenchmark "${fixture}" "${run_output}" \
 		"${metrics_file}" > "${stdout_file}" 2> "${stderr_file}"; then
 		echo "Benchmark fixture failed; inspect ${stderr_file}" >&2
+		if [[ -s ${stderr_file} ]]; then
+			echo "Last lines from the fixture's standard error:" >&2
+			tail -n 80 "${stderr_file}" >&2
+		fi
+		exit 1
+	fi
+	if [[ ! -s ${metrics_file} ]]; then
+		echo "Benchmark fixture exited without producing metrics: ${fixture}" >&2
+		echo "Expected metrics file: ${metrics_file}" >&2
+		echo "Inspect ${stderr_file} for the underlying simulation error" >&2
 		exit 1
 	fi
 

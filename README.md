@@ -77,6 +77,8 @@ comparison, or list its fixture names with
 Use `make benchmark BENCHMARK_FIXTURES=37-users` to run the 18 ten-user matrix
 scenarios with any supported positive user count. The current mobility-order
 manifest supports up to 480 users.
+Use `make benchmark-user-scaling` to run all established scenarios at 1, 10,
+100, and 200 users.
 
 ### Running in the Eclipse IDE
 
@@ -99,6 +101,26 @@ manifest supports up to 480 users.
 Optional dependency:
 
 - IBM ILOG CPLEX for optimisation algorithms
+
+## User-scaling benchmark results
+
+The reproducible user-scaling suite contains 67 process-isolated simulations
+covering the established scenarios at 1, 10, 100, and 200 users. Each fixture
+was measured once in a fresh JVM with no warm-up. RAM usage is the maximum
+resident set size of each JVM, and the mean is calculated from those independent
+peaks. “Median avg” is the median of the fixture-level averages within each
+table row; zero migration averages are excluded.
+
+| Workload | Fixtures | Total wall | Mean wall | Max wall | Mean RAM usage | Maximum RAM usage | Events total | Slice reconfigurations | Handoffs | Migrations | Median avg migration (s) | Median avg loop delay (ms) | Median avg loop maximum (ms) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 user | 13 | 2 min 37.88 s | 12.14 s | 13.58 s | 0.55 GiB | 0.70 GiB | 242,007,289 | 0 | 91 | 11 | 14.021 | 17.143 | 27.688 |
+| 10 users | 18 | 18 min 54.99 s | 1 min 3.05 s | 1 min 13.79 s | 2.38 GiB | 3.08 GiB | 757,466,623 | 39,626 | 1,261 | 301 | 140.601 | 20.798 | 43.784 |
+| 100 users | 18 | 3 h 10 min 3.21 s | 10 min 33.51 s | 13 min 40.64 s | 3.11 GiB | 3.74 GiB | 4,831,662,362 | 286,078 | 11,272 | 1,728 | 178.708 | 21.658 | 57.154 |
+| 200 users | 18 | 9 h 19 min 50.02 s | 31 min 6.11 s | 42 min 9.94 s | 4.58 GiB | 7.17 GiB | 8,913,449,664 | 429,658 | 21,621 | 2,749 | 263.348 | 24.952 | 79.522 |
+| **All** | **67** | **12 h 51 min 26.10 s** | **11 min 30.84 s** | **42 min 9.94 s** | **2.81 GiB** | **7.17 GiB** | **14,744,585,938** | **755,362** | **34,245** | **4,789** | **141.457** | **21.550** | **53.536** |
+
+See the [complete benchmark report](benchmarks/12-10-2026/BENCHMARK_RESULTS.md) for
+the environment, methodology, per-fixture values, and additional metrics.
 
 ## Parameters
 
