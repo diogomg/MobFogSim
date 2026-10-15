@@ -60,7 +60,7 @@ public class BwProvisionerOverbooking extends BwProvisioner {
 		{
 			out1.print(CloudSim.clock() + " Bandwich " + getAvailableBw() + " Required " + bw
 				+ " result " + (getAvailableBw() - bw) + " App " + vm.getVmm() + " device ");
-			if (vm.getHost() != null) {
+			if (vm.getHost() != null && vm.getHost().getDatacenter() != null) {
 				out1.println(vm.getHost().getDatacenter().getName());
 			}
 			else {

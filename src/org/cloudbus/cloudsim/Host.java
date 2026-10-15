@@ -116,47 +116,59 @@ public class Host {
 	}
 
 	/**
-	 * Adds the migrating in vm.
+	 * Reserves this host's resources for a migrating VM.
 	 * 
 	 * @param vm
 	 *        the vm
+	 * @return {@code true} when every resource was reserved; {@code false}
+	 *         when the reservation could not be made
 	 */
-	public void addMigratingInVm(Vm vm) {
+	public boolean addMigratingInVm(Vm vm) {
 		vm.setInMigration(true);
 
-		if (!getVmsMigratingIn().contains(vm)) {
-			if (getStorage() < vm.getSize()) {
-				Log.printLine("[VmScheduler.addMigratingInVm] Allocation of VM #" + vm.getId()
-					+ " to Host #" + getId() + " failed by storage");
-				System.exit(0);
-			}
-
-			if (!getRamProvisioner().allocateRamForVm(vm, vm.getCurrentRequestedRam())) {
-				Log.printLine("[VmScheduler.addMigratingInVm] Allocation of VM #" + vm.getId()
-					+ " to Host #" + getId() + " failed by RAM");
-				System.exit(0);
-			}
-
-			if (!getBwProvisioner().allocateBwForVm(vm, vm.getCurrentRequestedBw())) {
-				Log.printLine("[VmScheduler.addMigratingInVm] Allocation of VM #" + vm.getId()
-					+ " to Host #" + getId() + " failed by BW");
-				System.exit(0);
-			}
-
-			getVmScheduler().getVmsMigratingIn().add(vm.getUid());
-			if (!getVmScheduler().allocatePesForVm(vm, vm.getCurrentRequestedMips())) {
-				Log.printLine("[VmScheduler.addMigratingInVm] Allocation of VM #" + vm.getId()
-					+ " to Host #" + getId() + " failed by MIPS");
-				System.exit(0);
-			}
-
-			setStorage(getStorage() - vm.getSize());
-
-			getVmsMigratingIn().add(vm);
-			getVmList().add(vm);
-			updateVmsProcessing(CloudSim.clock());
-			vm.getHost().updateVmsProcessing(CloudSim.clock());
+		if (getVmsMigratingIn().contains(vm)) {
+			return true;
 		}
+		if (getStorage() < vm.getSize()) {
+			return rejectMigrationReservation(vm, "storage");
+		}
+		if (!getRamProvisioner().allocateRamForVm(vm,
+			vm.getCurrentRequestedRam())) {
+			return rejectMigrationReservation(vm, "RAM");
+		}
+		if (!getBwProvisioner().allocateBwForVm(vm,
+			vm.getCurrentRequestedBw())) {
+			getRamProvisioner().deallocateRamForVm(vm);
+			return rejectMigrationReservation(vm, "BW");
+		}
+
+		getVmScheduler().getVmsMigratingIn().add(vm.getUid());
+		if (!getVmScheduler().allocatePesForVm(vm,
+			vm.getCurrentRequestedMips())) {
+			getVmScheduler().getVmsMigratingIn().remove(vm.getUid());
+			getVmScheduler().deallocatePesForVm(vm);
+			getBwProvisioner().deallocateBwForVm(vm);
+			getRamProvisioner().deallocateRamForVm(vm);
+			return rejectMigrationReservation(vm, "MIPS");
+		}
+
+		setStorage(getStorage() - vm.getSize());
+		getVmsMigratingIn().add(vm);
+		getVmList().add(vm);
+		updateVmsProcessing(CloudSim.clock());
+		Host sourceHost = vm.getHost();
+		if (sourceHost != null) {
+			sourceHost.updateVmsProcessing(CloudSim.clock());
+		}
+		return true;
+	}
+
+	private boolean rejectMigrationReservation(Vm vm, String resource) {
+		String message = "[VmScheduler.addMigratingInVm] Allocation of VM #"
+			+ vm.getId() + " to Host #" + getId() + " failed by " + resource;
+		Log.printLine(message);
+		vm.setInMigration(false);
+		return false;
 	}
 
 	/**

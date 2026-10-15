@@ -137,7 +137,11 @@ public class PowerDatacenter extends Datacenter {
 								targetHost.getId());
 						}
 
-						targetHost.addMigratingInVm(vm);
+						if (!targetHost.addMigratingInVm(vm)) {
+							throw new IllegalStateException("Could not reserve Host #"
+								+ targetHost.getId() + " for migrating VM #"
+								+ vm.getId());
+						}
 						incrementMigrationCount();
 
 						/** VM migration delay = RAM / bandwidth **/

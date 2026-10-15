@@ -73,7 +73,9 @@ public final class MobileEdgeHostSelector {
 			|| policy == VmDestinationPolicy.Destination.HYBRID) {
 			ServiceAgreement.Evaluation service = ServiceAgreement.evaluate(
 				edgeServerCandidate, applicationOwner);
-			if (service.isAccepted()) {
+			if (service.isAccepted() && edgeServerCandidate != null
+				&& isSuitableForBundle(edgeServerCandidate.getHost(),
+					applicationOwner.getVmMobileDevices())) {
 				selected = edgeServerCandidate;
 				comparisonDestination = edgeServerCandidate;
 			}

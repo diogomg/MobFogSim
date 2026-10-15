@@ -309,6 +309,7 @@ public final class SimulationBenchmark {
 		private static final String BASELINE_GROUP = "baseline";
 		private static final String MATRIX_GROUP = "matrix";
 		private static final String FIFTY_USERS_GROUP = "fifty-users";
+		private static final String USER_SCALING_GROUP = "user-scaling";
 		private static final String NUMERIC_USERS_GROUP_SUFFIX = "-users";
 		private static final String TEN_USER_FIXTURE_PREFIX = "u10-";
 		private static final int USER_ARGUMENT_INDEX = 4;
@@ -367,7 +368,7 @@ public final class SimulationBenchmark {
 			if (fixture == null) {
 				throw new IllegalArgumentException("Unknown benchmark fixture or group '"
 					+ name
-					+ "'; use --list baseline, matrix, fifty-users, "
+					+ "'; use --list baseline, matrix, fifty-users, user-scaling, "
 					+ "<positive-integer>-users, or all");
 			}
 			return fixture;
@@ -388,6 +389,11 @@ public final class SimulationBenchmark {
 				}
 				else if (FIFTY_USERS_GROUP.equals(selection)) {
 					names.addAll(FIFTY_USER_NAMES);
+				}
+				else if (USER_SCALING_GROUP.equals(selection)) {
+					for (int userCount : new int[] { 1, 10, 100, 200 }) {
+						names.addAll(namesForUserCount(userCount));
+					}
 				}
 				else if (ALL_GROUP.equals(selection)) {
 					names.addAll(BASELINE_NAMES);

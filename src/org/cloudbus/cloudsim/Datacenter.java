@@ -539,8 +539,11 @@ public class Datacenter extends SimEntity {
 		host.removeMigratingInVm(vm);
 		boolean result = getVmAllocationPolicy().allocateHostForVm(vm, host);
 		if (!result) {
-			Log.printLine("[Datacenter.processVmMigrate] VM allocation to the destination host failed");
-			System.exit(0);
+			String message = "[Datacenter.processVmMigrate] VM allocation to "
+				+ "destination Host #" + host.getId() + " failed for VM #"
+				+ vm.getId();
+			Log.printLine(message);
+			throw new IllegalStateException(message);
 		}
 
 		if (ack) {

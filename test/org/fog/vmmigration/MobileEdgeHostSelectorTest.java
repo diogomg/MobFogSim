@@ -82,6 +82,17 @@ public class MobileEdgeHostSelectorTest {
 	}
 
 	@Test
+	public void fogOnlyRejectsHostWithoutEnoughResources() {
+		VmDestinationPolicy.configure(VmDestinationPolicy.EDGE_SERVERS_ONLY);
+		FogDevice undersized = fog("undersized", 100, 0,
+			host(256, 10000, 10000));
+		connect(source, undersized);
+
+		assertFalse(MobileEdgeHostSelector.selectDestination(owner, undersized));
+		assertNull(owner.getDestinationServerCloudlet());
+	}
+
+	@Test
 	public void deviceOnlyChoosesClosestEligibleDevice() {
 		HostedMobileDevice farther = connectedPeer("farther", 40, 0);
 		HostedMobileDevice closer = connectedPeer("closer", 10, 0);
@@ -222,7 +233,11 @@ public class MobileEdgeHostSelectorTest {
 	}
 
 	private static FogDevice fog(String name, int x, int y) {
-		FogDevice fog = new FogDevice(name, x, y, 0);
+		return fog(name, x, y, host(4096, 10000, 10000));
+	}
+
+	private static FogDevice fog(String name, int x, int y, PowerHost host) {
+		FogDevice fog = new HostedFogDevice(name, x, y, host);
 		Service service = new Service();
 		service.setType(Services.PRIVATE);
 		fog.setService(service);
@@ -253,6 +268,20 @@ public class MobileEdgeHostSelectorTest {
 
 		HostedMobileDevice(String name, int x, int y, PowerHost host) {
 			super(name, x, y, 0, 0, 0);
+			this.host = host;
+		}
+
+		@Override
+		public PowerHost getHost() {
+			return host;
+		}
+	}
+
+	private static final class HostedFogDevice extends FogDevice {
+		private final PowerHost host;
+
+		HostedFogDevice(String name, int x, int y, PowerHost host) {
+			super(name, x, y, 0);
 			this.host = host;
 		}
 

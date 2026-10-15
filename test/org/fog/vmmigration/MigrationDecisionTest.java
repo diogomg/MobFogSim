@@ -6,19 +6,28 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import org.cloudbus.cloudsim.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.NetworkTopology;
+import org.cloudbus.cloudsim.Pe;
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.power.PowerHost;
+import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
+import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
+import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
 import org.fog.entities.ApDevice;
 import org.fog.entities.FogDevice;
 import org.fog.entities.MobileDevice;
+import org.fog.scheduler.StreamOperatorScheduler;
+import org.fog.utils.FogLinearPowerModel;
 import org.fog.utils.NetworkSlicing;
 import org.fog.vmmobile.MobileSession;
 import org.fog.vmmobile.policy.MigrationPointPolicy;
@@ -128,7 +137,7 @@ public class MigrationDecisionTest {
 	}
 
 	private static FogDevice cloudlet(String name, int x, int y) {
-		FogDevice cloudlet = new FogDevice(name, x, y, 0);
+		FogDevice cloudlet = new HostedFogDevice(name, x, y, host());
 		cloudlet.setUplinkBandwidth(8.0 * 1024.0 * 1024.0);
 		cloudlet.setDownlinkBandwidth(8.0 * 1024.0 * 1024.0);
 		Service service = new Service();
@@ -136,5 +145,28 @@ public class MigrationDecisionTest {
 		cloudlet.setService(service);
 		cloudlet.setAvailable(true);
 		return cloudlet;
+	}
+
+	private static PowerHost host() {
+		List<Pe> processingElements = new ArrayList<Pe>();
+		processingElements.add(new Pe(0, new PeProvisionerOverbooking(5000)));
+		return new PowerHost(0, new RamProvisionerSimple(4096),
+			new BwProvisionerOverbooking(10000), 10000, processingElements,
+			new StreamOperatorScheduler(processingElements),
+			new FogLinearPowerModel(100.0, 50.0));
+	}
+
+	private static final class HostedFogDevice extends FogDevice {
+		private final PowerHost host;
+
+		HostedFogDevice(String name, int x, int y, PowerHost host) {
+			super(name, x, y, 0);
+			this.host = host;
+		}
+
+		@Override
+		public PowerHost getHost() {
+			return host;
+		}
 	}
 }

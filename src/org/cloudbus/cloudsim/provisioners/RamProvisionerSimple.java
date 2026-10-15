@@ -60,7 +60,7 @@ public class RamProvisionerSimple extends RamProvisioner {
 		{
 			out1.print(CloudSim.clock() + " RAM " + getAvailableRam() + " required " + ram
 				+ " result " + (getAvailableRam() - ram) + " App " + vm.getVmm() + " device ");
-			if (vm.getHost() != null) {
+			if (vm.getHost() != null && vm.getHost().getDatacenter() != null) {
 				out1.println(vm.getHost().getDatacenter().getName());
 			}
 			else {

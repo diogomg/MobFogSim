@@ -542,8 +542,10 @@ public abstract class PowerVmAllocationPolicyMigrationAbstract extends
 			Vm vm = (Vm) map.get("vm");
 			PowerHost host = (PowerHost) map.get("host");
 			if (!host.vmCreate(vm)) {
-				Log.printLine("Couldn't restore VM #" + vm.getId() + " on host #" + host.getId());
-				System.exit(0);
+				String message = "Couldn't restore VM #" + vm.getId()
+					+ " on Host #" + host.getId();
+				Log.printLine(message);
+				throw new IllegalStateException(message);
 			}
 			getVmTable().put(vm.getUid(), host);
 		}

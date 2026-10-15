@@ -939,6 +939,11 @@ public class FogDevice extends PowerDatacenter {
 			scheduleMigrationAbort(smartThing, plan.getReason());
 			return;
 		}
+		if (!reserveDestinationHost(smartThing)) {
+			scheduleMigrationAbort(smartThing,
+				"destination host no longer has enough VM capacity");
+			return;
+		}
 
 		int srcId = getId();
 		int entityId = smartThing.getDestinationServerCloudlet().getId();
@@ -969,6 +974,21 @@ public class FogDevice extends PowerDatacenter {
 					+ " migration to host "
 					+ smartThing.getDestinationServerCloudlet().getHost().getId());
 		}
+	}
+
+	private boolean reserveDestinationHost(MobileDevice smartThing) {
+		Host destinationHost = smartThing.getDestinationServerCloudlet().getHost();
+		List<Vm> reserved = new ArrayList<Vm>();
+		for (Vm virtualMachine : smartThing.getVmMobileDevices()) {
+			if (!destinationHost.addMigratingInVm(virtualMachine)) {
+				for (int index = reserved.size() - 1; index >= 0; index--) {
+					destinationHost.removeMigratingInVm(reserved.get(index));
+				}
+				return false;
+			}
+			reserved.add(virtualMachine);
+		}
+		return true;
 	}
 
 	private void scheduleMigrationAbort(MobileDevice smartThing, String reason) {

@@ -158,6 +158,31 @@ public class SimulationBenchmarkScenarioTest {
 			"50-users", "fifty-users", "u50-base").size());
 	}
 
+	@Test
+	public void userScalingGroupContainsEveryScenarioAtFourSizes() {
+		List<String> names = SimulationBenchmark.fixtureNames("user-scaling");
+		assertEquals(67, names.size());
+		assertEquals(67, new HashSet<String>(names).size());
+		assertEquals(SimulationBenchmark.fixtureNames(
+			"1-users", "10-users", "100-users", "200-users"), names);
+
+		int offset = 0;
+		for (int userCount : new int[] { 1, 10, 100, 200 }) {
+			List<String> expected = SimulationBenchmark.fixtureNames(
+				userCount + "-users");
+			assertEquals(userCount == 1 ? 13 : 18, expected.size());
+			assertEquals(expected, names.subList(offset, offset + expected.size()));
+			for (String name : expected) {
+				assertEquals(userCount, SimulationConfig.parse(
+					SimulationBenchmark.fixtureArguments(name)).getMaximumUsers());
+			}
+			offset += expected.size();
+		}
+		assertEquals(names.size(), offset);
+		assertEquals(names, SimulationBenchmark.fixtureNames(
+			"user-scaling", "100-users"));
+	}
+
 	@Test(expected = IllegalArgumentException.class)
 	public void zeroUserGroupIsRejected() {
 		SimulationBenchmark.fixtureNames("0-users");
